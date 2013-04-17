@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+<comment>
+  * Released as open source by NCC Group Plc - http://www.nccgroup.com/
+  *
+  * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+  *
+  * https://github.com/nccgroup/pip3line
+  *
+  * Released under AGPL see LICENSE for more information
+</comment>
+ <class>ModuleTransformWidget</class>
+ <widget class="QWidget" name="ModuleTransformWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Script file</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::ExpandingFieldsGrow</enum>
+      </property>
+      <item row="2" column="0">
+       <widget class="QLabel" name="fileLabel">
+        <property name="text">
+         <string>File</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="fileLineEdit">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QStackedWidget" name="stackedWidget">
+        <widget class="QWidget" name="basePage">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QPushButton" name="choosePushButton">
+            <property name="text">
+             <string>Choose file</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="makePersistentCheckBox">
+            <property name="toolTip">
+             <string>If selected this script will be saved in the system configuration, and will appear under the &quot;python 2,7&quot; category</string>
+            </property>
+            <property name="text">
+             <string>Persistent Module</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="baseLabel">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>If this option is checked the script will be saved in the system persistent configuration and will be loaded automatically under the category &quot;Python 3&quot;.
+
+It can also be deleted within the plugin configuration interface.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="autoPage">
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QLabel" name="autoLabel">
+            <property name="text">
+             <string>This module was automatically loaded from a default location.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

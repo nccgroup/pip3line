@@ -1,0 +1,59 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
+#ifndef NTLMSSP_H
+#define NTLMSSP_H
+
+#include <QObject>
+#include <QHash>
+#include <QMap>
+#include <transformabstract.h>
+#include <QTextCodec>
+#include <QString>
+
+class Ntlmssp : public TransformAbstract
+{
+        Q_OBJECT
+    public:
+        static const QString id;
+        explicit Ntlmssp();
+        ~Ntlmssp();
+        QString name() const;
+        QString description() const;
+        void transform(const QByteArray &input, QByteArray &output);
+        bool isTwoWays();
+        QWidget * requestGui(QWidget * parent);
+        QString help() const;
+        QHash<QString, QString> getConfiguration();
+        bool setConfiguration(QHash<QString, QString> propertiesList);
+
+        bool decodeBase64() const;
+        void setDecodeBase64(bool val);
+
+    private:
+        QByteArray extractFlags(int flags);
+        QByteArray extractTargetInfo(QByteArray &data);
+        QByteArray extractOSVersion(QByteArray &data);
+        QByteArray extractNTLM(QByteArray &data);
+        QByteArray getString(const QByteArray &data);
+        quint32 reverseBytes(quint32 val);
+        QByteArray reverseBytes(const QByteArray &data);
+        QByteArray toTimeStamp(const QByteArray &data);
+        QHash<int, QString> NTMLSSP_TYPE;
+        QMap<quint32, QString> FLAGS_VAL;
+        QMap<quint16, QString> TARGET_INFO;
+
+        bool doBase64;
+        bool oemString;
+        QTextCodec *unicodeCodec;
+        
+};
+
+#endif // NTLMSSP_H

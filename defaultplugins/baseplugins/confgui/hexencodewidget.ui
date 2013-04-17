@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+<comment>
+  * Released as open source by NCC Group Plc - http://www.nccgroup.com/
+  *
+  * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+  *
+  * https://github.com/nccgroup/pip3line
+  *
+  * Released under AGPL see LICENSE for more information
+</comment>
+ <class>HexEncodeWidget</class>
+ <widget class="QWidget" name="HexEncodeWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QRadioButton" name="normalRadioButton">
+     <property name="text">
+      <string>Normal</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="escapedRadioButton">
+     <property name="text">
+      <string>Escaped format</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="cstyleRadioButton">
+     <property name="text">
+      <string>C-style array</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="csvRadioButton">
+     <property name="text">
+      <string>CSV</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

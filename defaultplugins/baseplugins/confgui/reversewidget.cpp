@@ -1,0 +1,52 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
+#include "reversewidget.h"
+#include "ui_reversewidget.h"
+
+ReverseWidget::ReverseWidget(Reverse *ntransform, QWidget *parent) :
+    QWidget(parent),
+    ui(new Ui::ReverseWidget)
+{
+    transform = ntransform;
+    ui->setupUi(this);
+    ui->blockSizeSpinBox->setValue(transform->getBlocksize());
+    ui->blockSizeSpinBox->setMinimum(Reverse::MINBLOCKSIZE);
+    ui->blockSizeSpinBox->setMaximum(Reverse::MAXBLOCKSIZE);
+    ui->entireCheckBox->setChecked(transform->getNoBlock());
+
+    connect(ui->entireCheckBox,SIGNAL(toggled(bool)),this, SLOT(onEntireCheckBoxChange(bool)));
+    connect(ui->blockSizeSpinBox,SIGNAL(valueChanged(int)), this, SLOT(onBlockSizeChange(int)));
+}
+
+ReverseWidget::~ReverseWidget()
+{
+    delete ui;
+}
+
+void  ReverseWidget::onBlockSizeChange(int value) {
+    ui->blockSizeSpinBox->blockSignals(true);
+    if (!transform->setBlocksize(value)) {
+        if (value < Reverse::MINBLOCKSIZE) {
+            ui->blockSizeSpinBox->setValue(Reverse::MINBLOCKSIZE);
+        } else {
+            ui->blockSizeSpinBox->setValue(Reverse::MAXBLOCKSIZE);
+        }
+    } else {
+        ui->entireCheckBox->blockSignals(true);
+        ui->entireCheckBox->setChecked(false);
+        ui->entireCheckBox->blockSignals(false);
+    }
+    ui->blockSizeSpinBox->blockSignals(false);
+}
+
+void  ReverseWidget::onEntireCheckBoxChange(bool checked) {
+    transform->setNoBlock(checked);
+}

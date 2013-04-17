@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pip3line Version="9" Name="UTF-16 LE" Description="" Help="">
+    <Transform Way="1" Order="0" Name="Char encoding" CodecName="UTF-16"/>
+</pip3line>

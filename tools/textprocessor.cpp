@@ -1,0 +1,45 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
+#include "textprocessor.h"
+#include <QDebug>
+
+TextProcessor::TextProcessor(TransformMgmt * tFactory, QObject *parent) :
+                             Processor(tFactory, parent)
+{
+}
+
+TextProcessor::~TextProcessor()
+{
+}
+
+void TextProcessor::run()
+{
+    if (in == 0) {
+        logError(tr("Input is not defined, TextProcessor will not run"), "TextProcessor");
+        return;
+    }
+
+    if (out == 0) {
+        logError(tr("output is not defined, TextProcessor will not run"), "TextProcessor");
+        return;
+    }
+
+    QByteArray temp;
+    QTextStream ins(in);
+    ocount = 0;
+
+    while (!ins.atEnd()) {
+        temp = ins.readLine().toUtf8();
+
+        writeBlock(temp);
+
+    }
+}

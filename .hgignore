@@ -1,0 +1,19 @@
+syntax: glob
+
+*.o
+*.so
+*.txt.user
+*.pro.user*
+moc_*
+ui_*
+*~
+Makefile*
+build/*
+bin/*
+lib/*
+plugins/ExamplePlugin/libExamplePlugin.so*
+qrc_*
+scripts/__pycache__/*
+*.pyc
+*.jar
+unittests/unittests-build-*
