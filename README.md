@@ -35,12 +35,14 @@ https://github.com/nccgroup/pip3line/wiki/Shortcuts-list
 
 [Description]
 
-Pip3line is a tool for manipulating raw bytes blocks, able to apply diverse transformations to them. 
+Pip3line is a tool for manipulating raw bytes blocks, and isable to apply diverses transformations to them. 
+
 Its main usefullness is for pentesting and reverse-engineering / binary analysis purposes.
 
 Current transformations list include classic decoders such as Base64/32/hex to simple cryptographic ciphers, and includes common hashes algorithms as well as obfuscation techniques.
 
 Easy to use, but still offering some tweaking for most transformations, it also has the ability to save/restore a configured transformation chain for future used.
+
 The tool is also able to apply a transformation chain _en masse_ to either a file, or data blocks received from a TCP scoket, a Named Pipe (Windows) or a UNIX Socket (UNIX/Linux) via the *mass processing* utility
 
 It is also extendable for you to create your own transformations by using the C++/Qt plugin API.
