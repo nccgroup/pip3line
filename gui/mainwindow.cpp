@@ -194,7 +194,7 @@ void MainWindow::processingCheckForUpdate(DownloadManager *dm)
         int pos = versionRegExp.indexIn(data,0);
         if (pos != -1) {
             float last = versionRegExp.cap(1).mid(0,3).toFloat();
-            float current = QString(VERSION_STRING).toFloat();
+            float current = QString(VERSION_STRING).mid(0,3).toFloat();
             if (last > current) {
                 message = tr("Current: %1\nLatest: %2\n\nNew version of Pip3line available at\n \nhttps://code.google.com/p/pip3line/downloads/list").arg(VERSION_STRING).arg(versionRegExp.cap(1));
                 QMessageBox::warning(this,tr("New update"),message,QMessageBox::Ok);
