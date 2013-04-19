@@ -53,6 +53,45 @@
 
 	Easy to use, but still offering some tweaking for most transformations, it also has the ability to save/restore a configured transformation chain for future used.</p>
 
+	<h4>Transformations currently implemented</h4>
+	<ul>
+	  <li>Base32 (RFC 4648, Crockford, RFC 2938 a.k.a base32hex)</li>
+	  <li>Base64 (RFC 4648, ".Net" special version for *Resource.axd, Urlsafe)</li>
+	  <li>Binary encoding</li>
+	  <li>Bytes to Integer</li>
+	  <li>Char encoding (Unicode, iso ...)</li>
+	  <li>Cisco secret 7 decryption/encryption</li>
+	  <li>Cut</li>
+	  <li>FIX protocol parser (v4.4)</li>
+	  <li>Hexadecimal</li>
+	  <li>Hieroglyphy For JavaScript obfuscation</li>
+	  <li>Html</li>
+	  <li>Int to Timestamp (Epoch)</li>
+	  <li>Int64 to Timestamp (Microsoft)</li>
+	  <li>IPv4 translator between number and string representation of an IP</li>
+	  <li>Netmask calculator for IPv4 and IPv6</li>
+	  <li>Md4/Md5/Sha1 (built-in)</li>
+	  <li>NTLMSSP Messages parser</li>
+	  <li>Padding (Zero, ANSI X.923, ISO 10126, PKCS7, custom single char)</li>
+	  <li>Random Case</li>
+	  <li>Regular Expression (match&extract, match&replace)</li>
+	  <li>Reverse</li>
+	  <li>ROTx (ROT13, ROT5, ROT47)</li>
+	  <li>Signed Short to Char decoder</li>
+	  <li>Split</li>
+	  <li>Substitution crypto algorithm</li>
+	  <li>Oracle/MySql/MSSql/Postgres/Javascript concatenated string</li>
+	  <li>Url Encode</li>
+	  <li>Xor</li>
+	  <li>XmlQuery (XPATH)</li>
+	  <li>Zlib compression</li>
+	</ul>
+	<h4>Current additional Plugins</h4>
+	<ul>
+	  <li>OpenSSL hashes (Md4/Md5/Sha*/Whirlpool/MDC2/RIPEMD160)</li>
+	  <li>Python 2.7 & 3.x to run Python 2.7 and 3.x scripts</li>
+	</ul>
+	
 	<h3>Applying a transformation chain to a large number of data blocks</h3>
 	<p>The tool is also able to apply a transformation chain `en masse` to either a file, or data blocks received from a TCP socket, a Named Pipe (Windows) or a UNIX Socket (UNIX/Linux) via the Mass 
 	Processing utility</p>
