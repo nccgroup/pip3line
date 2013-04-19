@@ -54,14 +54,14 @@
 
 	<p>The plugin itself is a factory for TransformAbstract objects.</p>
 
-	<p>The programme loading the plugin will use the root class (the one the one that implement the <i>TransformFactoryPluginInterface</i> interface) to retrieve instances of transformations objects.</p>
+	<p>The programme loading the plugin will use the root class (the one the one that implement the <em>TransformFactoryPluginInterface</em> interface) to retrieve instances of transformations objects.</p>
 
-	<p>To send error messages to the GUI just use the signals <i>error(message,source)</i> and <i>warning(message,sources)</i> or the <i>Pip3lineCallback</i> object (logError/logWarning/logStatus)</p>
+	<p>To send error messages to the GUI just use the signals <em>error(message,source)</em> and <em>warning(message,sources)</em> or the <em>Pip3lineCallback</em> object (logError/logWarning/logStatus)</p>
 
 	<p>The individual panels will only display the last messages but all messages will appears in the logs panel.</p>
 
 	<h3>Memory management</h3>
-	<p>You should not delete any <i>TransformAbstract</i> objects yourself, this should done automatically.</p>
+	<p>You should not delete any <em>TransformAbstract</em> objects yourself, this should done automatically.</p>
 
 	<p>The same applies to the GUI configuration objects, Qt guarantee that these will be cleaned automatically whenever the parent GUI object is deleted.</p>
 
