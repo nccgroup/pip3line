@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Pip3line - The Swiss army knife of byte manipulation</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Pip3line</h1>
+        
+        <ul>
+          <li class="download"><a class="buttons" href="index.html">Home</a></li>
+          <li class="download"><a class="buttonsdownload" href="download.html">Download</a></li>
+        </ul>
+        <p class="header">Documentation</p>
+        <ul>
+          <li class="download"><a class="buttons" href="nativeextensions.html">Native plugin API</a></li>
+          <li class="download"><a class="buttons" href="pythonplugins.html">Python plugins</a></li>
+          <li class="download"><a class="buttons" href="shortcuts.html">Shortcuts list</a></li>
+        </ul>
+        <p>Repository</p>
+        <ul>
+          <li><a class="buttons github" href="https://github.com/nccgroup/pip3line" target="_blank">View On GitHub</a></li>
+        </ul>
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/metrodango">Gabriel Caudrelier</a></p>
+
+
+      </header>
+      <section>
+	<h2>Coding your own plugins</h2>
+
+	<h3>Why would you do want to do that?</h3>
+	<p>If you want to implement your own hash for instance, or a special decoder type, or just a cool parser.</p>
+
+	<h3>Prequisites</h3>
+	<ul>
+	<li>Having a working Qt development environment</li>
+	<li>Having a good basic knowledge on dynamic library development in C/C++</li>
+	<li>Using QtCreator makes it easier, but that's ultimately optional. I guess anyone mastering libraries development would only need notepad.</li>
+	</ul>
+
+	<h3>Base principles</h3>
+
+	<p>The plugin itself is a factory for TransformAbstract objects.</p>
+
+	<p>The programme loading the plugin will use the root class (the one the one that implement the <i>TransformFactoryPluginInterface</i> interface) to retrieve instances of transformations objects.</p>
+
+	<p>To send error messages to the GUI just use the signals <i>error(message,source)</i> and <i>warning(message,sources)</i> or the <i>Pip3lineCallback</i> object (logError/logWarning/logStatus)</p>
+
+	<p>The individual panels will only display the last messages but all messages will appears in the logs panel.</p>
+
+	<h3>Memory management</h3>
+	<p>You should not delete any <i>TransformAbstract</i> objects yourself, this should done automatically.</p>
+
+	<p>The same applies to the GUI configuration objects, Qt guarantee that these will be cleaned automatically whenever the parent GUI object is deleted.</p>
+
+	<h3>Example</h3>
+	<p>The source code repository contains a ready-to-build example, located in defaultplugins/examplePlugin.</p>
+
+	<p>The source is documented, and should not be too difficult to understand.</p>
+
+	<h3>Notes</h3>
+	<p>The gui/command line tool should do most of the hard work for you, as long as you are doing yours well (i.e. cleaning memory, sanitizing any user input ..) there should not be any issue.</p>
+
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> based on the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
+  </body>
+</html>

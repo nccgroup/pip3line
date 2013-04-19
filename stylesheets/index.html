@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Pip3line - The Swiss army knife of byte manipulation</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Pip3line</h1>
+        
+        <ul>
+          <li class="download"><a class="buttons" href="index.html">Home</a></li>
+          <li class="download"><a class="buttonsdownload" href="download.html">Download</a></li>
+        </ul>
+        <p class="header">Documentation</p>
+        <ul>
+          <li class="download"><a class="buttons" href="nativeextensions.html">Native plugin API</a></li>
+          <li class="download"><a class="buttons" href="pythonplugins.html">Python plugins</a></li>
+          <li class="download"><a class="buttons" href="shortcuts.html">Shortcuts list</a></li>
+        </ul>
+        <p>Repository</p>
+        <ul>
+          <li><a class="buttons github" href="https://github.com/nccgroup/pip3line" target="_blank">View On GitHub</a></li>
+        </ul>
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/metrodango">Gabriel Caudrelier</a></p>
+
+
+      </header>
+      <section>
+	<h2>Pip3line, the Swiss army knife of byte manipulation</h2>
+
+	<p>Pip3line is a raw bytes manipulation utility, able to apply well known and less well known transformations from anywhere to anywhere (almost).</p>
+
+	<p>Its main usefullness lies in pentesting and reverse-engineering / binary analysis purposes.</p>
+
+	<h3>The main bit</h3>
+
+	<p>On a Linux KDE desktop the main window would look like this (the actual apparence is system dependent)</p>
+
+	<img src="images/pip3line1.png">
+	<p>
+	Current transformations list include classic decoders such as Base64/32/hex to simple cryptographic ciphers, and includes common hashes algorithms as well as obfuscation techniques.
+
+	Easy to use, but still offering some tweaking for most transformations, it also has the ability to save/restore a configured transformation chain for future used.</p>
+
+	<h3>Applying a transformation chain to a large number of data blocks</h3>
+	<p>The tool is also able to apply a transformation chain `en masse` to either a file, or data blocks received from a TCP socket, a Named Pipe (Windows) or a UNIX Socket (UNIX/Linux) via the Mass 
+	Processing utility</p>
+
+	<img src="images/massprocessing.png">
+	
+	<h3>The Quick View</h3>
+	<p>To help reverse engineering, a powerfull quick view functionality is present, which will automatically apply a transformation to the current selection.<p/>
+	</p>
+	
+	<img src="images/pip3line_quickview.png">
+
+	<h3>Basic text analysis</h3>
+	<p>The text analysis functionality gives you some basic information from your input.</p>
+
+	<img src="images/simple_analysis.png">
+
+	<h3>Import / Export</h3>
+	<p>Finally the tool allows you to import/export bytes data easily, either via the Tray Icon, the context menu, or the pre-configured shortcuts.</p>
+
+	<img src="images/import.png"> <img src="images/export.png">
+	<p>The import/export functions are personalizable by the user via the <i>Tools->Settings</i> dialog</p>
+	<img src="images/importexportsettings.png">
+	
+	<h3>Extending Pip3line</h3>
+	<p>Pip3line was designed to be extendable and allows you to create your own transformations by using the C++/Qt plugin API.</p>
+
+	<p>Alternatively you can just use the powerful Python 2.7 & 3 plugins to load your own Python scripts.</p>
+	<p>Please refer to the documentation for more information</p>
+	
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> based on the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
+  </body>
+</html>
