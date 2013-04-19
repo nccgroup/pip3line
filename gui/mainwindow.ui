@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<comment>
+ <comment>
   * Released as open source by NCC Group Plc - http://www.nccgroup.com/
   *
   * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
@@ -125,7 +125,7 @@
   </action>
   <action name="actionPip3line_settings">
    <property name="text">
-    <string>Pip3line &amp;settings</string>
+    <string>&amp;Settings</string>
    </property>
   </action>
   <action name="actionNew_Tab">

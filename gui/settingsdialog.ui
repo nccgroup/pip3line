@@ -35,7 +35,7 @@
    <item>
     <widget class="QToolBox" name="toolBox">
      <property name="currentIndex">
-      <number>0</number>
+      <number>5</number>
      </property>
      <widget class="QWidget" name="generalPage">
       <property name="geometry">
@@ -308,8 +308,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>83</width>
-        <height>100</height>
+        <width>415</width>
+        <height>372</height>
        </rect>
       </property>
       <attribute name="label">
@@ -351,8 +351,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>327</width>
-        <height>104</height>
+        <width>415</width>
+        <height>372</height>
        </rect>
       </property>
       <attribute name="label">
@@ -417,7 +417,7 @@
        </rect>
       </property>
       <attribute name="label">
-       <string>Markings</string>
+       <string>Markings Colors</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_15">
        <property name="spacing">
@@ -496,7 +496,7 @@
        </rect>
       </property>
       <attribute name="label">
-       <string>Import/Exports functions</string>
+       <string>Import/Export Functions</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_16">
        <property name="spacing">
@@ -508,7 +508,7 @@
        <item>
         <widget class="QLabel" name="importExportlabel">
          <property name="text">
-          <string>Transformations used for import/export functionalities (Tray icon, copy as, replace, insert as, load)</string>
+          <string>Transformations used for import/export functionalities (Tray icon, copy as, replace, insert as and load from clipboard)</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>

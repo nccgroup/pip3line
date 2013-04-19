@@ -74,9 +74,17 @@ int main(int argc, char *argv[])
     homeDir = QDir::home();
     if (homeDir.cd(Pip3lineConst::USER_DIRECTORY)) {
         QString logdir = homeDir.absolutePath().append(QDir::separator()).append("pip3line_gui.log");
+#ifdef _MSC_VER
+        char buffer[80];
+        if (fopen_s (_logFile, logdir.toUtf8().data(),"w") != 0) {
+            _strerror_s(buffer, 80);
+            fprintf( stderr, buffer );
+#else
         _logFile = fopen (logdir.toUtf8().data(),"w");
+
         if (_logFile == NULL) {
             qWarning("Cannot open log file for writing");
+#endif
         } else {
             qInstallMessageHandler(myMessageOutput);
         }
@@ -98,11 +106,15 @@ int main(int argc, char *argv[])
 
     // Cleaning the PATH to avoid library loading corruption
     {
-        QByteArray pathValue = "PATH=''";
-        putenv(pathValue.data());
+#ifdef _MSC_VER
+        _putenv_s(const_cast<char *>("PATH",""));
+#else
+        putenv(const_cast<char *>("PATH=''"));
+        putenv(const_cast<char *>("LD_PRELOAD=''"));
+#endif
 
-        QByteArray ldpreloadValue = "LD_PRELOAD=''";
-        putenv(ldpreloadValue.data());
+
+
     }
 
     QStringList list = QApplication::arguments();

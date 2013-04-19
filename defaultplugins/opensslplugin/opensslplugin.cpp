@@ -17,7 +17,7 @@ Released under AGPL see LICENSE for more information
 #include <openssl/evp.h>
 #include <openssl/crypto.h>
 
-const QStringList OpensslPlugin::blacklistHash = QStringList() << "ecdsa-with-SHA1" << "DSA" << "DSA-SHA" << "MD5" << "MD4" << "SHA1";
+const QStringList OpensslPlugin::blacklistHash = QStringList() << "ecdsa-with-SHA1" << "DSA" << "DSA-SHA" << "MD5" << "MD4" << "SHA1" << "SHA";
 QMutex OpensslPlugin::hashListLocker;
 
 extern "C" {
