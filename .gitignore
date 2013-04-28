@@ -15,3 +15,4 @@ scripts/__pycache__/*
 *.pyc
 *.jar
 unittests/unittests-build-*
+pip3line.kdev4

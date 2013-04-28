@@ -152,6 +152,7 @@ QString Python3::outboundString() const
 
 bool Python3::loadModule()
 {
+    bool oldtwoWays = twoWays;
     twoWays = false;
     if (!checkPyObject(pModule)) {
         PyObject *pName;
@@ -183,6 +184,9 @@ bool Python3::loadModule()
         }else {
             PyErr_Clear();
         }
+
+        if (oldtwoWays != twoWays)
+            Q_EMIT confUpdated();
 
         return true;
     }

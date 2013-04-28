@@ -75,9 +75,14 @@ int main(int argc, char *argv[])
     if (homeDir.cd(Pip3lineConst::USER_DIRECTORY)) {
         QString logdir = homeDir.absolutePath().append(QDir::separator()).append("pip3line_gui.log");
 #ifdef _MSC_VER
-        char buffer[80];
-        if (fopen_s (_logFile, logdir.toUtf8().data(),"w") != 0) {
-            _strerror_s(buffer, 80);
+#define BUFFERSIZE 200
+
+        char buffer[BUFFERSIZE];
+        memset((void *)buffer, 0, BUFFERSIZE);
+
+        errno_t err = fopen_s (&_logFile, logdir.toUtf8().data(),"w");
+        if ( err != 0) {
+            strerror_s(buffer, BUFFERSIZE, err);
             fprintf( stderr, buffer );
 #else
         _logFile = fopen (logdir.toUtf8().data(),"w");
@@ -107,7 +112,7 @@ int main(int argc, char *argv[])
     // Cleaning the PATH to avoid library loading corruption
     {
 #ifdef _MSC_VER
-        _putenv_s(const_cast<char *>("PATH",""));
+        _putenv_s(const_cast<char *>("PATH"),"");
 #else
         putenv(const_cast<char *>("PATH=''"));
         putenv(const_cast<char *>("LD_PRELOAD=''"));

@@ -54,10 +54,10 @@ void Python27::transform(const QByteArray &input, QByteArray &output)
             logError(tr("Could not set the direction value properly"),id);
         }
 
-        PyObject * pFunc = PyObject_GetAttrString(pModule, MAIN_FUNCTION_NAME.toUtf8().data());
+        PyObject * pFunc = PyObject_GetAttrString(pModule, MAIN_FUNCTION_NAME.toUtf8().data()); // to be cleaned
 
         if (checkPyObject(pFunc) && PyCallable_Check(pFunc)) {
-            PyObject* pArgs = PyTuple_New(1);
+            PyObject* pArgs = PyTuple_New(1); // to be cleaned ... for now
 
             if (!checkPyObject( pArgs)) {
                 emit error("Error while creating the Python argument tuple", id);
@@ -65,7 +65,7 @@ void Python27::transform(const QByteArray &input, QByteArray &output)
                 return;
             }
 
-            PyObject* inputPy = PyByteArray_FromStringAndSize(input.data(),input.size());
+            PyObject* inputPy = PyByteArray_FromStringAndSize(input.data(),input.size()); // to be cleaned ... for now
             if (!checkPyObject( inputPy)) {
                 emit error("Error while creating the Python byte array", id);
                 Py_XDECREF(pFunc);
@@ -73,7 +73,7 @@ void Python27::transform(const QByteArray &input, QByteArray &output)
                 return;
             }
 
-            if (PyTuple_SetItem(pArgs, 0, inputPy) != 0) {
+            if (PyTuple_SetItem(pArgs, 0, inputPy) != 0) { // stealing the reference of inputPy
                 emit error("Error while creating the Python byte array", id);
                 Py_XDECREF(pFunc);
                 Py_XDECREF(pArgs);
@@ -165,6 +165,7 @@ bool Python27::checkPyObject(PyObject *obj)
 
 bool Python27::loadModule()
 {
+    bool oldtwoWays = twoWays;
     twoWays = false;
     if (!checkPyObject(pModule)) {
         PyObject *pName;
@@ -190,7 +191,6 @@ bool Python27::loadModule()
 
             if (checkPyObject(returnValue) && PyBool_Check(returnValue)) {
                 twoWays = returnValue == Py_True;
-                qDebug() << "Got the direction " << twoWays;
             } else {
                 qDebug() << "don't have the direction";
             }
@@ -199,9 +199,11 @@ bool Python27::loadModule()
 
         }else {
             PyErr_Clear();
-            qDebug() << "Error while calling the Python function %1(), assuming one way transform";
         }
-        qDebug() << "module loaded and configured";
+
+        if (oldtwoWays != twoWays)
+            Q_EMIT confUpdated();
+
         return true;
     } else {
         pModule = NULL;

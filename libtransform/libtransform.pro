@@ -14,7 +14,13 @@ TEMPLATE = lib
 CONFIG += release plugin
 DEFINES += LIBTRANSFORM_LIBRARY
 
+unix {
 DESTDIR = ../bin
+}
+
+win32 {
+DESTDIR = ../lib
+}
 
 SOURCES += transformmgmt.cpp \
     transformabstract.cpp \

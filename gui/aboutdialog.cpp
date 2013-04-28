@@ -23,7 +23,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
     QString info;
 
     info.append(tr("<p>Compiled with <b>Qt %1</b> (currently running with Qt %2)</p>").arg(QT_VERSION_STR).arg(qVersion()));
-    info.append(tr("<p>Style(s) available on this platform:<ul>"));
+    info.append(tr("<p>Style(s) available on this platform: <ul>"));
     QStringList stylelist = QStyleFactory::keys();
     for (int i = 0; i < stylelist.size(); i++) {
         info.append("<li>");

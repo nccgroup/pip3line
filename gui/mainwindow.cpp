@@ -184,7 +184,7 @@ void MainWindow::checkForUpdates()
 void MainWindow::processingCheckForUpdate(DownloadManager *dm)
 {
     QString data = QString::fromUtf8(dm->getData());
-    qDebug() << data;
+
     QString message = "Unknown";
     QRegExp versionRegExp("#define VERSION_STRING \"(.*)\"");
     if (data.isEmpty()) {
