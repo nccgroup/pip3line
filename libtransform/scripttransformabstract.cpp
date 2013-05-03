@@ -78,7 +78,11 @@ bool ScriptTransformAbstract::setConfiguration(QHash<QString, QString> propertie
 
 QWidget *ScriptTransformAbstract::requestGui(QWidget *parent)
 {
-    return new ModuleTransformWidget(this, parent);
+    QWidget * widget = new(std::nothrow) ModuleTransformWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for ModuleTransformWidget X{");
+    }
+    return widget;
 }
 
 QString ScriptTransformAbstract::getModuleName() const

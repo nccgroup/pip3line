@@ -7,12 +7,20 @@
 # Released under AGPL see LICENSE for more information
 
 QT       += svg gui xmlpatterns network
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = baseplugins
 TEMPLATE = lib
 CONFIG += plugin release
 
-LIBS += -L"../../bin/" -ltransform
+unix {
+    LIBS += -L"../../bin/" -ltransform
+}
+
+win32 {
+    LIBS += -L"../../lib/" -ltransform
+}
+
 INCLUDEPATH += ../../libtransform/
 DESTDIR = ../../bin/plugins
 
@@ -82,7 +90,15 @@ SOURCES += baseplugins.cpp \
     basex.cpp \
     confgui/basexwidget.cpp \
     ntlmssp.cpp \
-    confgui/ntlmsspwidget.cpp
+    confgui/ntlmsspwidget.cpp \
+    confgui/numbertocharwidget.cpp \
+    bytestofloat.cpp \
+    confgui/bytestofloatwdiget.cpp
+
+greaterThan(QT_MAJOR_VERSION, 4): SOURCES += sha256.cpp \
+    sha512.cpp \
+    sha224.cpp \
+    sha384.cpp
 
 HEADERS += baseplugins.h\
     baseplugins_global.h\
@@ -149,7 +165,15 @@ HEADERS += baseplugins.h\
     basex.h \
     confgui/basexwidget.h \
     ntlmssp.h \
-    confgui/ntlmsspwidget.h
+    confgui/ntlmsspwidget.h \
+    confgui/numbertocharwidget.h \
+    bytestofloat.h \
+    confgui/bytestofloatwdiget.h
+
+greaterThan(QT_MAJOR_VERSION, 4): HEADERS += sha256.h \
+    sha512.h \
+    sha224.h \
+    sha384.h
 
 FORMS += \
     confgui/xorwidget.ui \
@@ -176,7 +200,9 @@ FORMS += \
     confgui/microsofttimestampwidget.ui \
     confgui/byteintegerwidget.ui \
     confgui/basexwidget.ui \
-    confgui/ntlmsspwidget.ui
+    confgui/ntlmsspwidget.ui \
+    confgui/numbertocharwidget.ui \
+    confgui/bytestofloatwdiget.ui
 
 RESOURCES += \
     baseplugins_res.qrc

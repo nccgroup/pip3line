@@ -16,9 +16,12 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 DebugDialog::DebugDialog(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::DebugDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::DebugDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::DebugDialog X{");
+    }
     ui->setupUi(this);
     connect(this, SIGNAL(rejected()), this, SLOT(deleteLater()));
 }
@@ -44,7 +47,7 @@ void DebugDialog::on_loadPushButton_clicked()
     QObject *parentObj = obj->parent();
 
 
-    if (superClassObj != 0) {
+    if (superClassObj != NULL) {
         QString parentName = superClassObj->className();
         ui->nameValLabel->setText(tr("%1 (%2)").arg(obj->metaObject()->className()).arg(parentName));
 
@@ -78,7 +81,7 @@ void DebugDialog::on_loadPushButton_clicked()
 
     else
         ui->nameValLabel->setText(tr("%1").arg(obj->metaObject()->className()));
-    if (parentObj == 0)
+    if (parentObj == NULL)
         ui->parentValLabel->setText(tr("None"));
     else
         ui->parentValLabel->setText(tr("0x%1 %2").arg(QString::number((quint64) parentObj, 16)).arg(parentObj->metaObject()->className()));

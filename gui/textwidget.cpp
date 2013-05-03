@@ -18,19 +18,26 @@ Released under AGPL see LICENSE for more information
 int TextWidget::MAX_TEXT_VIEW = 100000;
 
 TextWidget::TextWidget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::TextWidget)
+    QWidget(parent)
 {
-    currentModel = 0;
+    ui = new(std::nothrow) Ui::TextWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::TextWidget X{");
+    }
+    currentModel = NULL;
 
     ui->setupUi(this);
 
-    qDebug() << "Created" << this;
-    renderThread = new RenderTextView(this);
-    connect(renderThread, SIGNAL(startingRendering()), this, SLOT(textRenderingStarted()),Qt::QueuedConnection);
-    connect(renderThread, SIGNAL(finishedRendering()), this, SLOT(textRenderingFinished()),Qt::QueuedConnection);
-    connect(renderThread, SIGNAL(dataChunk(QString)), this, SLOT(reveceivingTextChunk(QString)),Qt::QueuedConnection);
-    renderThread->start();
+    //qDebug() << "Created" << this;
+    renderThread = new(std::nothrow) RenderTextView(this);
+    if (renderThread != NULL) {
+        connect(renderThread, SIGNAL(startingRendering()), this, SLOT(textRenderingStarted()),Qt::QueuedConnection);
+        connect(renderThread, SIGNAL(finishedRendering()), this, SLOT(textRenderingFinished()),Qt::QueuedConnection);
+        connect(renderThread, SIGNAL(dataChunk(QString)), this, SLOT(reveceivingTextChunk(QString)),Qt::QueuedConnection);
+        renderThread->start();
+    } else {
+        qFatal("Cannot allocate memory for renderThread X{");
+    }
 
     ui->plainTextEdit->installEventFilter(this);
     connect(ui->plainTextEdit, SIGNAL(textChanged()), this, SLOT(onTextChanged()));
@@ -45,9 +52,11 @@ TextWidget::TextWidget(QWidget *parent) :
 
 TextWidget::~TextWidget()
 {
-    renderThread->stop();
-    renderThread->wait();
-    delete renderThread;
+    if (renderThread != NULL) {
+        renderThread->stop();
+        renderThread->wait();
+        delete renderThread;
+    }
     delete ui;
 }
 
@@ -134,6 +143,7 @@ void TextWidget::updateText(ByteItemModel::UpdateSource source)
 {
     if (source == ByteItemModel::TEXTVIEW)
         return;
+
     ui->plainTextEdit->blockSignals(true);
     ui->plainTextEdit->clear();
     if (currentModel->isStringValid()) {

@@ -14,12 +14,19 @@ Released under AGPL see LICENSE for more information
 
 
 LoggerWidget::LoggerWidget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::LoggerWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::LoggerWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::LoggerWidget X{");
+    }
     ui->setupUi(this);
-    cerr = new QTextStream(stderr);
-    cout = new QTextStream(stdout);
+    cerr = new(std::nothrow) QTextStream(stderr);
+    if (cerr == NULL)
+        qFatal("Cannot allocate memory for logger cerr X{");
+    cout = new(std::nothrow) QTextStream(stdout);
+    if (cout == NULL)
+        qFatal("Cannot allocate memory for logger cout X{");
     uncheckedError = false;
 }
 

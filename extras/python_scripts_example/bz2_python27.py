@@ -9,8 +9,7 @@
 
 import bz2
 
-def pip3line_is_two_ways():
-	return True
+Pip3line_is_two_ways = True
 
 def pip3line_transform(inputData):
 	ret = None

@@ -19,6 +19,7 @@ Released under AGPL see LICENSE for more information
 #include <QDir>
 #include <QCoreApplication>
 #include <QSetIterator>
+#include <QMetaType>
 #include "composedtransform.h"
 #include "../version.h"
 
@@ -35,7 +36,7 @@ using namespace Pip3lineConst;
 TransformMgmt::TransformMgmt()
 {
     id = tr("TransformMgmt");
-    settings = 0;
+    settings = NULL;
     cycleSem.release(MAX_NESTING);
 }
 
@@ -43,14 +44,14 @@ TransformMgmt::~TransformMgmt()
 {
     unloadTransforms();
     unloadPlugins();
-    if (settings != 0)
+    if (settings != NULL)
         delete settings;
 
     if (transformInstances.isEmpty()) {
         qDebug() << "No TransformAbstract instances left :D";
     } else {
         QTextStream cout(stderr);
-        cout << endl << "TransformAbstract instances still present T_T (Memory leak)" << endl;
+        qWarning("TransformAbstract instances still present T_T (Memory leak)");
         QSetIterator<TransformAbstract *> i(transformInstances);
          while (i.hasNext())
              cout << " => " << i.next() << endl;
@@ -59,6 +60,7 @@ TransformMgmt::~TransformMgmt()
 
 bool TransformMgmt::initialize(const QString &baseDirectory)
 {
+    qRegisterMetaType<Messages>("Messages");
     if (baseDirectory.isEmpty()) {
         qDebug() << tr("Application dir path is empty. Plugins won't probably load.");
     }
@@ -166,14 +168,14 @@ bool TransformMgmt::loadTransforms(bool verbose) {
 
 void TransformMgmt::saveInstance(TransformAbstract *ta)
 {
-    if (ta == 0)
+    if (ta == NULL)
         return;
 
     if (transformInstances.contains(ta)) {
         if (QString(ta->metaObject()->className()) == QString("ComposedTransform"))
             qDebug() << tr("Composed Class already registered") << ta;
         else
-            qDebug() << tr("Class already registered T_T") << ta;
+            qWarning() << tr("Class already registered T_T") << ta;
     }
     else {
         transformInstances.insert(ta);
@@ -184,11 +186,12 @@ void TransformMgmt::saveInstance(TransformAbstract *ta)
 void TransformMgmt::OnTransformDelete()
 {
     TransformAbstract* src = (TransformAbstract* ) sender();
-
-    if (transformInstances.contains(src)) {
-        transformInstances.remove(src);
-    } else {
-        qDebug() << "Could not find " << src << " in the instance list";
+    if (src != NULL) {
+        if (transformInstances.contains(src)) {
+            transformInstances.remove(src);
+        } else {
+            qDebug() << "Could not find " << src << " in the instance list";
+        }
     }
 }
 
@@ -200,7 +203,7 @@ bool TransformMgmt::loadPlugins()
     // loading static plugins first
     foreach (QObject *plugin, QPluginLoader::staticInstances()) {
         TransformFactoryPluginInterface *tro = qobject_cast<TransformFactoryPluginInterface *>(plugin);
-        if (tro != 0) {
+        if (tro != NULL) {
            registerPlugin(tro);
            emit status(tr("Loaded static plugin: \"%1\" version %2 (compiled with Qt %3)").arg(tro->pluginName()).arg(tro->pluginVersion()).arg(tro->compiledWithQTversion()),id);
         } else {
@@ -226,11 +229,15 @@ bool TransformMgmt::loadPlugins()
         foreach (QString fileName, pluginsDir.entryList(QDir::Files)) {
             QString absName = pluginsDir.absoluteFilePath(fileName);
 
-             QPluginLoader *loader = new QPluginLoader(absName);
+             QPluginLoader *loader = new(std::nothrow) QPluginLoader(absName);
+             if (loader == NULL) {
+                 qFatal("Cannot allocate memory for QPluginLoader X{");
+                 return false;
+             }
              QObject *plugin = loader->instance();
              if (plugin) {
                  TransformFactoryPluginInterface *tro = qobject_cast<TransformFactoryPluginInterface *>(plugin);
-                 if (tro != 0) {
+                 if (tro != NULL) {
                     if (tro->getLibTransformVersion() == LIB_TRANSFORM_VERSION) {
                         if (!pluginsList.contains(tro->pluginName())) {
                             registerPlugin(tro);
@@ -276,7 +283,7 @@ void TransformMgmt::unloadPlugins()
     foreach (Pip3lineCallback * val, callbackList)
          delete val;
 
-    QPluginLoader *loader = 0;
+    QPluginLoader *loader = NULL;
     while (!pluginLibs.isEmpty()) {
         loader = pluginLibs.takeLast();
         loader->unload();
@@ -294,7 +301,7 @@ void TransformMgmt::unloadTransforms() {
 
 TransformAbstract * TransformMgmt::getTransform(QString name) {
 
-    TransformAbstract * ta = 0;
+    TransformAbstract * ta = NULL;
     listLocker.lock();
     if (!cycleSem.tryAcquire()) {
         listLocker.unlock();
@@ -307,14 +314,18 @@ TransformAbstract * TransformMgmt::getTransform(QString name) {
         listLocker.unlock();
         ta = plugin->getTransform(name);
 
-        if (ta == 0)
+        if (ta == NULL)
             emit error(tr("The plugin could not instanciate the transformation object named \"%1\" v_v").arg(name),id);
     } else if (savedConf.contains(name)) {
         listLocker.unlock();
 
         TransformChain chain = loadChainFromSaved(name);
-        if (!chain.isEmpty())
-            ta = new ComposedTransform(chain);
+        if (!chain.isEmpty()) {
+            ta = new(std::nothrow) ComposedTransform(chain);
+            if (ta == NULL) {
+                qFatal("Cannot allocate memory for ComposedTransform 1 X{");
+            }
+        }
     }else {
         listLocker.unlock();
         emit error(tr("No transformation named \"%1\" was found in the current plugins and the persistent storage").arg(name),id);
@@ -413,7 +424,7 @@ TransformChain TransformMgmt::loadConfFromXML(QXmlStreamReader *stream)
     }
 
     int order = 0;
-    TransformAbstract * ntw = 0;
+    TransformAbstract * ntw = NULL;
     QHash<QString, QString> properties;
 
     while (!stream->atEnd()) {
@@ -426,7 +437,7 @@ TransformChain TransformMgmt::loadConfFromXML(QXmlStreamReader *stream)
 
         if (ok) {
           ntw = getTransform(name);
-          if (ntw != 0) {
+          if (ntw != NULL) {
               connect(ntw,SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)));
               connect(ntw,SIGNAL(warning(QString,QString)), this, SLOT(logError(QString,QString)));
 
@@ -508,18 +519,15 @@ bool TransformMgmt::saveConfToFile(const QString &fileName, const TransformChain
 
 TransformAbstract *TransformMgmt::loadTransformFromConf(const QHash<QString, QString> confEle)
 {
-    TransformAbstract *transf = 0;
+    TransformAbstract *transf = NULL;
     if (confEle.contains(PROP_NAME)) {
         transf = getTransform(confEle.value(PROP_NAME));
-        if (transf != 0) {
+        if (transf != NULL) {
             connect(transf,SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)));
             connect(transf,SIGNAL(warning(QString,QString)), this, SLOT(logError(QString,QString)));
-             if (transf->setConfiguration(confEle)) {
-                disconnect(transf,SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)));
-                disconnect(transf,SIGNAL(warning(QString,QString)), this, SLOT(logError(QString,QString)));
-             } else {
-                delete transf;
-            }
+            transf->setConfiguration(confEle);
+            disconnect(transf,SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)));
+            disconnect(transf,SIGNAL(warning(QString,QString)), this, SLOT(logError(QString,QString)));
         }
     } else {
         emit error (tr("Missing property \"%1\" in the configuration").arg(PROP_NAME),id);
@@ -645,12 +653,16 @@ void TransformMgmt::setPersistance(const QString &name, bool persistent)
 
 TransformAbstract *TransformMgmt::loadComposedTransformFromXML(QXmlStreamReader *streamReader)
 {
-    TransformAbstract *ta = 0;
+    TransformAbstract *ta = NULL;
     TransformChain chain = loadConfFromXML(streamReader);
 
     if (!chain.isEmpty()) {
-        ta = new ComposedTransform(chain);
-        saveInstance(ta);
+        ta = new(std::nothrow) ComposedTransform(chain);
+        if (ta == NULL) {
+            qFatal("Cannot allocate memory for ComposedTransform 2 X{");
+        } else {
+            saveInstance(ta);
+        }
     }
 
     return ta;
@@ -718,7 +730,11 @@ inline bool TransformMgmt::isValidAttributeName(QString name)
 void TransformMgmt::registerPlugin(TransformFactoryPluginInterface *plugin)
 {
     pluginsList.insert(plugin->pluginName(),plugin);
-    Pip3lineCallback * callback = new Pip3lineCallback(this, fileConf, plugin->pluginName());
+    Pip3lineCallback * callback = new(std::nothrow) Pip3lineCallback(this, fileConf, plugin->pluginName());
+    if (callback == NULL) {
+        qFatal("Cannot allocate memory for Pip3lineCallback X{");
+        return;
+    }
 
     connect(callback, SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)));
     connect(callback, SIGNAL(warning(QString,QString)), this, SLOT(logWarning(QString,QString)));
@@ -733,7 +749,11 @@ void TransformMgmt::registerPlugin(TransformFactoryPluginInterface *plugin)
 QSettings *TransformMgmt::getSettingsObj()
 {
     fileConf = getHomeDirectory().append(QDir::separator()).append(CONF_FILE);
-    return new QSettings(fileConf,QSettings::IniFormat);
+    QSettings * settings = new(std::nothrow) QSettings(fileConf,QSettings::IniFormat);
+    if (settings == NULL) {
+        qFatal("Cannot allocate memory for QSettings (lib) X{");
+    }
+    return settings;
 }
 
 

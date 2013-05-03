@@ -12,14 +12,20 @@ Released under AGPL see LICENSE for more information
 #include "ui_hexencodewidget.h"
 
 HexEncodeWidget::HexEncodeWidget(HexEncode *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::HexEncodeWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::HexEncodeWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::HexEncodeWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     switch(transform->getType()) {
         case HexEncode::NORMAL:
             ui->normalRadioButton->setChecked(true);
+            break;
+        case HexEncode::ESCAPED_MIXED:
+            ui->escapedMixedRadioButton->setChecked(true);
             break;
         case HexEncode::ESCAPED:
             ui->escapedRadioButton->setChecked(true);
@@ -36,6 +42,7 @@ HexEncodeWidget::HexEncodeWidget(HexEncode *ntransform, QWidget *parent) :
 
     connect(ui->normalRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
     connect(ui->escapedRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
+    connect(ui->escapedMixedRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
     connect(ui->cstyleRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
     connect(ui->csvRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
 }
@@ -51,6 +58,8 @@ void HexEncodeWidget::onTypeChange()
         transform->setType(HexEncode::NORMAL);
     else if (ui->escapedRadioButton->isChecked())
         transform->setType(HexEncode::ESCAPED);
+    else if (ui->escapedMixedRadioButton->isChecked())
+        transform->setType(HexEncode::ESCAPED_MIXED);
     else if (ui->cstyleRadioButton->isChecked())
         transform->setType(HexEncode::CSTYLE);
     else

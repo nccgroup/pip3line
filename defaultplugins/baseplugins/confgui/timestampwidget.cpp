@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_timestampwidget.h"
 
 TimestampWidget::TimestampWidget(TimeStamp *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::TimestampWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::TimestampWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::TimestampWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

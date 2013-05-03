@@ -29,7 +29,7 @@ DownloadManager::~DownloadManager()
 
 bool DownloadManager::launch()
 {
-    if (networkManager != 0) {
+    if (networkManager != NULL) {
         reply = networkManager->get(QNetworkRequest(resource));
         connect(reply, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(networkSSLError(QList<QSslError>)));
         connect(reply,SIGNAL(finished()), this, SLOT(requestFinished()));

@@ -13,9 +13,12 @@ Released under AGPL see LICENSE for more information
 #include <QTextCodec>
 
 CharEncodingWidget::CharEncodingWidget(CharEncoding *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::CharEncodingWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::CharEncodingWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::CharEncodingWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

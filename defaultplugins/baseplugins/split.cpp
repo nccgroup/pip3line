@@ -67,9 +67,9 @@ bool Split::isTwoWays()
 QHash<QString, QString> Split::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(XMLSEPARATOR,QString::number((int)separator));
+    properties.insert(XMLSEPARATOR,saveChar(separator));
     properties.insert(XMLGROUP,QString::number((int)group));
-    properties.insert(XMLEVERYTHING,QString::number((int)allGroup));
+    properties.insert(XMLEVERYTHING,QString::number(allGroup ? 1 : 0));
 
     return properties;
 }
@@ -79,15 +79,16 @@ bool Split::setConfiguration(QHash<QString, QString> propertiesList)
     bool res = TransformAbstract::setConfiguration(propertiesList);
     bool ok;
 
-    int val = propertiesList.value(XMLSEPARATOR).toInt(&ok);
-    if (!ok || val < 0x00 || val > 0xFF) {
+    QString tmp = propertiesList.value(XMLSEPARATOR);
+    char tmpChar;
+    if (!loadChar(tmp,&tmpChar)) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLSEPARATOR),id);
     } else {
-        setSeparator((char)val);
+        setSeparator(tmpChar);
     }
 
-    val = propertiesList.value(XMLGROUP).toInt(&ok);
+    int val = propertiesList.value(XMLGROUP).toInt(&ok);
     if (!ok) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLGROUP),id);
@@ -108,7 +109,11 @@ bool Split::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Split::requestGui(QWidget *parent)
 {
-    return new SplitWidget(this, parent);
+    QWidget * widget = new(std::nothrow) SplitWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for SplitWidget X{");
+    }
+    return widget;
 }
 
 QString Split::help() const
@@ -145,17 +150,20 @@ bool Split::setSelectedGroup(int val)
         emit error(tr("Invalid selected group value %1").arg(val),id);
         return false;
     }
-
-    group = val;
-    allGroup = false;
-    emit confUpdated();
+    if (group != val) {
+        group = val;
+        allGroup = false;
+        emit confUpdated();
+    }
     return true;
 }
 
 void Split::setTakeAllGroup(bool val)
 {
-    allGroup = val;
-    emit confUpdated();
+    if (allGroup != val) {
+        allGroup = val;
+        emit confUpdated();
+    }
 }
 
 

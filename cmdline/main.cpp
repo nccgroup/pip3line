@@ -120,9 +120,12 @@ int main(int argc, char *argv[])
         args.removeAt(index);
     }
 
-    MasterThread *pt;
+    MasterThread *pt = NULL;
 
-    pt = new MasterThread(binaryInput, noError, verbose);
+    pt = new(std::nothrow) MasterThread(binaryInput, noError, verbose);
+    if (pt == NULL) {
+        qFatal("Cannot allocate memory for MasterThread X{");
+    }
     if (fileName.isEmpty()) {
         pt->setTransformName(name, inbound);
     } else {

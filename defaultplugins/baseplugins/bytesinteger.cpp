@@ -57,8 +57,6 @@ void BytesInteger::transform(const QByteArray &input, QByteArray &output)
     QByteArray temp = input;
     if (wayValue == INBOUND) {
 
-
-
         if (temp.size() > integerSize) {
             temp = temp.mid(0,integerSize);
             emit warning(tr("Input size too big for the selected Integer size. the last bytes have been ignored"),id);
@@ -239,9 +237,9 @@ bool BytesInteger::isTwoWays()
 QHash<QString, QString> BytesInteger::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(PROP_ENDIAN,QString::number((int)littleendian));
+    properties.insert(PROP_ENDIAN,QString::number(littleendian ? 1 : 0));
     properties.insert(PROP_INTEGERSIZE,QString::number((int)integerSize));
-    properties.insert(PROP_SIGNEDINTEGER,QString::number((int)signedInteger));
+    properties.insert(PROP_SIGNEDINTEGER,QString::number(signedInteger ? 1 : 0));
 
     return properties;
 }
@@ -293,7 +291,11 @@ QString BytesInteger::outboundString() const
 
 QWidget *BytesInteger::requestGui(QWidget * parent )
 {
-    return new ByteIntegerWidget(this, parent);
+    QWidget * widget = new(std::nothrow) ByteIntegerWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for ByteIntegerWidget X{");
+    }
+    return widget;
 }
 
 QString BytesInteger::help() const

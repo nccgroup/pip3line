@@ -13,9 +13,12 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 IPTranslateIPv4Widget::IPTranslateIPv4Widget(IPTranslateIPv4 *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::IPTranslateIPv4Widget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::IPTranslateIPv4Widget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::IPTranslateIPv4Widget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

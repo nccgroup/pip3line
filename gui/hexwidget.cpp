@@ -10,11 +10,15 @@ Released under AGPL see LICENSE for more information
 
 #include "hexwidget.h"
 #include "ui_hexwidget.h"
+#include <transformabstract.h>
 
 HexWidget::HexWidget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::HexWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::HexWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::HexWidget X{");
+    }
     ui->setupUi(this);
     connect(ui->hexLineEdit, SIGNAL(textEdited(QString)),this, SLOT(onHexChanged()));
     setChar('\00');
@@ -39,7 +43,7 @@ void HexWidget::setChar(char c)
     QString data;
     QString hex = QString::fromUtf8(QByteArray(1,c).toHex());
 
-    if (c >= ' ' && c <= '~') {
+    if (TransformAbstract::isPrintable((qint32)c)) {
         data = QString::fromUtf8(&c, 1);
     } else {
         switch (c) {
@@ -65,7 +69,7 @@ void HexWidget::onHexChanged()
     char c = '\00';
     if (!input.isEmpty()) {
         c = input.at(0);
-        if (c >= ' ' && c <= '~') {
+        if (TransformAbstract::isPrintable((qint32)c)) {
             data = QString::fromUtf8(&c, 1);
         } else {
             switch (c) {

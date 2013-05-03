@@ -20,8 +20,8 @@ class Base64 : public TransformAbstract
         static const QByteArray BASE64CHAR;
         static const QStringList VARIATIONS;
         static const char DEFAULTPADDINGCHAR = '=';
-        enum Variation {STANDARD = 0, SAFEURL, DOTNET, CUSTOM};
-        enum PaddingType {DEFAULTPADDING = 0, DOTNETPADDING, NOPADDING, CUSTOMPADDING};
+        enum Variation {STANDARD = 0, SAFEURL = 1, DOTNET = 2, CUSTOM = 3};
+        enum PaddingType {DEFAULTPADDING = 0, DOTNETPADDING = 1, NOPADDING = 2, CUSTOMPADDING = 3};
         explicit Base64();
         ~Base64();
         QString name() const;

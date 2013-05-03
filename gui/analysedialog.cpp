@@ -18,9 +18,12 @@ Released under AGPL see LICENSE for more information
 #include <QBuffer>
 
 AnalyseDialog::AnalyseDialog(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::AnalyseDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::AnalyseDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::AnalyseDialog X{");
+    }
     ui->setupUi(this);
     ui->inputPlainTextEdit->setContextMenuPolicy(Qt::CustomContextMenu);
 

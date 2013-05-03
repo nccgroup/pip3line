@@ -31,7 +31,7 @@ class QuickViewDialog : public QDialog
     public slots:
         void receivingData(const QByteArray &data);
     private slots:
-        void NewItem();
+        void newItem();
         void itemDeleted();
         void onReset();
 

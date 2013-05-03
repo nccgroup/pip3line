@@ -17,18 +17,26 @@ Released under AGPL see LICENSE for more information
 #include "ui_transformsgui.h"
 
 TransformsGui::TransformsGui(GuiHelper *nguiHelper, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::TransformsGui)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::TransformsGui();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::TransformsGui X{");
+    }
     guiHelper = nguiHelper;
     transformFactory = guiHelper->getTransformFactory();
     logger  = guiHelper->getLogger();
     ui->setupUi(this);
 
-    firstTransformWidget = 0;
-    massProcessingDialog = 0;
+    firstTransformWidget = NULL;
+    massProcessingDialog = NULL;
 
-    firstTransformWidget = new TransformWidget(guiHelper, this);
+    firstTransformWidget = new(std::nothrow) TransformWidget(guiHelper, this);
+
+    if (firstTransformWidget == NULL) {
+        qFatal("Cannot allocate memory for firstTransformWidget X{");
+    }
+
     addWidget(firstTransformWidget);
 
     ui->savedComboBox->installEventFilter(guiHelper);
@@ -46,8 +54,7 @@ TransformsGui::TransformsGui(GuiHelper *nguiHelper, QWidget *parent) :
 TransformsGui::~TransformsGui()
 {
     qDebug() << "Destroying " << this;
-    if (massProcessingDialog != 0)
-        delete massProcessingDialog;
+    delete massProcessingDialog;
 
     while (transformWidgetList.size() > 0) {
         delete transformWidgetList.takeLast();
@@ -125,13 +132,24 @@ void TransformsGui::setCurrentTransformChain(TransformChain talist)
     }
 
     QList<TransformWidget *> widgetList;
+    TransformWidget *twa = NULL;
     for (int i = 0; i < talist.size(); i++) {
-        TransformWidget *twa = new TransformWidget(guiHelper, this);
-        twa->setTransform(talist.at(i));
-        widgetList.append(twa);
+        twa = new(std::nothrow) TransformWidget(guiHelper, this);
+        if (twa == NULL) {
+            qFatal("Cannot allocate memory for TransformWidget X{");
+            return;
+        } else {
+            twa->setTransform(talist.at(i));
+            widgetList.append(twa);
+        }
+    }
+    twa = new(std::nothrow) TransformWidget(guiHelper, this);
+    if (twa == NULL) {
+        qFatal("Cannot allocate memory for TransformWidget X{");
+        return;
     }
 
-    widgetList.append(new TransformWidget(guiHelper, this));
+    widgetList.append(twa);
 
     // setting the first transform widget
     firstTransformWidget = widgetList.at(0);
@@ -168,7 +186,11 @@ void TransformsGui::bringFront()
 void TransformsGui::processNewTransformation(TransformWidget *transformWidget)
 {
     int pos;
-    TransformWidget * ntw = new TransformWidget(guiHelper, this);
+    TransformWidget * ntw = new(std::nothrow) TransformWidget(guiHelper, this);
+    if (ntw == NULL) {
+        qFatal("Cannot allocate memory for TransformWidget ntw X{");
+        return;
+    }
 
     pos = transformWidgetList.indexOf(transformWidget);
 
@@ -176,7 +198,7 @@ void TransformsGui::processNewTransformation(TransformWidget *transformWidget)
     while (transformWidgetList.size() > pos + 1)
         delete transformWidgetList.takeLast();
 
-    ntw->input(transformWidget->output());
+    //ntw->input(transformWidget->output()); // testing
     addWidget(ntw);
 
 }
@@ -190,7 +212,8 @@ void TransformsGui::processDeletionRequest(TransformWidget *transformWidget)
 
     int i = transformWidgetList.indexOf(transformWidget);
     if (i == -1) {
-        QMessageBox::critical(this,tr("Radioactive error"), tr("I did not found the transform widget object. This should NEVER happen. T_T"),QMessageBox::Ok);
+        QMessageBox::critical(this,tr("Radioactive error"), tr("Widget object not found T_T"),QMessageBox::Ok);
+        qWarning() << tr("[TransformsGui] Widget object not found T_T");
         return;
     }
 
@@ -214,8 +237,12 @@ void TransformsGui::onMassProcessing()
         QMessageBox::critical(this,tr("Nothing to be processed"), tr("Please, select a transformation before."),QMessageBox::Ok);
         return;
     }
-    if (massProcessingDialog == 0) {
-        massProcessingDialog = new MassProcessingDialog(guiHelper, this);
+    if (massProcessingDialog == NULL) {
+        massProcessingDialog = new(std::nothrow) MassProcessingDialog(guiHelper, this);
+        if (massProcessingDialog == NULL) {
+            qFatal("Cannot allocate memory for MassProcessingDialog X{");
+            return;
+        }
         massProcessingDialog->setTranformChain(getCurrentChainConf());
         massProcessingDialog->setWindowTitle(tr("Mass processing for %1").arg(name));
     }
@@ -312,17 +339,19 @@ void TransformsGui::onSaveToMemory()
     } else {
 
         NameDialog * dia = guiHelper->getNameDialog(this, name);
-        int ret = dia->exec();
-        if (ret == QDialog::Accepted && !dia->getName().isEmpty()) {
-            QString newName = dia->getName();
-            if (newName.isEmpty())
-                newName = name;
-            setName(newName);
+        if (dia != NULL) {
+            int ret = dia->exec();
+            if (ret == QDialog::Accepted && !dia->getName().isEmpty()) {
+                QString newName = dia->getName();
+                if (newName.isEmpty())
+                    newName = name;
+                setName(newName);
 
-            transformFactory->registerChainConf(getCurrentTransformChain(),true);
+                transformFactory->registerChainConf(getCurrentTransformChain(),true);
 
+            }
+            delete dia;
         }
-        delete dia;
     }
 }
 
@@ -330,6 +359,7 @@ void TransformsGui::onSavedSelected(QString name)
 {
     if (name.isEmpty()) {
         QMessageBox::critical(this,tr("Error"),tr("The selected name is empty T_T"),QMessageBox::Ok);
+        qWarning() << tr("[TransformsGui] The selected name is empty T_T");
         return;
     }
     TransformChain tc = transformFactory->loadChainFromSaved(name);

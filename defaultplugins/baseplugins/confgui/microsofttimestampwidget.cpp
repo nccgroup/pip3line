@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_microsofttimestampwidget.h"
 
 MicrosoftTimestampWidget::MicrosoftTimestampWidget(MicrosoftTimestamp *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::MicrosoftTimestampWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::MicrosoftTimestampWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::MicrosoftTimestampWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

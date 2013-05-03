@@ -14,9 +14,12 @@ Released under AGPL see LICENSE for more information
 #include <QFileDialog>
 
 ModulesManagementWidget::ModulesManagementWidget(ModulesManagement *nmodulesMgmt, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::ModulesManagementWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::ModulesManagementWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::ModulesManagementWidget X{");
+    }
     modulesMgmt = nmodulesMgmt;
     moduleTitle = modulesMgmt->getLangName();
     ui->setupUi(this);
@@ -48,17 +51,25 @@ void ModulesManagementWidget::loadModules()
     ui->modulesListWidget->clear();
     QStringList list = modulesMgmt->getModulesList();
     for (int i = 0; i < list.size(); i++) {
-        DeleteableListItem *itemWid = new DeleteableListItem(list.at(i));
-        if (modulesMgmt->getModuleType(list.at(i)) == ModulesManagement::AUTO) {
-            itemWid->setEnableDelete(false);
+        DeleteableListItem *itemWid = new(std::nothrow) DeleteableListItem(list.at(i));
+        if (itemWid == NULL) {
+            qFatal("Cannot allocate memory for DeleteableListItem X{");
         } else {
-            itemWid->setEnableDelete(true);
-        }
+            if (modulesMgmt->getModuleType(list.at(i)) == ModulesManagement::AUTO) {
+                itemWid->setEnableDelete(false);
+            } else {
+                itemWid->setEnableDelete(true);
+            }
 
-        connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(unload(QString)));
-        QListWidgetItem *item = new QListWidgetItem();
-        ui->modulesListWidget->addItem(item);
-        ui->modulesListWidget->setItemWidget(item, itemWid);
+            connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(unload(QString)));
+            QListWidgetItem *item = new(std::nothrow) QListWidgetItem();
+            if (item == NULL) {
+                qFatal("Cannot allocate memory for QListWidgetItem X{");
+            } else {
+                ui->modulesListWidget->addItem(item);
+                ui->modulesListWidget->setItemWidget(item, itemWid);
+            }
+        }
     }
     ui->modulesListWidget->setCurrentRow(0);
 

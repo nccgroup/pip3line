@@ -105,7 +105,11 @@ bool Substitution::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Substitution::requestGui(QWidget *parent)
 {
-    return new SubstitutionWidget(this, parent);
+    QWidget * widget = new(std::nothrow) SubstitutionWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for SubstitutionWidget X{");
+    }
+    return widget;
 }
 
 QString Substitution::inboundString() const
@@ -132,10 +136,12 @@ void Substitution::setSTable(QByteArray sTable)
         sTable = sTable.mid(0,SubstitutionTables::S_ARRAY_SIZE);
         emit error(tr("Permutation table too long (%1 instead of 256). Truncated.").arg(sTable.size()),id);
     }
-    s_table_e = sTable;
+    if (s_table_e != sTable) {
+        s_table_e = sTable;
 
-    createDecryptTable();
-    emit confUpdated();
+        createDecryptTable();
+        emit confUpdated();
+    }
 }
 
 bool Substitution::isPermutationValid(QByteArray sTable)

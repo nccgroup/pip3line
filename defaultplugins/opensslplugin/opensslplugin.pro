@@ -6,7 +6,8 @@
 #
 # Released under AGPL see LICENSE for more information
 
-QT       +=
+QT       += gui
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = opensslplugin
 TEMPLATE = lib
@@ -20,7 +21,14 @@ HEADERS += opensslplugin.h\
         opensslplugin_global.h \
     opensslhashes.h
 
-LIBS += -L"../../bin/" -ltransform
+unix {
+    LIBS += -L"../../bin/" -ltransform
+}
+
+win32 {
+    LIBS += -L"../../lib/" -ltransform
+}
+
 INCLUDEPATH += ../../libtransform/
 
 DESTDIR = ../../bin/plugins

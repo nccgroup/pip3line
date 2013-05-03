@@ -17,8 +17,9 @@ const char Processor::DEFAULT_SEPARATOR = '\n';
 Processor::Processor(TransformMgmt * tFactory, QObject *parent) : QThread(parent)
 {
     transformFactory = tFactory;
-    outputLock = 0;
-    out = 0;
+    outputLock = NULL;
+    out = NULL;
+    in = NULL;
     separator = DEFAULT_SEPARATOR;
     ocount = 0;
     encode = false;
@@ -91,7 +92,7 @@ void Processor::setInput(QIODevice *nin)
 
 void Processor::clearOutputMutex()
 {
-    outputLock = 0;
+    outputLock = NULL;
 }
 
 void Processor::setSeparator(char c)

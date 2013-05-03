@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_byteintegerwidget.h"
 
 ByteIntegerWidget::ByteIntegerWidget(BytesInteger *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::ByteIntegerWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::ByteIntegerWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::ByteIntegerWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     if (transform->isLittleEndian()) {

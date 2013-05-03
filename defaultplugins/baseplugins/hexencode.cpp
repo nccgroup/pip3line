@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "hexencode.h"
 #include "confgui/hexencodewidget.h"
+#include <QDebug>
 
 const QString HexEncode::id = "Hexadecimal";
 
@@ -47,7 +48,7 @@ bool HexEncode::setConfiguration(QHash<QString, QString> propertiesList)
     bool ok;
 
     int val = propertiesList.value(XMLTYPE).toInt(&ok);
-    if (!ok || (val != NORMAL && val != ESCAPED && val != CSTYLE && val != CSV)) {
+    if (!ok || (val != NORMAL && val != ESCAPED_MIXED && val != ESCAPED && val != CSTYLE && val != CSV)) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLTYPE),id);
     } else {
@@ -59,13 +60,26 @@ bool HexEncode::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *HexEncode::requestGui(QWidget *parent)
 {
-    return new HexEncodeWidget(this, parent);
+    QWidget * widget = new(std::nothrow) HexEncodeWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for HexEncodeWidget X{");
+    }
+    return widget;
 }
 
 QString HexEncode::help() const
 {
     QString help;
-    help.append("<p>Hexadecimal encoder</p><p>It is possible to choose a specific output format.<br>Currently available: <ul><li>Basic hexadecimal format</li><li>Escaped Hexadecimal format (i.e. \"\\xAD\")</li><li>C-Style array (i.e. \"{ 0xAD, 0x01 }\" )</li><li>CSV format, i.e. \"AD, 01\"</li></ul></p>");
+    help.append("<p>Hexadecimal encoder</p>");
+    help.append("<p>It is possible to choose a specific output format.");
+    help.append("<br>Currently available: <ul>");
+    help.append("<li>Basic hexadecimal </li>");
+    help.append("<li>Escaped Hexadecimal (i.e. \"\\xAD\")</li>");
+    help.append("<li>Escaped Hexadecimal Mixed (i.e. \"abc123\\xAD\")*</li>");
+    help.append("<li>C-Style array (i.e. \"{ 0xAD, 0x01 }\" )</li>");
+    help.append("<li>CSV format, i.e. \"AD, 01\"</li></ul>");
+    help.append("* Escaped Hexadecimal Mixed is encoding only non-printable characters, and while decoding just append any incorrect value to the output (instead of discarding it)");
+    help.append("</p>");
     return help;
 }
 
@@ -80,6 +94,15 @@ void HexEncode::transform(const QByteArray &input, QByteArray &output) {
         switch (type) {
             case NORMAL:
                 output = temp;
+                break;
+            case ESCAPED_MIXED:
+                for (i = 0; i < input.size(); i += 1) {
+                    char c = input.at(i);
+                    if (c < '\x20' || c > '\x7e')
+                        output.append(QByteArray("\\x").append(QByteArray(1,c).toHex()));
+                    else
+                        output.append(c);
+                }
                 break;
             case ESCAPED:
                 for (i = 0; i < temp.size(); i += 2) {
@@ -106,6 +129,21 @@ void HexEncode::transform(const QByteArray &input, QByteArray &output) {
         switch (type) {
             case NORMAL:
                 output = fromHex(input);
+                break;
+            case ESCAPED_MIXED:
+                qDebug() << "Escape lenient";
+                while (i < input.size()) {
+                    if (input.at(i) == '\\' && i < input.size() - 3 &&  input.at(i+1) == 'x') {
+                        if (HEXCHAR.contains(input.at(i+2)) && HEXCHAR.contains(input.at(i+3))) {
+                            temp.append(QByteArray::fromHex(QByteArray(1,input.at(i+2)).append(input.at(i+3))));
+                            i += 4;
+                            continue;
+                        }
+                    }
+                    temp.append(input.at(i));
+                    i++;
+                }
+                output = temp;
                 break;
             case ESCAPED:
                 while (i < input.size()) {

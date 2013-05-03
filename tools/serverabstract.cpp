@@ -14,7 +14,7 @@ Released under AGPL see LICENSE for more information
 ServerAbstract::ServerAbstract(TransformMgmt *tFactory)
 {
     transformFactory = tFactory;
-    output = 0;
+    output = NULL;
     separator = Processor::DEFAULT_SEPARATOR;
 }
 
@@ -25,7 +25,7 @@ void ServerAbstract::setOutput(QIODevice *out)
 
 void ServerAbstract::clearOutput()
 {
-    output = 0;
+    output = NULL;
 }
 
 void ServerAbstract::setTransformations(const QString &conf)

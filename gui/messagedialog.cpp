@@ -13,9 +13,12 @@ Released under AGPL see LICENSE for more information
 #include <QMutexLocker>
 
 MessageDialog::MessageDialog(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::MessageDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::MessageDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::MessageDialog X{");
+    }
     ui->setupUi(this);
     warningCount = 0;
     errorCount = 0;

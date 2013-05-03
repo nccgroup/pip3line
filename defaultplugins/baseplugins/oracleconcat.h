@@ -17,7 +17,7 @@ class OracleConcat : public TransformAbstract
 {
     Q_OBJECT
     public:
-        OracleConcat() {}
+        explicit OracleConcat() {}
         QString name() const;
         QString description() const;
         void transform(const QByteArray &input, QByteArray &output);

@@ -22,7 +22,7 @@ class BASEPLUGINSSHARED_EXPORT BasePlugins : public QObject, public TransformFac
 #endif
         Q_INTERFACES(TransformFactoryPluginInterface)
     public:
-        BasePlugins();
+        explicit BasePlugins();
         ~BasePlugins();
         QString pluginName() const;
         QString compiledWithQTversion() const;

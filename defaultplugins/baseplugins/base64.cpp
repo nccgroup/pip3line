@@ -11,6 +11,7 @@ Released under AGPL see LICENSE for more information
 #include "base64.h"
 #include "confgui/base64widget.h"
 #include <QTextStream>
+#include <QDebug>
 
 const QString Base64::id = "Base64";
 const QStringList Base64::VARIATIONS = QStringList() << "RFC 2045" << "Safe Url" << ".Net (*Resource.axd)" << "Custom";
@@ -27,8 +28,8 @@ Base64::Base64()
 
 Base64::~Base64()
 {
-}
 
+}
 
 QString Base64::name() const {
     return id;
@@ -48,9 +49,9 @@ QHash<QString, QString> Base64::getConfiguration()
 
     properties.insert(XMLVARIANT,QString::number((int)choosenVariation));
     if (choosenVariation == CUSTOM) {
-        properties.insert(XMLPADDINGCHAR,QString::number((int)paddingChar));
-        properties.insert(XMLCHAR62,QString::number((int)char62));
-        properties.insert(XMLCHAR63,QString::number((int)char63));
+        properties.insert(XMLPADDINGCHAR,saveChar(paddingChar));
+        properties.insert(XMLCHAR62,saveChar(char62));
+        properties.insert(XMLCHAR63,saveChar(char63));
         properties.insert(XMLPADDINGTYPE,QString::number((int)paddingType));
     }
     return properties;
@@ -60,6 +61,9 @@ bool Base64::setConfiguration(QHash<QString, QString> propertiesList)
 {
     bool res = TransformAbstract::setConfiguration(propertiesList);
     bool ok = true;
+    QString tmp;
+    char tmpChar = '\x00';
+
     int val = propertiesList.value(XMLVARIANT).toInt(&ok);
     if (!ok || ( val != STANDARD && val != CUSTOM && val != SAFEURL && val != DOTNET)) {
         res = false;
@@ -70,28 +74,28 @@ bool Base64::setConfiguration(QHash<QString, QString> propertiesList)
 
     if (choosenVariation == CUSTOM) {
 
-        val = propertiesList.value(XMLPADDINGCHAR).toInt(&ok);
-        if (!ok || val < 0x01 || val > 0xFF) {
+        tmp = propertiesList.value(XMLPADDINGCHAR);
+        if (!loadChar(tmp, &tmpChar)) {
             res = false;
             emit error(tr("Invalid value for %1").arg(XMLPADDINGCHAR),id);
         } else {
-            res = setPaddingChar((char)val) && res;
+            res = setPaddingChar(tmpChar) && res;
         }
 
-        val = propertiesList.value(XMLCHAR62).toInt(&ok);
-        if (!ok || val < 0x01 || val > 0xFF) {
+        tmp = propertiesList.value(XMLCHAR62);
+        if (!loadChar(tmp, &tmpChar)) {
             res = false;
             emit error(tr("Invalid value for %1").arg(XMLCHAR62),id);
         } else {
-            res = setChar62((char)val) && res;
+            res = setChar62(tmpChar) && res;
         }
 
-        val = propertiesList.value(XMLCHAR63).toInt(&ok);
-        if (!ok || val < 0x01 || val > 0xFF) {
+        tmp = propertiesList.value(XMLCHAR63);
+        if (!loadChar(tmp, &tmpChar)) {
             res = false;
             emit error(tr("Invalid value for %1").arg(XMLCHAR63),id);
         } else {
-            res = setChar63((char)val) && res;
+            res = setChar63(tmpChar) && res;
         }
 
         val = propertiesList.value(XMLPADDINGTYPE).toInt(&ok);
@@ -108,7 +112,11 @@ bool Base64::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Base64::requestGui(QWidget *parent)
 {
-    return new Base64Widget(this, parent);
+    QWidget * widget = new(std::nothrow) Base64Widget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for Base64Widget X{");
+    }
+    return widget;
 }
 
 QString Base64::help() const
@@ -147,20 +155,27 @@ void Base64::setChoosenVariation(Base64::Variation val)
 {
     if (choosenVariation != val) {
         choosenVariation = val;
-        if (choosenVariation == Base64::STANDARD) {
-            char62 = '+';
-            char63 = '/';
-            paddingChar = '=';
-            paddingType = DEFAULTPADDING;
-        } else if (choosenVariation == Base64::SAFEURL) {
-            char62 = '-';
-            char63 = '_';
-            paddingType = NOPADDING;
-        } else if (choosenVariation == Base64::DOTNET) {
-            char62 = '-';
-            char63 = '_';
-            paddingType = DOTNETPADDING;
+        switch (choosenVariation) {
+            case (STANDARD):
+                char62 = '+';
+                char63 = '/';
+                paddingChar = '=';
+                paddingType = DEFAULTPADDING;
+                break;
+            case (SAFEURL):
+                char62 = '-';
+                char63 = '_';
+                paddingType = NOPADDING;
+                break;
+            case (DOTNET):
+                char62 = '-';
+                char63 = '_';
+                paddingType = DOTNETPADDING;
+                break;
+            default:
+                return;
         }
+
         emit confUpdated();
     }
 }
@@ -176,6 +191,12 @@ void Base64::setPaddingType(Base64::PaddingType val)
 bool Base64::setChar62(char val)
 {
     if (char62 != val) {
+        QByteArray charset = BASE64CHAR.mid(0,BASE64CHAR.size() -2);
+        if (charset.contains(val)) {
+            emit error(tr("This character is already included in the Base64 charset, cannot use it twice"),id);
+            return false;
+        }
+
         if (val != char63 && val != paddingChar) {
             char62 = val;
             emit confUpdated();
@@ -183,11 +204,7 @@ bool Base64::setChar62(char val)
             emit error(tr("All three characters must be differents"),id);
             return false;
         }
-        QByteArray charset = BASE64CHAR.mid(0,BASE64CHAR.size() -2);
-        if (charset.contains(val)) {
-            emit error(tr("This character is already included in the Base64 charset, cannot use it twice"),id);
-            return false;
-        }
+
     }
     return true;
 }
@@ -195,6 +212,12 @@ bool Base64::setChar62(char val)
 bool Base64::setChar63(char val)
 {
     if (char63 != val) {
+        QByteArray charset = BASE64CHAR.mid(0,BASE64CHAR.size() -2);
+        if (charset.contains(val)) {
+            emit error(tr("This character is already included in the Base64 charset, cannot use it twice"),id);
+            return false;
+        }
+
         if (val != char62 && val != paddingChar) {
             char63 = val;
             emit confUpdated();
@@ -202,11 +225,7 @@ bool Base64::setChar63(char val)
             emit error(tr("All three characters must be differents"),id);
             return false;
         }
-        QByteArray charset = BASE64CHAR.mid(0,BASE64CHAR.size() -2);
-        if (charset.contains(val)) {
-            emit error(tr("This character is already included in the Base64 charset, cannot use it twice"),id);
-            return false;
-        }
+
     }
     return true;
 }
@@ -214,6 +233,12 @@ bool Base64::setChar63(char val)
 bool Base64::setPaddingChar(char val)
 {
     if (paddingChar != val) {
+        QByteArray charset = BASE64CHAR.mid(0,BASE64CHAR.size() -2);
+        if (charset.contains(val)) {
+            emit error(tr("This character is already included in the Base64 charset, cannot use it for padding"),id);
+            return false;
+        }
+
         if (val != char62 && val != char63) {
             paddingChar = val;
             emit confUpdated();
@@ -221,11 +246,7 @@ bool Base64::setPaddingChar(char val)
             emit error(tr("All three characters must be differents"),id);
             return false;
         }
-        QByteArray charset = BASE64CHAR.mid(0,BASE64CHAR.size() -2);
-        if (charset.contains(val)) {
-            emit error(tr("This character is already included in the Base64 charset, cannot use it for padding"),id);
-            return false;
-        }
+
     }
     return true;
 }

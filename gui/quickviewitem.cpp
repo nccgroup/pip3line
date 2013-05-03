@@ -17,14 +17,20 @@ Released under AGPL see LICENSE for more information
 const QString QuickViewItem::LOGID = "QuickView";
 
 QuickViewItem::QuickViewItem(GuiHelper *nguiHelper, QWidget *parent, const QString &xmlconfig) :
-    QWidget(parent),
-    ui(new Ui::QuickViewItem)
+    QWidget(parent)
 {
-    currentTransform = 0;
+    ui = new(std::nothrow) Ui::QuickViewItem();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::QuickViewItem X{");
+    }
+    currentTransform = NULL;
     noError = true;
     guiHelper = nguiHelper;
     format = TEXTFORMAT;
-    guiConfig = new QuickViewItemConfig(guiHelper, this);
+    guiConfig = new(std::nothrow) QuickViewItemConfig(guiHelper, this);
+    if (guiConfig == NULL) {
+        qFatal("Cannot allocate memory for guiConfig X{");
+    }
     ui->setupUi(this);
     connect(ui->removePushButton, SIGNAL(clicked()), this, SLOT(deleteLater()));
     connect(this, SIGNAL(updateData(QByteArray)), this, SLOT(renderData(QByteArray)));
@@ -35,15 +41,13 @@ QuickViewItem::QuickViewItem(GuiHelper *nguiHelper, QWidget *parent, const QStri
 
 QuickViewItem::~QuickViewItem()
 {
-    if (currentTransform != 0)
-        delete currentTransform;
-
+    delete currentTransform;
     delete ui;
 }
 
 void QuickViewItem::renderData(const QByteArray &displayData)
 {
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         processMessages();
         if (format == TEXTFORMAT)
             ui->outputLineEdit->setText(QString::fromUtf8(displayData));
@@ -64,13 +68,13 @@ void QuickViewItem::processData(const QByteArray &data)
 
 bool QuickViewItem::isConfigured()
 {
-    return currentTransform != 0;
+    return currentTransform != NULL;
 }
 
 void QuickViewItem::internalProcess()
 {
     dataMutex.lock();
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         emit updateData(currentTransform->transform(currentData));
     }
     else {
@@ -87,8 +91,7 @@ bool QuickViewItem::configure()
 
     int ret = guiConfig->exec();
     if (ret == QDialog::Accepted) {
-        if (currentTransform != 0)
-            delete currentTransform;
+        delete currentTransform;
         currentTransform = guiConfig->getTransform();
         ui->nameLabel->setText(guiConfig->getName());
         if (currentTransform != 0) {
@@ -151,7 +154,7 @@ void QuickViewItem::mouseDoubleClickEvent(QMouseEvent * event)
 QString QuickViewItem::getXmlConf()
 {
     QString ret;
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         this->setEnabled(false);
         TransformChain list;
         list.append(currentTransform);

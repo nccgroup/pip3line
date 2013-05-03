@@ -13,9 +13,12 @@ Released under AGPL see LICENSE for more information
 
 
 ZlibWidget::ZlibWidget(Zlib *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::ZlibWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::ZlibWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::ZlibWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->compressionSpinBox->setValue(transform->getCompression());

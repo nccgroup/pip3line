@@ -1,22 +1,14 @@
 ####
-# pip3line: easy encoder/decoder and more
-# Copyright (C) 2012-2013  Gabriel Caudrelier<gabriel.caudrelier@gmail.com>
+# Released as open source by NCC Group Plc - http://www.nccgroup.com/
 #
-# Pip3line is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
 #
-# Pip3line is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# https://github.com/nccgroup/pip3line
 #
-# You should have received a copy of the GNU General Public License
-# along with Pip3line.  If not, see <http://www.gnu.org/licenses/>.
+# Released under AGPL see LICENSE for more information
 ####
 
-message( STATUS " Configuring the OpenSSL plugin")
+message( STATUS "Configuring the OpenSSL plugin --")
 project( opensslplugin )
 
 cmake_minimum_required( VERSION 2.8.9 )
@@ -79,14 +71,8 @@ if (OPENSSL_FOUND)
 		opensslplugin.cpp
 		opensslhashes.cpp
 		)
-
-	if(WITH_QT5)
-        	qt5_wrap_ui(UIS ${opensslplugin_UIS})
-	else(WITH_QT5)
-        	QT4_WRAP_UI(UIS ${opensslplugin_UIS})
-	endif(WITH_QT5)
 	
-	add_library ( opensslplugin MODULE ${opensslplugin_SRCS} ${UIS} )
+	add_library ( opensslplugin MODULE ${opensslplugin_SRCS} )
 	if(WITH_QT5)
         	qt5_use_modules(opensslplugin Widgets Svg)
 	else(WITH_QT5)

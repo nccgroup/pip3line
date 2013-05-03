@@ -50,7 +50,6 @@ class QuickViewItemConfig : public QDialog
         void integrateTransform();
         void onTransformDelete();
     private:
-        void clearCurrentTransform();
         static const QString LOGID;
         Ui::QuickViewItemConfig *ui;
         GuiHelper *guiHelper;

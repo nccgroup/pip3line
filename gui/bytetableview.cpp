@@ -29,18 +29,22 @@ int HexDelegate::COMPLETE_LINE = 0x8001;
 HexDelegate::HexDelegate(QObject *parent) : QStyledItemDelegate (parent), normalCell(24,20),  previewCell(130,20){
     labelFont.setFamily("Courier New");
     labelFont.setPointSize(10);
-    qDebug() << "Created: " << this;
+    //qDebug() << "Created: " << this;
 }
 
 HexDelegate::~HexDelegate()
 {
-    qDebug() << "Destroyed: " << this;
+    //qDebug() << "Destroyed: " << this;
 }
 
 QWidget *HexDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem & /* Unused */, const QModelIndex & /* Unused */) const {
-    QLineEdit *editor = new QLineEdit(parent);
-    editor->setInputMask("HH");
-    editor->setFrame(false);
+    QLineEdit *editor = new(std::nothrow) QLineEdit(parent);
+    if (editor != NULL) {
+        editor->setInputMask("HH");
+        editor->setFrame(false);
+    } else {
+        qFatal("Cannot allocate memory for delegate editor X{");
+    }
     return editor;
 }
 
@@ -133,17 +137,17 @@ void HexDelegate::clearSelected()
 
 HexSelectionModel::HexSelectionModel(QAbstractItemModel *model) : QItemSelectionModel(model)
 {
-    qDebug() << "Created: " << this;
+    //qDebug() << "Created: " << this;
 }
 
 HexSelectionModel::HexSelectionModel(QAbstractItemModel *model, QObject *parent) : QItemSelectionModel(model,parent)
 {
-    qDebug() << "Created: " << this << " parent:" << parent;
+    //qDebug() << "Created: " << this << " parent:" << parent;
 }
 
 HexSelectionModel::~HexSelectionModel()
 {
-    qDebug() << "Destroyed: " << this;
+    //qDebug() << "Destroyed: " << this;
 }
 
 void HexSelectionModel::setDelegate(HexDelegate *ndelegate)
@@ -211,8 +215,12 @@ ByteTableView::ByteTableView(QWidget *parent) :
     QTableView(parent)
 {
     setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Expanding);
-    delegate = new HexDelegate(this);
-    setItemDelegate(delegate);
+    delegate = new(std::nothrow) HexDelegate(this);
+    if (delegate != NULL) {
+        setItemDelegate(delegate);
+    } else {
+        qFatal("Cannot allocate memory for hex delegate X{");
+    }
     setSelectionMode(QAbstractItemView::ContiguousSelection);
     //setAttribute(Qt::WA_NoMousePropagation);
 #if QT_VERSION >= 0x050000
@@ -222,9 +230,9 @@ ByteTableView::ByteTableView(QWidget *parent) :
     verticalHeader()->setResizeMode(QHeaderView::Fixed);
     horizontalHeader()->setResizeMode(QHeaderView::Fixed);
 #endif
-    currentSelectionModel = 0;
-    currentModel = 0;
-    qDebug() << "Created: " << this;
+    currentSelectionModel = NULL;
+    currentModel = NULL;
+    //qDebug() << "Created: " << this;
 
 }
 
@@ -232,9 +240,8 @@ ByteTableView::~ByteTableView()
 {
     // no need to delete currentModel as it should be taken care by the parent
     delete delegate;
-    if (currentSelectionModel != 0)
-        delete currentSelectionModel;
-    qDebug() << "Destroyed: " << this;
+    delete currentSelectionModel;
+    //qDebug() << "Destroyed: " << this;
 }
 
 void ByteTableView::setModel(ByteItemModel *nmodel)
@@ -248,14 +255,22 @@ void ByteTableView::setModel(ByteItemModel *nmodel)
         setColumnWidth(i,25);
     setColumnWidth(16,131);
 
-    currentSelectionModel = new HexSelectionModel(nmodel, this);
-    currentSelectionModel->setDelegate(delegate);
+    currentSelectionModel = new(std::nothrow) HexSelectionModel(nmodel, this);
+    if (currentSelectionModel == NULL) {
+        qFatal("Cannot allocate memory for currentSelectionModel X{");
+    } else {
 
-    connect(currentSelectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this , SLOT(onSelectionChanged(QItemSelection,QItemSelection)));
+        currentSelectionModel->setDelegate(delegate);
 
-    QItemSelectionModel *sm = QTableView::selectionModel();
-    QTableView::setSelectionModel(currentSelectionModel);
-    delete sm;
+        connect(currentSelectionModel,
+                SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
+                this ,
+                SLOT(onSelectionChanged(QItemSelection,QItemSelection)));
+
+        QItemSelectionModel *sm = QTableView::selectionModel();
+        QTableView::setSelectionModel(currentSelectionModel);
+        delete sm;
+    }
 }
 
 void ByteTableView::mousePressEvent(QMouseEvent *event)

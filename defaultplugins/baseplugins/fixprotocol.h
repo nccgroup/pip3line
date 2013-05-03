@@ -18,7 +18,7 @@ class FixProtocol : public TransformAbstract
 {
         Q_OBJECT
     public:
-        FixProtocol();
+        explicit FixProtocol();
         ~FixProtocol();
         QString name() const;
         QString description() const;

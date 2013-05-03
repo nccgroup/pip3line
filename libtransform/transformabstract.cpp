@@ -15,16 +15,17 @@ Released under AGPL see LICENSE for more information
 const QByteArray TransformAbstract::HEXCHAR("abcdefABCDEF1234567890");
 
 TransformAbstract::TransformAbstract() {
-    confGui = 0;
+    confGui = NULL;
     wayValue = INBOUND;
-    qDebug() << this;
+    qDebug() << "Created " << this;
 }
 
 TransformAbstract::~TransformAbstract() {
 
-    if (confGui != 0)
-        delete confGui;
-    confGui = 0;
+    delete confGui;
+    confGui = NULL;
+
+    qDebug() << "Destroyed " << this;
 }
 
 QByteArray TransformAbstract::transform(const QByteArray &input)
@@ -51,9 +52,9 @@ bool TransformAbstract::isTwoWays()
 
 QWidget *TransformAbstract::getGui(QWidget * parent)
 {
-    if (confGui == 0) {
+    if (confGui == NULL) {
         confGui = requestGui(parent);
-        if (confGui != 0) {
+        if (confGui != NULL) {
             connect(confGui, SIGNAL(destroyed()), this, SLOT(onGuiDelete()), Qt::UniqueConnection);
         }
     }
@@ -62,12 +63,12 @@ QWidget *TransformAbstract::getGui(QWidget * parent)
 
 QWidget *TransformAbstract::requestGui(QWidget * /* parent */)
 {
-    return 0;
+    return NULL;
 }
 
 void TransformAbstract::onGuiDelete()
 {
-    confGui = 0;
+    confGui = NULL;
 }
 
 QString TransformAbstract::inboundString() const
@@ -151,80 +152,39 @@ QByteArray TransformAbstract::fromHex(QByteArray in)
     return QByteArray::fromHex(in);
 }
 
-QByteArray TransformAbstract::fromEscapedHex(const QByteArray &val)
+QString TransformAbstract::saveChar(const char c) const
 {
-    QByteArray temp;
-    int i = 0;
-    while (i < val.size()) {
-        if (val.at(i) == '\\' && i < val.size() - 3 &&  val.at(i+1) == 'x') {
-            if (HEXCHAR.contains(val.at(i+2)) && HEXCHAR.contains(val.at(i+3))) {
-                temp.append(val.at(i+2)).append(val.at(i+3));
-                i += 4;
-                continue;
-            }
-        }
-        i++;
-    }
-    return QByteArray::fromHex(temp);
+    QByteArray val(1,c);
+    return QString::fromUtf8(val.toHex());
 }
 
-QByteArray TransformAbstract::fromCStyleArray(const QByteArray &val)
+bool TransformAbstract::loadChar(const QString val, char *c)
 {
-    QByteArray temp;
-    int i = 0;
-    while (i < val.size()) {
-        if (val.at(i) == '0' && i < val.size() - 3 &&  val.at(i+1) == 'x') {
-            if (HEXCHAR.contains(val.at(i+2)) && HEXCHAR.contains(val.at(i+3))) {
-                temp.append(val.at(i+2)).append(val.at(i+3));
-                i += 4;
-                continue;
-            }
-        }
-        i++;
+    QByteArray tmp = fromHex(val.toUtf8());
+    if (tmp.size() == 0) {
+        emit error(tr("Empty value for char"), name());
+        return false;
+    } else if (tmp.size() > 1) {
+        emit warning(tr("Multiple values for char, only the first one will be considered"), name());
     }
-    return QByteArray::fromHex(temp);
+    (*c) = tmp.at(0);
+
+    return true;
 }
 
-QByteArray TransformAbstract::toEscapedHex(const QByteArray &val)
-{
-    QByteArray final;
-
-    for (int i = 0; i < val.size(); i++) {
-        final.append("\\x").append(val.mid(i,1).toHex());
-    }
-
-    return final;
+bool TransformAbstract::isPrintable(const qint32 c) {
+    return (c > 0x1F && c < 0x7F);
 }
 
-QByteArray TransformAbstract::toCStyleArray(const QByteArray &val)
-{
-    QByteArray final;
-    final.append("{");
-    for (int i = 0; i < val.size(); i++) {
-        final.append(" 0x").append(val.mid(i,1).toHex()).append(",");
-    }
-    final.chop(1);
-    final.append(" }");
-    return final;
-}
-
-QByteArray TransformAbstract::toCSV(const QByteArray &val)
-{
-    QByteArray final;
-
-    for (int i = 0; i < val.size(); i++) {
-        final.append(val.mid(i,1).toHex()).append(",");
-    }
-    return final;
-}
-
-QByteArray TransformAbstract::toPrintableString(const QByteArray &val)
+QByteArray TransformAbstract::toPrintableString(const QByteArray &val, bool strict)
 {
     QByteArray ret;
     for (int i = 0; i < val.size(); i++) {
         char c = val.at(i);
-        if (c > ' ' && c <= '~') {
+        if (isPrintable((quint32)c)) {
             ret.append(c);
+        } else if (strict) {
+            ret.append("\\x").append(QByteArray(1,c).toHex());
         } else {
             switch (c) {
                 case '\n':
@@ -234,7 +194,7 @@ QByteArray TransformAbstract::toPrintableString(const QByteArray &val)
                     ret.append("\\r");
                     break;
                 default:
-                ret.append("\\").append(QByteArray(1,c).toHex());
+                ret.append("\\x").append(QByteArray(1,c).toHex());
             }
         }
     }

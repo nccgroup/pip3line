@@ -21,7 +21,7 @@ class RenderTextView : public QThread
 {
         Q_OBJECT
     public:
-        RenderTextView(QObject *parent = 0);
+        explicit RenderTextView(QObject *parent = 0);
         ~RenderTextView();
         void run();
         void stop();

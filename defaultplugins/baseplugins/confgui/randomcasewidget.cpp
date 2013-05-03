@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_randomcasewidget.h"
 
 RandomCaseWidget::RandomCaseWidget(RandomCase *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::RandomCaseWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::RandomCaseWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::RandomCaseWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 }

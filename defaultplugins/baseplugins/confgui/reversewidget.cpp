@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_reversewidget.h"
 
 ReverseWidget::ReverseWidget(Reverse *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::ReverseWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::ReverseWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::ReverseWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->blockSizeSpinBox->setValue(transform->getBlocksize());

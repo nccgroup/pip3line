@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_infodialog.h"
 
 InfoDialog::InfoDialog(TransformAbstract *ntransform, QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::InfoDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::InfoDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::InfoDialog X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

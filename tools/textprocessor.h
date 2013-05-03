@@ -16,7 +16,7 @@ Released under AGPL see LICENSE for more information
 class TextProcessor: public Processor
 {
     public:
-        TextProcessor(TransformMgmt *tFactory, QObject * parent = 0);
+        explicit TextProcessor(TransformMgmt *tFactory, QObject * parent = 0);
         ~TextProcessor();
         void run();
     protected:

@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_xmlquerywidget.h"
 
 XmlQueryWidget::XmlQueryWidget(XmlQuery *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::XmlQueryWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::XmlQueryWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::XmlQueryWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->queryPlainTextEdit->appendPlainText(transform->getQueryString());

@@ -19,7 +19,7 @@ Released under AGPL see LICENSE for more information
 class LIBTRANSFORMSHARED_EXPORT TransformChain : public QList<TransformAbstract *>
 {
     public:
-        TransformChain();
+        explicit TransformChain();
         ~TransformChain();
         void setName(const QString &name);
         QString getName() const;

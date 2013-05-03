@@ -22,7 +22,7 @@ class BytesInteger : public TransformAbstract
         static const QString PROP_INTEGERSIZE;
         static const QString PROP_SIGNEDINTEGER;
         enum IntSize { I8bits = 1, I16bits = 2, I32bits = 4, I64bits = 8 };
-        BytesInteger();
+        explicit BytesInteger();
         ~BytesInteger();
         QString name() const;
         QString description() const;

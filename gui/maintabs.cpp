@@ -29,7 +29,7 @@ MainTabs::MainTabs(GuiHelper *nguiHelper, QWidget *parent) :
     connect(this, SIGNAL(tabCloseRequested(int)), this, SLOT(onDeleteTab(int)));
 
     logger = guiHelper->getLogger();
-    if (logger != 0) {
+    if (logger != NULL) {
         connect(logger, SIGNAL(errorRaised()), this, SLOT(onLogError()));
         connect(logger,SIGNAL(cleanStatus()), this, SLOT(onLogCleanStatus()));
         int index = this->addTab(logger,tr("Logs"));
@@ -71,36 +71,41 @@ void MainTabs::askForRenaming(int index)
 {
     if (index != indexOf(logger)) {
         NameDialog * dia = guiHelper->getNameDialog(this, tabBarRef->tabText(index));
+        if (dia != NULL) {
+            int res = dia->exec();
+            if (res == QDialog::Accepted && !dia->getName().isEmpty()) {
+                ((TransformsGui *)widget(index))->setName(dia->getName());
+            }
 
-        int res = dia->exec();
-        if (res == QDialog::Accepted && !dia->getName().isEmpty()) {
-            ((TransformsGui *)widget(index))->setName(dia->getName());
+            delete dia;
         }
-
-        delete dia;
     }
 }
 
 void MainTabs::newTabTransform(const QByteArray &initialValue, const QString &conf)
 {
     int nextInsert = count() - ((indexOf(logger) == -1)? 0 : 1);
-    TransformsGui *newTab = new TransformsGui(guiHelper, this);
-    connect(newTab, SIGNAL(askWindowTabSwitch(TransformsGui*)), this, SLOT(receivedTabWindowSwitch(TransformsGui*)));
-    newTab->setCurrentChainConf(conf);
-    tabList.insert(newTab,false);
-    newTab->setData(initialValue);
-    QString tabName = newTab->getName();
-    if (tabName.isEmpty()) {
-        tabName = tr("%1").arg(tabCount);
-        newTab->setName(tabName);
-    }
+    TransformsGui *newTab = new(std::nothrow) TransformsGui(guiHelper, this);
+    if (newTab != NULL) {
+        connect(newTab, SIGNAL(askWindowTabSwitch(TransformsGui*)), this, SLOT(receivedTabWindowSwitch(TransformsGui*)));
+        newTab->setCurrentChainConf(conf);
+        tabList.insert(newTab,false);
+        newTab->setData(initialValue);
+        QString tabName = newTab->getName();
+        if (tabName.isEmpty()) {
+            tabName = tr("%1").arg(tabCount);
+            newTab->setName(tabName);
+        }
 
-    connect(newTab, SIGNAL(nameChanged(TransformsGui*)), this, SLOT(receivedNameChanged(TransformsGui*)));
-    connect(newTab, SIGNAL(askBringFront(TransformsGui*)), this, SLOT(receivedBringToFront(TransformsGui*)));
-    insertTab(nextInsert, newTab, tabName);
-    setCurrentIndex(nextInsert);
-    guiHelper->addTab(newTab);
-    tabCount++;
+        connect(newTab, SIGNAL(nameChanged(TransformsGui*)), this, SLOT(receivedNameChanged(TransformsGui*)));
+        connect(newTab, SIGNAL(askBringFront(TransformsGui*)), this, SLOT(receivedBringToFront(TransformsGui*)));
+        insertTab(nextInsert, newTab, tabName);
+        setCurrentIndex(nextInsert);
+        guiHelper->addTab(newTab);
+        tabCount++;
+    } else {
+        qFatal("Cannot allocate memory for newTab X{");
+    }
 }
 
 void MainTabs::onDeleteTab(int index)
@@ -129,7 +134,7 @@ void MainTabs::showLogs()
 void MainTabs::onLogError()
 {
     int index = indexOf(logger);
-    if (index == -1 && logger != 0) {
+    if (index == -1 && logger != NULL) {
         index = addTab(logger, tr("Logs"));
     }
     tabBarRef->setTabTextColor(index, Qt::red);
@@ -147,7 +152,7 @@ void MainTabs::receivedNameChanged(TransformsGui *tab)
 {
     int index = indexOf(tab);
     if (index == -1) {
-        logger->logError(tr("Tab %1 not found when renaming T_T").arg(index),ID);
+        qWarning("[MainTabs] Tab %d not found when renaming T_T",index);
     }
     QString name = tab->getName();
     if (index != -1 && !name.isEmpty()) {
@@ -159,14 +164,14 @@ void MainTabs::receivedNameChanged(TransformsGui *tab)
 void MainTabs::receivedTabWindowSwitch(TransformsGui *tab)
 {
     if (!tabList.contains(tab)) {
-        logger->logError(tr("Tab %1 not found when switching window <-> tab T_T").arg(tab->getName()),ID);
+        qWarning("[MainTabs] Tab not found when switching window <-> tab T_T");
         return;
     } else {
         if (tabList.value(tab)) { // window
             addTab(tab, tab->getName());
             setCurrentWidget(tab);
             if (!activeWindows.contains(tab)) {
-                logger->logError(tr("Widget %1 not found in the active windows T_T").arg(tab->getName()),ID);
+                qWarning("[MainTabs] Widget not found in the active windows T_T");
             } else {
                FloatingDialog *fd = activeWindows.value(tab);
                activeWindows.remove(tab);
@@ -177,18 +182,23 @@ void MainTabs::receivedTabWindowSwitch(TransformsGui *tab)
         } else { // tab
             int index = indexOf(tab);
             if (index == -1) {
-                logger->logError(tr("Tab %1 not found when switching window <-> tab T_T").arg(index),ID);
+                qWarning("[MainTabs] Tab not found when switching window <-> tab T_T");
             } else {
+
                 removeTab(index);
                 if (count() != 0)
                     setCurrentIndex(0);
-                FloatingDialog *fd = new FloatingDialog(tab, this);
-                activeWindows.insert(tab, fd);
-                fd->setWindowTitle(tab->getName());
-                fd->raise();
-                fd->show();
-                tabList.insert(tab,true);
-                connect(fd,SIGNAL(rejected()), this, SLOT(onFloatingWindowsReject()));
+                FloatingDialog *fd = new(std::nothrow) FloatingDialog(tab, this);
+                if (fd != NULL) {
+                    activeWindows.insert(tab, fd);
+                    fd->setWindowTitle(tab->getName());
+                    fd->raise();
+                    fd->show();
+                    tabList.insert(tab,true);
+                    connect(fd,SIGNAL(rejected()), this, SLOT(onFloatingWindowsReject()));
+                } else {
+                    qFatal("Cannot allocate memory for FloatingDialog X{");
+                }
             }
         }
     }
@@ -197,12 +207,12 @@ void MainTabs::receivedTabWindowSwitch(TransformsGui *tab)
 void MainTabs::receivedBringToFront(TransformsGui *tab)
 {
     if (!tabList.contains(tab)) {
-        logger->logError(tr("Tab %1 not found when bringing to front T_T").arg(tab->getName()),ID);
+        qWarning("[MainTabs] Tab not found when bringing to front T_T");
         return;
     } else {
         if (tabList.value(tab)) { // windows
             if (!activeWindows.contains(tab)) {
-                logger->logError(tr("Widget %1 not found in the active windows (bringToFront) T_T").arg(tab->getName()),ID);
+                qWarning("[MainTabs] Widget not found in the active windows (bringToFront) T_T");
             } else {
                 FloatingDialog *fd = activeWindows.value(tab);
                 fd->raise();
@@ -217,16 +227,16 @@ void MainTabs::receivedBringToFront(TransformsGui *tab)
 void MainTabs::onFloatingWindowsReject()
 {
     FloatingDialog *fd = (FloatingDialog *) sender();
-    if (fd != 0) {
+    if (fd != NULL) {
         TransformsGui *tab = activeWindows.key(fd,0);
-        if (tab != 0) {
+        if (tab != NULL) {
             addTab(tab, tab->getName());
             setCurrentWidget(tab);
             activeWindows.remove(tab);
             delete fd;
             tabList.insert(tab,false);
         } else {
-           logger->logError(tr("Tab not found  in the active windows tab (reject) T_T"),ID);
+           qWarning("[MainTabs] Tab not found  in the active windows tab (reject) T_T");
         }
     }
 }

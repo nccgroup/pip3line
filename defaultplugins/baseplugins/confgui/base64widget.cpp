@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_base64widget.h"
 
 Base64Widget::Base64Widget(Base64 *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::Base64Widget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::Base64Widget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::Base64Widget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->variantComboBox->addItems(Base64::VARIATIONS);

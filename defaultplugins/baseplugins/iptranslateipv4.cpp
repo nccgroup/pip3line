@@ -77,8 +77,8 @@ QHash<QString, QString> IPTranslateIPv4::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
     properties.insert(XMLBASE,QString::number((int)base));
-    properties.insert(XMLUPPERCASE,QString::number((int)toUpper));
-    properties.insert(XMLLITTLEENDIAN,QString::number((int)littleEndian));
+    properties.insert(XMLUPPERCASE,QString::number(toUpper ? 1 : 0));
+    properties.insert(XMLLITTLEENDIAN,QString::number(littleEndian ? 1 : 0));
 
     return properties;
 }
@@ -117,7 +117,11 @@ bool IPTranslateIPv4::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *IPTranslateIPv4::requestGui(QWidget *parent)
 {
-    return new IPTranslateIPv4Widget(this, parent);
+    QWidget * widget = new(std::nothrow) IPTranslateIPv4Widget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for IPTranslateIPv4Widget X{");
+    }
+    return widget;
 }
 
 QString IPTranslateIPv4::inboundString() const

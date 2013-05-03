@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_urlencodewidget.h"
 
 UrlEncodeWidget::UrlEncodeWidget(UrlEncode *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::UrlEncodeWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::UrlEncodeWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::UrlEncodeWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->includeLineEdit->setText(QString(transform->getInclude()));

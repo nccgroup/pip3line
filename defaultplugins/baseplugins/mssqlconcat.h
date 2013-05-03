@@ -17,7 +17,7 @@ class MSSqlConcat : public TransformAbstract
 {
     Q_OBJECT
     public:
-        MSSqlConcat() {}
+        explicit MSSqlConcat() {}
         QString name() const;
         QString description() const;
         void transform(const QByteArray &input, QByteArray &output);

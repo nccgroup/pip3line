@@ -39,7 +39,7 @@ QHash<QString, QString> Xor::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
     properties.insert(XMLKEY,QString(key.toBase64()));
-    properties.insert(XMLFROMHEX,QString::number((int)hexDecode));
+    properties.insert(XMLFROMHEX,QString::number(hexDecode ? 1 : 0));
 
     return properties;
 }
@@ -62,7 +62,11 @@ bool Xor::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Xor::requestGui(QWidget *parent)
 {
-    return new XorWidget(this, parent);
+    QWidget * widget = new(std::nothrow) XorWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for XorWidget X{");
+    }
+    return widget;
 }
 
 QString Xor::help() const
@@ -102,8 +106,10 @@ QByteArray Xor::getKey()
 
 void Xor::setKey(QByteArray val)
 {
-    key = val;
-    emit confUpdated();
+    if (key != val) {
+        key = val;
+        emit confUpdated();
+    }
 }
 
 bool Xor::isFromHex()
@@ -113,6 +119,8 @@ bool Xor::isFromHex()
 
 void Xor::setFromHex(bool val)
 {
-    hexDecode = val;
-    emit confUpdated();
+    if (hexDecode != val) {
+        hexDecode = val;
+        emit confUpdated();
+    }
 }

@@ -147,8 +147,8 @@ QHash<QString, QString> Base32::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
     properties.insert(XMLVARIANT,QString::number((int)variant));
-    properties.insert(XMLPADDINGCHAR,QString::number((int)paddingChar));
-    properties.insert(XMLINCLUDEPADDING,QString::number((int)includePadding));
+    properties.insert(XMLPADDINGCHAR, saveChar(paddingChar));
+    properties.insert(XMLINCLUDEPADDING,QString::number(includePadding ? 1 : 0));
 
     return properties;
 }
@@ -161,7 +161,7 @@ bool Base32::setConfiguration(QHash<QString, QString> propertiesList)
     int val = 0;
 
     val = propertiesList.value(XMLVARIANT).toInt(&ok);
-    if (!ok || val < 0 || val > BASE32HEX) {
+    if (!ok || (val != RFC4648 && val != CROCKFORD && val != BASE32HEX)) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLVARIANT),id);
     } else {
@@ -169,12 +169,13 @@ bool Base32::setConfiguration(QHash<QString, QString> propertiesList)
     }
 
 
-    val = propertiesList.value(XMLPADDINGCHAR).toInt(&ok);
-    if (!ok || val < 0x01 || val > 0xFF) {
+    QString str = propertiesList.value(XMLPADDINGCHAR);
+    char padtmp = '\x00';
+    if (!loadChar(str,&padtmp)) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLPADDINGCHAR),id);
     } else {
-        res = setPaddingChar((char)val) && res;
+        res = setPaddingChar(padtmp) && res;
     }
 
     val = propertiesList.value(XMLINCLUDEPADDING).toInt(&ok);
@@ -190,13 +191,19 @@ bool Base32::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Base32::requestGui(QWidget *parent)
 {
-    return new Base32Widget(this, parent);
+    QWidget * widget = new(std::nothrow) Base32Widget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for Base32Widget X{");
+    }
+    return widget;
 }
 
 QString Base32::help() const
 {
     QString help;
-    help.append("<p>Base32 decoder/encoder</p><p>Available variants: <ul><li>RFC 4648</li> <li>Crockford</li><li>Base32hex (RFC 2938)</li></ul>The default variant used is RFC 4648</p>");
+    help.append("<p>Base32 decoder/encoder</p><p>Available variants: ");
+    help.append("<ul><li>RFC 4648</li> <li>Crockford</li><li>Base32hex (RFC 2938)</li></ul>");
+    help.append("The default variant used is RFC 4648</p>");
     return help;
 }
 

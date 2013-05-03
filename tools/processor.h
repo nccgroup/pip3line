@@ -26,7 +26,7 @@ class Processor : public QThread
         Q_OBJECT
     public:
         static const char DEFAULT_SEPARATOR;
-        Processor(TransformMgmt * transformFactory, QObject * parent);
+        explicit Processor(TransformMgmt * transformFactory, QObject * parent);
         virtual ~Processor();
         bool configureFromFile(const QString &fileName);
         bool configureFromName(const QString &name, TransformAbstract::Way way = TransformAbstract::INBOUND);

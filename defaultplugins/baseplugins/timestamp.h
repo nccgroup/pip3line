@@ -20,7 +20,7 @@ class TimeStamp : public TransformAbstract
         static const QString id;
         static const QString DEFAULT_DATE_FORMAT;
         static const QString PROP_DATEFORMAT;
-        TimeStamp();
+        explicit TimeStamp();
         ~TimeStamp();
         QString name() const;
         QString description() const;

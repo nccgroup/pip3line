@@ -20,7 +20,7 @@ class ServerAbstract : public QObject
 {
         Q_OBJECT
     public:
-        ServerAbstract(TransformMgmt *tFactory);
+        explicit ServerAbstract(TransformMgmt *tFactory);
         virtual ~ServerAbstract() {}
         virtual void setOutput(QIODevice *out);
         void clearOutput();

@@ -60,7 +60,9 @@ SOURCES += main.cpp\
     textwidget.cpp \ 
     hexwidget.cpp \
     newbytedialog.cpp \
-    debugdialog.cpp
+    debugdialog.cpp \
+    ../tools/centralprocessor.cpp \
+    ../tools/transformrequest.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -97,7 +99,9 @@ HEADERS  += mainwindow.h \
     textwidget.h \ 
     hexwidget.h \
     newbytedialog.h \
-    debugdialog.h
+    debugdialog.h \
+    ../tools/centralprocessor.h \
+    ../tools/transformrequest.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \

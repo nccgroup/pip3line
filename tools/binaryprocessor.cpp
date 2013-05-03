@@ -10,6 +10,8 @@ Released under AGPL see LICENSE for more information
 
 #include "binaryprocessor.h"
 
+const int BinaryProcessor::BLOCKSIZE = 4096;
+
 BinaryProcessor::BinaryProcessor(TransformMgmt * tFactory, QObject *parent) :
     Processor(tFactory, parent)
 {
@@ -22,7 +24,7 @@ BinaryProcessor::~BinaryProcessor()
 
 void BinaryProcessor::run()
 {
-    QByteArray temp;
+    QByteArray block;
 
     char buffer[BLOCKSIZE];
     qint64 whatHasBeenDone = 0;
@@ -39,9 +41,14 @@ void BinaryProcessor::run()
             emit error(in->errorString(), "Binary Processor");
             break;
         }
-        temp.append(buffer,whatHasBeenDone);
+        block.append(buffer,whatHasBeenDone);
+        if (block.size() > BLOCK_MAX_SIZE) {
+            block.resize(BLOCK_MAX_SIZE);
+            emit error("Data received from the pipe is too large, the block has been truncated.","BinaryProcessor");
+            break;
+        }
     }
 
-    writeBlock(temp);
+    writeBlock(block);
 
 }

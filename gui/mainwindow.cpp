@@ -33,9 +33,12 @@ Released under AGPL see LICENSE for more information
 using namespace Pip3lineConst;
 
 MainWindow::MainWindow(bool debug, QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    QMainWindow(parent)
 {
+    ui = new(std::nothrow) Ui::MainWindow();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::MainWindow X{");
+    }
     qApp->setOrganizationName(APPNAME);
     qApp->setApplicationName(APPNAME);
 
@@ -48,8 +51,15 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 
     connect(ui->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
 
-    logger = new LoggerWidget();
-    transformFactory = new TransformMgmt();
+    logger = new(std::nothrow) LoggerWidget();
+    if (logger == NULL) {
+        qFatal("Cannot allocate memory for LoggerWidget X{");
+    }
+
+    transformFactory = new(std::nothrow) TransformMgmt();
+    if (transformFactory == NULL) {
+        qFatal("Cannot allocate memory for the Transform Factory X{");
+    }
     connect(transformFactory,SIGNAL(error(QString, QString)),logger,SLOT(logError(QString,QString)));
     connect(transformFactory,SIGNAL(warning(QString,QString)),logger,SLOT(logWarning(QString,QString)));
     connect(transformFactory,SIGNAL(status(QString,QString)),logger,SLOT(logStatus(QString,QString)));
@@ -60,25 +70,35 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 //    networkProxy.setPort(8080);
 //    networkManager.setProxy(networkProxy);
 
-    guiHelper = new GuiHelper(transformFactory,&networkManager, logger);
+    guiHelper = new(std::nothrow) GuiHelper(transformFactory,&networkManager, logger);
+    if (guiHelper == NULL) {
+        qFatal("Cannot allocate memory for GuiHelper X{");
+    }
 
-    mainTabs = new MainTabs(guiHelper, this);
+    mainTabs = new(std::nothrow) MainTabs(guiHelper, this);
+    if (mainTabs == NULL) {
+        qFatal("Cannot allocate memory for MainTabs X{");
+    }
     ui->centralWidget->layout()->addWidget(mainTabs);
-    analyseDialog = 0;
-    regexphelpDialog = 0;
-    settingsDialog = 0;
-    trayIcon = 0;
-    quickView = 0;
+    analyseDialog = NULL;
+    regexphelpDialog = NULL;
+    settingsDialog = NULL;
+    trayIcon = NULL;
+    quickView = NULL;
 
     quickViewWasVisible = false;
     settingsWasVisible = false;
 
-    QComboBox * filterComboBox = new QComboBox();
+    QComboBox * filterComboBox = new(std::nothrow) QComboBox();
+    if (filterComboBox == NULL) {
+        qFatal("Cannot allocate memory for filterComboBox X{");
+    }
+
     filterComboBox->installEventFilter(guiHelper);
     guiHelper->buildFilterComboBox(filterComboBox);
     ui->mainToolBar->addWidget(filterComboBox);
 
-    trayIconLabel = 0;
+    trayIconLabel = NULL;
     createTrayIcon();
 
     connect(ui->actionHelp_with_RegExp, SIGNAL(triggered()), this, SLOT(onHelpWithRegExp()));
@@ -97,29 +117,17 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete mainTabs;
-    if (quickView != 0)
-        delete quickView;
+    delete quickView;
+    delete trayIconMenu;
 
-    if (trayIconMenu != 0)
-        delete trayIconMenu;
-
-    // delete logger // no need for that, already done by the main window
-    if (analyseDialog != 0)
-        delete analyseDialog;
-
-    if (regexphelpDialog != 0)
-        delete regexphelpDialog;
-
-    if (trayIcon != 0)
-        delete trayIcon;
-
+    // delete logger // no need for that, already done by the main tab
+    delete analyseDialog;
+    delete regexphelpDialog;
+    delete trayIcon;
     delete settings;
-
     delete guiHelper;
     delete transformFactory;
-
-    if (settingsDialog != 0)
-        delete settingsDialog;
+    delete settingsDialog;
 
     delete ui;
 
@@ -128,7 +136,11 @@ MainWindow::~MainWindow()
 void MainWindow::onAnalyse()
 {
     if (!analyseDialog) {
-        analyseDialog = new AnalyseDialog(this);
+        analyseDialog = new(std::nothrow) AnalyseDialog(this);
+        if (analyseDialog == NULL) {
+            qFatal("Cannot allocate memory for analyseDialog X{");
+            return;
+        }
     }
 
     if (!analyseDialog->isVisible()) {
@@ -150,7 +162,11 @@ void MainWindow::onAboutPip3line()
 void MainWindow::onHelpWithRegExp()
 {
     if (!regexphelpDialog) {
-        regexphelpDialog = new RegExpHelpDialog(this);
+        regexphelpDialog = new(std::nothrow) RegExpHelpDialog(this);
+        if (regexphelpDialog == NULL) {
+            qFatal("Cannot allocate memory for regexphelpDialog X{");
+            return;
+        }
     }
 
     regexphelpDialog->show();
@@ -160,9 +176,14 @@ void MainWindow::onHelpWithRegExp()
 
 void MainWindow::onSettingsDialogOpen()
 {
-    if (settingsDialog == 0) {
-        settingsDialog = new SettingsDialog(guiHelper, this);
-        connect(settingsDialog, SIGNAL(updateCheckRequested()), this, SLOT(checkForUpdates()));
+    if (settingsDialog == NULL) {
+        settingsDialog = new(std::nothrow) SettingsDialog(guiHelper, this);
+        if (settingsDialog == NULL) {
+            qFatal("Cannot allocate memory for settingsDialog X{");
+            return;
+        }
+        else
+            connect(settingsDialog, SIGNAL(updateCheckRequested()), this, SLOT(checkForUpdates()));
     }
 
     settingsDialog->show();
@@ -173,7 +194,11 @@ void MainWindow::onSettingsDialogOpen()
 void MainWindow::checkForUpdates()
 {
     QUrl resource(UPDATE_URL);
-    DownloadManager * dm = new DownloadManager(resource, &networkManager);
+    DownloadManager * dm = new(std::nothrow) DownloadManager(resource, &networkManager);
+    if (dm == NULL) {
+        qFatal("Cannot allocate memory for DownloadManager (updates) X{");
+        return;
+    }
     connect(dm,SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
     connect(dm, SIGNAL(warning(QString,QString)), logger, SLOT(logWarning(QString,QString)));
     connect(dm, SIGNAL(finished(DownloadManager*)), this, SLOT(processingCheckForUpdate(DownloadManager*)));
@@ -209,7 +234,7 @@ void MainWindow::processingCheckForUpdate(DownloadManager *dm)
         }
     }
 
-    if (settingsDialog != 0)
+    if (settingsDialog != NULL)
         settingsDialog->setVersionUpdateMessage(message);
 
     delete dm;
@@ -236,13 +261,13 @@ void MainWindow::on_actionNew_Tab_triggered()
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     bool minimize = settings->value(SETTINGS_MINIMIZE_TO_TRAY, true).toBool();
-    if (minimize && trayIcon != 0) {
-        if (quickView != 0) {
+    if (minimize && trayIcon != NULL) {
+        if (quickView != NULL) {
             quickViewWasVisible = quickView->isVisible();
             if (quickViewWasVisible)
                 quickView->hide();
         }
-        if (settingsDialog != 0) {
+        if (settingsDialog != NULL) {
             settingsWasVisible = settingsDialog->isVisible();
             if (settingsWasVisible)
                 settingsDialog->hide();
@@ -258,7 +283,11 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::createTrayIcon()
 {
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
-        trayIconMenu = new QMenu(this);
+        trayIconMenu = new(std::nothrow) QMenu(this);
+        if (trayIconMenu == NULL) {
+            qFatal("Cannot allocate memory for trayIconMenu X{");
+            return;
+        }
         updateTrayIcon();
         connect(guiHelper, SIGNAL(importExportUpdated()), this, SLOT(updateTrayIcon()));
         trayIcon->show();
@@ -269,10 +298,10 @@ void MainWindow::showWindow()
 {
     showNormal();
     activateWindow();
-    if (quickView != 0 && quickViewWasVisible)
+    if (quickView != NULL && quickViewWasVisible)
         quickView->show();
 
-    if (settingsDialog != 0 && settingsWasVisible)
+    if (settingsDialog != NULL && settingsWasVisible)
         settingsDialog->show();
 
 }
@@ -281,15 +310,28 @@ void MainWindow::updateTrayIcon()
 {
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
         trayIconMenu->clear();
-        trayIconLabel = new QAction(tr("Import from clipboard as"), trayIconMenu);
+        trayIconLabel = new(std::nothrow) QAction(tr("Import from clipboard as"), trayIconMenu);
+        if (trayIconLabel == NULL) {
+            qFatal("Cannot allocate memory for trayIconLabel X{");
+            return;
+        }
         trayIconLabel->setDisabled(true);
         trayIconMenu->addAction(trayIconLabel);
-        QAction * action = new QAction(GuiHelper::ACTION_UTF8_STRING, trayIconMenu);
+        QAction * action = new(std::nothrow) QAction(GuiHelper::ACTION_UTF8_STRING, trayIconMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for QAction in mainwindow 1 X{");
+            return;
+        }
+
         trayIconMenu->addAction(action);
         QStringList list = guiHelper->getImportExportFunctions();
         qSort(list);
         for (int i = 0; i < list.size(); i++) {
-            action = new QAction(list.at(i), trayIconMenu);
+            action = new(std::nothrow) QAction(list.at(i), trayIconMenu);
+            if (action == NULL) {
+                qFatal("Cannot allocate memory for QAction in mainwindow 2 X{");
+                return;
+            }
             trayIconMenu->addAction(action);
         }
         connect(trayIconMenu, SIGNAL(triggered(QAction*)), this, SLOT(onImport(QAction*)), Qt::UniqueConnection);
@@ -300,7 +342,11 @@ void MainWindow::updateTrayIcon()
         trayIconMenu->addSeparator();
 
         trayIconMenu->addAction(ui->actionExit);
-        trayIcon = new QSystemTrayIcon(this);
+        trayIcon = new(std::nothrow) QSystemTrayIcon(this);
+        if (trayIcon == NULL) {
+            qFatal("Cannot allocate memory for trayIcon X{");
+            return;
+        }
         trayIcon->setIcon(QIcon(":/Images/icons/pip3line.png"));
         trayIcon->setContextMenu(trayIconMenu);
         connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
@@ -311,7 +357,11 @@ void MainWindow::updateTrayIcon()
 void MainWindow::onDebug()
 {
     qDebug() << "Debugging";
-    DebugDialog * dialog = new DebugDialog(this);
+    DebugDialog * dialog = new(std::nothrow) DebugDialog(this);
+    if (dialog == NULL) {
+        qFatal("Cannot allocate memory for DebugDialog X{");
+        return;
+    }
 
     dialog->show();
 }
@@ -349,7 +399,7 @@ void MainWindow::onImport(QAction *action)
             mainTabs->newTabTransform(input.toUtf8());
         } else {
             TransformAbstract *ta  = guiHelper->getImportExportFunction(action->text());
-            if (ta != 0) {
+            if (ta != NULL) {
                 ta->setWay(TransformAbstract::OUTBOUND);
                 mainTabs->newTabTransform(ta->transform(input.toUtf8()));
             }
@@ -363,7 +413,11 @@ void MainWindow::onDataFromURL()
     QString input = QApplication::clipboard()->text();
     QUrl resource(input);
     if (resource.isValid()) {
-        DownloadManager * dm = new DownloadManager(resource, &networkManager);
+        DownloadManager * dm = new(std::nothrow) DownloadManager(resource, &networkManager);
+        if (dm == NULL) {
+            qFatal("Cannot allocate memory for DownloadManager (url) X{");
+            return;
+        }
         connect(dm,SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
         connect(dm, SIGNAL(warning(QString,QString)), logger, SLOT(logWarning(QString,QString)));
         connect(dm, SIGNAL(finished(DownloadManager*)), this, SLOT(processingUrlDownload(DownloadManager*)));
@@ -373,8 +427,12 @@ void MainWindow::onDataFromURL()
 
 void MainWindow::onQuickView()
 {
-    if (quickView == 0) {
-        quickView = new QuickViewDialog(guiHelper, this);
+    if (quickView == NULL) {
+        quickView = new(std::nothrow) QuickViewDialog(guiHelper, this);
+        if (quickView == NULL) {
+            qFatal("Cannot allocate memory for QuickViewDialog X{");
+            return;
+        }
         connect(guiHelper, SIGNAL(newSelection(QByteArray)), quickView, SLOT(receivingData(QByteArray)));
     }
 

@@ -17,7 +17,7 @@ class MySqlConcatv2 : public TransformAbstract
 {
     Q_OBJECT
     public:
-        MySqlConcatv2() {}
+        explicit MySqlConcatv2() {}
         QString name() const;
         QString description() const;
         void transform(const QByteArray &input, QByteArray &output);

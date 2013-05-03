@@ -66,9 +66,9 @@ bool Html::isTwoWays() {
 QHash<QString, QString> Html::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(XMLUSEENTITYNAMES,QString::number((int)useName));
-    properties.insert(XMLUSEHEXA,QString::number((int)useHexadecimal));
-    properties.insert(XMLENCODEALL,QString::number((int)encodeAll));
+    properties.insert(XMLUSEENTITYNAMES,QString::number(useName ? 1 : 0));
+    properties.insert(XMLUSEHEXA,QString::number(useHexadecimal ? 1 : 0));
+    properties.insert(XMLENCODEALL,QString::number(encodeAll ? 1 : 0));
 
     return properties;
 }
@@ -106,7 +106,11 @@ bool Html::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Html::requestGui(QWidget *parent)
 {
-    return new HtmlWidget(this, parent);
+    QWidget * widget = new(std::nothrow) HtmlWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for HtmlWidget X{");
+    }
+    return widget;
 }
 
 QString Html::help() const

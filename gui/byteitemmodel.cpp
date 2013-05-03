@@ -24,24 +24,32 @@ ByteItemModel::ByteItemModel(QObject *parent) :
 {
     columnNumbers = 16;
     currentHistoryPointer = -1;
-    qDebug() << "Created: " << this;
+    //qDebug() << "Created: " << this;
 }
 
 ByteItemModel::~ByteItemModel()
 {
-    qDebug() << "Destroyed: " << this;
+    //qDebug() << "Destroyed: " << this;
 }
 
 void ByteItemModel::setRawData(const QByteArray &data, UpdateSource source)
 {
-    beginResetModel();
+
     rawDataMutex.lock();
-    rawData = data;
-    addDataToHistory(rawData);
-    marked.clear();
-    rawDataMutex.unlock();
-    endResetModel();
-    notifyUpdate(source);
+    if (rawData != data) {
+        beginResetModel();
+        rawData = data;
+        addDataToHistory(rawData);
+        marked.clear();
+        endResetModel();
+        rawDataMutex.unlock();
+        emit updatedFrom(source);
+    } else {
+        rawDataMutex.unlock();
+    }
+
+
+
 }
 
 int ByteItemModel::size() const
@@ -149,14 +157,14 @@ bool ByteItemModel::setData(const QModelIndex &index, const QVariant &value, int
         QByteArray hexVal = QByteArray::fromHex(value.toByteArray());
         if (hexVal.isEmpty())
             return false;
-        beginResetModel();
+
         int pos = columnNumbers * index.row() + index.column();
         if (pos > rawData.size()) {
             rawData.append(QByteArray(pos - rawData.size(),0x00));
         }
         rawData.replace(pos,1, hexVal);
         addDataToHistory(rawData);
-        endResetModel();
+
         emit updatedFrom(HEXVIEW);
         emit dataChanged(index, index);
         return true;
@@ -189,7 +197,7 @@ void ByteItemModel::remove(int pos, int length)
     rawData.remove(pos,length);
     addDataToHistory(rawData);
     endResetModel();
-    notifyUpdate();
+    emit updatedFrom(HEXVIEW);
 }
 
 void ByteItemModel::replace(int pos, int length, QByteArray val)
@@ -285,7 +293,6 @@ void ByteItemModel::clearMarking(int start, int end)
 void ByteItemModel::clearAllMarkings()
 {
     marked.clear();
-//    notifyUpdate(TEXTVIEW);
 }
 
 bool ByteItemModel::hasMarking() const
@@ -306,8 +313,7 @@ void ByteItemModel::fromLocalFile(QString fileName)
         rawData = file.readAll();
         addDataToHistory(rawData);
         endResetModel();
-        notifyUpdate();
-
+        emit updatedFrom(EXTERNAL);
     }
 }
 
@@ -330,7 +336,7 @@ void ByteItemModel::notifyUpdate(UpdateSource source)
         emit dataChanged(QAbstractTableModel::createIndex(0,0),QAbstractTableModel::createIndex(rawData.size() / columnNumbers, columnNumbers));
         break;
     default:
-        emit error("Unkonwn update source T_T");
+        qWarning("[ByteItemModel] Unknown update source T_T");
     }
 }
 
@@ -341,7 +347,7 @@ void ByteItemModel::historyForward()
         beginResetModel();
         rawData = history.at(currentHistoryPointer);
         endResetModel();
-        notifyUpdate();
+        emit updatedFrom(EXTERNAL);
     }
 }
 
@@ -352,7 +358,7 @@ void ByteItemModel::historyBackward()
         beginResetModel();
         rawData = history.at(currentHistoryPointer);
         endResetModel();
-        notifyUpdate();
+        emit updatedFrom(EXTERNAL);
     }
 }
 

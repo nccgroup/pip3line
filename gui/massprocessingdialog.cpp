@@ -29,15 +29,18 @@ const QString MassProcessingDialog::SETTINGS_MASS_PROCESSING_GROUP = "MassProces
 
 MassProcessingDialog::MassProcessingDialog(GuiHelper *helper, TransformsGui *ntGui) :
     QDialog(ntGui),
-    ui(new Ui::MassProcessingDialog),
     statTimer(this)
 {
+    ui = new(std::nothrow) Ui::MassProcessingDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::MassProcessingDialog X{");
+    }
     guiHelper = helper;
     ui->setupUi(this);
     transformFactory = guiHelper->getTransformFactory();
-    processor = 0;
-    currentInput = 0;
-    currentOutput = 0;
+    processor = NULL;
+    currentInput = NULL;
+    currentOutput = NULL;
     tGui = ntGui;
     logger = guiHelper->getLogger();
 
@@ -58,7 +61,7 @@ MassProcessingDialog::MassProcessingDialog(GuiHelper *helper, TransformsGui *ntG
 
     onInputChanged(ui->inputComboBox->currentIndex());
 
-    server = 0;
+    server = NULL;
 
     ui->keepSynchronizedCheckBox->setChecked(true);
     ui->refreshConfPushButton->setDisabled(true);
@@ -92,7 +95,7 @@ MassProcessingDialog::~MassProcessingDialog()
 void MassProcessingDialog::setTranformChain(const QString &chainConf)
 {
     transformConf = chainConf;
-    if (server != 0)
+    if (server != NULL)
         server->setTransformations(transformConf);
 }
 
@@ -121,18 +124,18 @@ void MassProcessingDialog::on_processingPushButton_clicked()
     ui->outputComboBox->setEnabled(false);
     ui->inputComboBox->setEnabled(false);
 
-    QIODevice * output = 0;
+    QIODevice * output = NULL;
     if (ui->inputComboBox->currentIndex() == 0 || ui->inputComboBox->currentIndex() == 1) { // i.e. file or manual input
-        QIODevice * input = 0;
+        QIODevice * input = NULL;
         ui->inputStackedWidget->setEnabled(false);
 
-        if (processor != 0) {
+        if (processor != NULL) {
             QMessageBox::critical(this,tr("Error"),tr("Already processing."),QMessageBox::Ok);
             return;
         }
 
         input  = getInput();
-        if (input == 0) {
+        if (input == NULL) {
             massMutex.unlock();
             releasingThread();
             return;
@@ -140,7 +143,7 @@ void MassProcessingDialog::on_processingPushButton_clicked()
 
         output = getOutput();
 
-        if (output == 0) {
+        if (output == NULL) {
             delete input;
             massMutex.unlock();
             releasingThread();
@@ -148,23 +151,28 @@ void MassProcessingDialog::on_processingPushButton_clicked()
         }
 
         errorDialog.clearMessages();
-        processor = new TextProcessor(transformFactory);
-        processor->setInput(input);
-        processor->setOutput(output);
-        processor->setTransformsChain(transformConf);
-        processor->setDecoding(ui->decodeCheckBox->isChecked());
-        processor->setEncoding(ui->encodeCheckBox->isChecked());
+        processor = new(std::nothrow) TextProcessor(transformFactory);
+        if (processor != NULL) {
+            processor->setInput(input);
+            processor->setOutput(output);
+            processor->setTransformsChain(transformConf);
+            processor->setDecoding(ui->decodeCheckBox->isChecked());
+            processor->setEncoding(ui->encodeCheckBox->isChecked());
 
-        connect(processor, SIGNAL(error(QString,QString)), logger, SLOT(logError(QString,QString)));
-        connect(processor, SIGNAL(status(QString,QString)), logger, SLOT(logStatus(QString,QString)));
-        connect(processor,SIGNAL(finished()),this,SLOT(releasingThread()));
+            connect(processor, SIGNAL(error(QString,QString)), logger, SLOT(logError(QString,QString)));
+            connect(processor, SIGNAL(status(QString,QString)), logger, SLOT(logStatus(QString,QString)));
+            connect(processor,SIGNAL(finished()),this,SLOT(releasingThread()));
 
-        processor->start();
+            processor->start();
+            statTimer.start(1000);
+        } else {
+            qFatal("Cannot allocate memory for TextProcessor X{");
+        }
     } else { // Servers
 
         if (!ui->useSocketForOutputcheckBox->isChecked()) {
             output = getOutput();
-            if (output == 0) {
+            if (output == NULL) {
                 massMutex.unlock();
                 releasingThread();
                 return;
@@ -172,54 +180,65 @@ void MassProcessingDialog::on_processingPushButton_clicked()
         }
         deleteCurrentServer();
         if (ui->serverTypeComboBox->currentText() == TCP_SERVER) {
-            TcpServer * tcpServer = new TcpServer(transformFactory,this);
-            tcpServer->setIP(ui->ipsComboBox->currentText());
-            tcpServer->setPort(ui->portSpinBox->value());
-            connect(ui->portSpinBox, SIGNAL(valueChanged(int)), tcpServer,SLOT(setPort(int)));
-            connect(ui->ipsComboBox, SIGNAL(currentIndexChanged(QString)), tcpServer, SLOT(setIP(QString)));
+            TcpServer * tcpServer = new(std::nothrow) TcpServer(transformFactory,this);
+            if (tcpServer != NULL) {
+                tcpServer->setIP(ui->ipsComboBox->currentText());
+                tcpServer->setPort(ui->portSpinBox->value());
+                connect(ui->portSpinBox, SIGNAL(valueChanged(int)), tcpServer,SLOT(setPort(int)));
+                connect(ui->ipsComboBox, SIGNAL(currentIndexChanged(QString)), tcpServer, SLOT(setIP(QString)));
+            } else {
+                qFatal("Cannot allocate memory for tcpServer X{");
+            }
 
             server = tcpServer;
         } else if (ui->serverTypeComboBox->currentText() == PIPE_SERVER) {
-            PipeServer * pipeServer = new PipeServer(transformFactory,this);
-            pipeServer->setPipeName(ui->pipeNameLineEdit->text());
-            connect(ui->pipeNameLineEdit, SIGNAL(textChanged(QString)), pipeServer, SLOT(setPipeName(QString)));
-            server = pipeServer;
+            PipeServer * pipeServer = new(std::nothrow) PipeServer(transformFactory,this);
+            if (pipeServer != NULL) {
+                pipeServer->setPipeName(ui->pipeNameLineEdit->text());
+                connect(ui->pipeNameLineEdit, SIGNAL(textChanged(QString)), pipeServer, SLOT(setPipeName(QString)));
+                server = pipeServer;
+            } else {
+                qFatal("Cannot allocate memory for pipeServer X{");
+            }
         }
 
-        connect(server, SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
-        connect(server, SIGNAL(status(QString,QString)), logger,SLOT(logStatus(QString,QString)));
-        connect(ui->encodeCheckBox, SIGNAL(toggled(bool)), server,SLOT(setEncoding(bool)));
-        connect(ui->decodeCheckBox, SIGNAL(toggled(bool)), server,SLOT(setDecoding(bool)));
+        if (server != NULL) {
+            connect(server, SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
+            connect(server, SIGNAL(status(QString,QString)), logger,SLOT(logStatus(QString,QString)));
+            connect(ui->encodeCheckBox, SIGNAL(toggled(bool)), server,SLOT(setEncoding(bool)));
+            connect(ui->decodeCheckBox, SIGNAL(toggled(bool)), server,SLOT(setDecoding(bool)));
 
-        server->setOutput(output);
-        server->setTransformations(tGui->getCurrentChainConf());
-        server->setDecoding(ui->decodeCheckBox->isChecked());
-        server->setEncoding(ui->encodeCheckBox->isChecked());
-        onSeparatorChanged(ui->separatorLineEdit->text());
+            server->setOutput(output);
+            server->setTransformations(tGui->getCurrentChainConf());
+            server->setDecoding(ui->decodeCheckBox->isChecked());
+            server->setEncoding(ui->encodeCheckBox->isChecked());
+            onSeparatorChanged(ui->separatorLineEdit->text());
 
-        ui->serverTypeComboBox->setEnabled(false);
-        ui->useSocketForOutputcheckBox->setEnabled(false);
+            ui->serverTypeComboBox->setEnabled(false);
+            ui->useSocketForOutputcheckBox->setEnabled(false);
 
-        if (!server->startServer()) {
-            massMutex.unlock();
-            QMessageBox::critical(this,tr("Error"),tr("Could not start the %1:\n%2").arg(server->getServerType()).arg(server->getLastError()),QMessageBox::Ok);
-            releasingThread();
-            return;
+            if (!server->startServer()) {
+                massMutex.unlock();
+                QMessageBox::critical(this,tr("Error"),tr("Could not start the %1:\n%2").arg(server->getServerType()).arg(server->getLastError()),QMessageBox::Ok);
+                releasingThread();
+                return;
+            }
+            ui->restartPushButton->setEnabled(true);
+            ui->stopPushButton->setEnabled(true);
+            statTimer.start(1000);
         }
-        ui->restartPushButton->setEnabled(true);
-        ui->stopPushButton->setEnabled(true);
 
     }
-    statTimer.start(1000);
+
 }
 
 
 void MassProcessingDialog::deleteCurrentServer()
 {
-    if (server!= 0) {
+    if (server!= NULL) {
         server->stopServer();
         delete server;
-        server = 0;
+        server = NULL;
     }
 }
 
@@ -246,18 +265,15 @@ void MassProcessingDialog::releasingThread() {
 
 void MassProcessingDialog::cleaningMem()
 {
-    if (processor != 0) {
-        delete processor;
-        processor = 0;
-    }
-    if (currentInput != 0) {
-        delete currentInput;
-        currentInput = 0;
-    }
-    if (currentOutput != 0) {
-        delete currentOutput;
-        currentOutput = 0;
-    }
+    delete processor;
+    processor = NULL;
+
+    delete currentInput;
+    currentInput = NULL;
+
+    delete currentOutput;
+    currentOutput = NULL;
+
     deleteCurrentServer();
 }
 
@@ -265,17 +281,17 @@ void MassProcessingDialog::cleaningMem()
 void MassProcessingDialog::stats()
 {
     QMutexLocker locked(&threadMutex);
-    if (processor != 0)
+    if (processor != NULL)
         ui->statsLabel->setText(QString("Output blocks written: %1").arg(processor->getStatsOut()));
-    else if (server != 0)
+    else if (server != NULL)
         ui->statsLabel->setText(QString("Output blocks written: %1").arg(server->getStatsOut()));
 
 }
 
 QIODevice *MassProcessingDialog::getInput()
 {
-    QIODevice * input = 0;
-    QBuffer *buffer = 0;
+    QIODevice * input = NULL;
+    QBuffer *buffer = NULL;
 
     switch (ui->inputComboBox->currentIndex())
     {
@@ -283,15 +299,16 @@ QIODevice *MassProcessingDialog::getInput()
             if (ui->inputFileLineEdit->text().isEmpty())
             {
                 QMessageBox::critical(this,tr("Error"),tr("No input file defined"),QMessageBox::Ok);
-                return 0;
+                return NULL;
             }
 
-            input = new QFile(ui->inputFileLineEdit->text());
-            if (!input->open(QIODevice::ReadOnly | QIODevice::Text))
-            {
+            input = new(std::nothrow) QFile(ui->inputFileLineEdit->text());
+            if (input == NULL) {
+                 qFatal("Cannot allocate memory for input QFile X{");
+            } else if (!input->open(QIODevice::ReadOnly | QIODevice::Text)) {
                 QMessageBox::critical(this,tr("Error"),tr("Error while opening \"%1\" for reading:\n%2").arg(ui->inputFileLineEdit->text()).arg(input->errorString()),QMessageBox::Ok);
                 delete input;
-                input = 0 ;
+                input = NULL ;
             }
             break;
         case 1:
@@ -299,56 +316,65 @@ QIODevice *MassProcessingDialog::getInput()
             if (tempManualInput.isEmpty()) {
                 break;
             }
-            buffer = new QBuffer(&tempManualInput);
-            buffer->open(QBuffer::ReadOnly);
+            buffer = new(std::nothrow) QBuffer(&tempManualInput);
+            if (buffer != NULL) {
+                buffer->open(QBuffer::ReadOnly);
+            } else {
+               qFatal("Cannot allocate memory for input QBuffer X{");
+            }
+
             input = buffer;
             break;
         default:
             break;
     }
 
-    if (!currentInput == 0) {
-        delete currentInput;
-    }
+    delete currentInput;
     currentInput = input;
     return input;
 }
 
 QIODevice *MassProcessingDialog::getOutput()
 {
-    QIODevice * output = 0;
+    QIODevice * output = NULL;
     QIODevice::OpenMode writingMode;
     switch (ui->outputComboBox->currentIndex())
     {
         case 0:
             if (ui->outputFileLineEdit->text().isEmpty()){
                 QMessageBox::critical(this,tr("Error"),tr("No output file defined"),QMessageBox::Ok);
-                return 0;
+                return NULL;
             }
 
-            output = new QFile(ui->outputFileLineEdit->text());
+            output = new(std::nothrow) QFile(ui->outputFileLineEdit->text());
+            if (output == NULL) {
+                 qFatal("Cannot allocate memory for output QFile X{");
+            } else  {
+                if (ui->noOverWriteCheckBox->isChecked())
+                    writingMode = QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append;
+                else
+                    writingMode = QIODevice::WriteOnly | QIODevice::Text;
 
-            if (ui->noOverWriteCheckBox->isChecked())
-                writingMode = QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append;
-            else
-                writingMode = QIODevice::WriteOnly | QIODevice::Text;
-
-            if (!output->open(writingMode)) {
-                QMessageBox::critical(this,tr("Error"),tr("Error while opening \"%1\" for writing:\n%2").arg(ui->outputFileLineEdit->text()).arg(output->errorString()),QMessageBox::Ok);
-                delete output;
-                output = 0;
+                if (!output->open(writingMode)) {
+                    QMessageBox::critical(this,tr("Error"),tr("Error while opening \"%1\" for writing:\n%2").arg(ui->outputFileLineEdit->text()).arg(output->errorString()),QMessageBox::Ok);
+                    delete output;
+                    output = NULL;
+                }
             }
             break;
         case 1:
-            output = new ScreenIODevice(ui->outputPlainTextEdit);
-            output->open(QIODevice::WriteOnly);
+            output = new(std::nothrow) ScreenIODevice(ui->outputPlainTextEdit);
+            if (output != NULL)
+                output->open(QIODevice::WriteOnly);
+            else
+                qFatal("Cannot allocate memory for output ScreenIODevice X{");
+
             break;
         default:
             break;
     }
-    if (!currentOutput == 0) {
-        delete currentOutput;
-    }
+
+    delete currentOutput;
     currentOutput = output;
     return output;
 }
@@ -414,7 +440,7 @@ void MassProcessingDialog::onOutputChanged(int index)
 
 void MassProcessingDialog::onSeparatorChanged(QString hexSep)
 {
-    if (server != 0  && !hexSep.isEmpty()) {
+    if (server != NULL  && !hexSep.isEmpty()) {
         QByteArray sep = QByteArray::fromHex(hexSep.toUtf8());
         if (sep.size() > 0)
             server->setSeparator(sep.at(0));
@@ -423,7 +449,7 @@ void MassProcessingDialog::onSeparatorChanged(QString hexSep)
 
 void MassProcessingDialog::refreshTransformConf()
 {
-    if (server != 0) {
+    if (server != NULL) {
         server->setTransformations(tGui->getCurrentChainConf());
     }
 }
@@ -445,7 +471,7 @@ void MassProcessingDialog::restartCurrentServer()
 {
     ui->stopPushButton->setEnabled(false);
     ui->restartPushButton->setEnabled(false);
-    if (server != 0) {
+    if (server != NULL) {
         server->stopServer();
         if (!server->startServer()) {
             QMessageBox::critical(this,tr("Error"),tr("Could not restart the %1:\n%2").arg(server->getServerType()).arg(server->getLastError()),QMessageBox::Ok);
@@ -461,7 +487,7 @@ void MassProcessingDialog::stopCurrentServer()
 {
     ui->stopPushButton->setEnabled(false);
     ui->restartPushButton->setEnabled(false);
-    if (server != 0)  {
+    if (server != NULL)  {
         server->stopServer();
     }
 

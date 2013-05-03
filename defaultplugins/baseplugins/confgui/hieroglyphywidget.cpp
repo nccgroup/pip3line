@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_hieroglyphywidget.h"
 
 HieroglyphyWidget::HieroglyphyWidget(Hieroglyphy * ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::HieroglyphyWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::HieroglyphyWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::HieroglyphyWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

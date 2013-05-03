@@ -11,8 +11,9 @@ Released under AGPL see LICENSE for more information
 #ifndef XMLCOMMON_H
 #define XMLCOMMON_H
 #include <QString>
+#include <QByteArray>
 
-#define LIB_TRANSFORM_VERSION 9
+#define LIB_TRANSFORM_VERSION 10
 
 namespace Pip3lineConst {
     // Default types
@@ -75,6 +76,7 @@ namespace Pip3lineConst {
     static const QString XMLLEVEL = "Level";
     static const QString XMLFORMAT = "Format";
     static const QString XMLDECODE = "Decode";
+    static const QString XMLOFFSET = "Offset";
 
     static const QString SETTINGS_SERVER_PORT = "DefaultServerPort";
     static const QString SETTINGS_SERVER_IP = "DefaultServerIP";
@@ -106,7 +108,15 @@ namespace Pip3lineConst {
     enum OutputFormat {TEXTFORMAT = 0, HEXAFORMAT = 1};
 
     static const QString USER_DIRECTORY = ".pip3line";
+    static const int BLOCK_MAX_SIZE = 0x04000000;
 
+    enum LOGLEVEL { LSTATUS = 0, LWARNING = 1, LERROR = 2};
+    struct Message {
+            QString message;
+            QString source;
+            LOGLEVEL level;
+    };
+    typedef QList<Message> Messages;
 }
 
 #endif // XMLCOMMON_H

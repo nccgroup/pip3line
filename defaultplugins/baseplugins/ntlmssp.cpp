@@ -16,6 +16,8 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 const QString Ntlmssp::id = "NTLMSSP";
+const int Ntlmssp::SecurityBufferSize = 8;
+const int Ntlmssp::OSFooterSize = 8;
 
 Ntlmssp::Ntlmssp()
 {
@@ -95,22 +97,26 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
     QBuffer buf;
     QString str;
     QByteArray initial;
-    ushort length = 0;
-    ushort maxLength = 0;
+    quint16 length = 0;
+    quint16 maxLength = 0;
 
-    int offset;
+
+
+    quint32 offset;
     if (doBase64) {
         initial = QByteArray::fromBase64(input);
     } else {
         initial = input;
     }
 
+    quint32 sizeLimit = (quint32)initial.size();
+
     buf.setBuffer(&initial);
     buf.open(QIODevice::ReadOnly);
 
-    QByteArray temp = buf.read(8);
+    QByteArray temp = buf.read(SecurityBufferSize);
     QByteArray temp2;
-    if (temp.size() == 8 ) {
+    if (temp.size() == SecurityBufferSize ) {
         temp.chop(1);
         output.append("NTLMSSP ID: ").append(temp).append("\n");
     } else {
@@ -121,15 +127,15 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
         emit error(tr("Not a valid NTLMSSP id, let's try anyway."),id);
     }
 
-    temp = buf.read(4);
+    temp = buf.read(sizeof(quint32));
 
-    if (temp.size() != 4) {
+    if (temp.size() != sizeof(quint32)) {
         emit error(tr("Invalid type (8-11)"),id);
         return;
     }
 
     quint32 type = 0;
-    memcpy(&type, temp.data(),4);
+    memcpy(&type, temp.data(),sizeof(quint32));
 
     if (NTMLSSP_TYPE.contains(type)) {
         output.append("Message TYPE: ").append(NTMLSSP_TYPE.value(type)).append("\n");
@@ -142,104 +148,82 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
     switch (type) {
     case 1: {
         quint32 flags = 0;
-        temp = buf.read(4);
 
-        if (temp.size() != 4) {
-            emit error(tr("Invalid flags (12-15)"),id);
+        if (!readFlags(buf,&flags)) {
+            emit error(tr("Invalid flags (20-23)"),id);
             return;
         }
-        memcpy(&flags, temp.data(),4);
 
         output.append("Flags:\n").append(extractFlags(flags)).append("\n");
 
-        temp = buf.read(8);
-        if (temp.size() != 8)
+        temp = buf.read(SecurityBufferSize);
+        if (temp.size() != SecurityBufferSize)
             return;
         str = QString::fromUtf8(temp);
+
         if (str.isEmpty())
             output.append("Calling Worksation Domain: NULL").append("\n");
         else
             output.append("Calling Worksation Domain: ").append(str).append("\n");
 
-        temp = buf.read(8);
-        if (temp.size() != 8)
+        temp = buf.read(SecurityBufferSize);
+        if (temp.size() != SecurityBufferSize)
             return;
+
         str = QString::fromUtf8(temp);
         if (str.isEmpty())
             output.append("Calling Worksation Name: NULL").append("\n");
         else
             output.append("Calling Worksation Name: ").append(QString::fromUtf8(temp)).append("\n");
 
-        temp = buf.read(8);
-        if (temp.size() != 8)
-            return;
-
-        output.append(extractOSVersion(temp));
+        output.append(extractOSVersion(buf));
 
     }
         break;
     case 2: {
-        temp = buf.read(8);
-        if (temp.size() != 8) {
+
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
             emit error(tr("Invalid Target name buffer (12-19)"),id);
             return;
         }
 
-        memcpy(&length, temp.mid(0,2).data(),2);
-        memcpy(&maxLength, temp.mid(2,2).data(),2);
-        memcpy(&offset, temp.mid(4,4).data(),4);
-        if (offset + length > initial.size()) {
-            emit error(tr("Invalid Target Name size (12-13)"),id);
-            return;
-        }
         temp2 = initial.mid(offset,length);
 
         quint32 flags = 0;
-        temp = buf.read(4);
 
-        if (temp.size() != 4) {
+        if (!readFlags(buf, &flags)) {
             emit error(tr("Invalid flags (20-23)"),id);
             return;
         }
-        memcpy(&flags, temp.data(),4);
-        oemString = (flags & 0x00000002) != 0;
 
         output.append("Target Name: ");
         output.append(getString(temp2)).append("\n");
 
         output.append("Flags:\n").append(extractFlags(flags)).append("\n");
 
-        temp = buf.read(8);
+        temp = buf.read(SecurityBufferSize);
 
-        if (temp.size() != 8) {
+        if (temp.size() != SecurityBufferSize) {
             emit error(tr("Invalid challenge (24-31)"),id);
             return;
         }
 
         output.append("Challenge: ").append(temp.toHex()).append("\n");
 
-        temp = buf.read(8);
+        temp = buf.read(SecurityBufferSize);
 
-        if (temp.size() != 8) {
-            emit error(tr("Invalid challenge (32-39)"),id);
+        if (temp.size() != SecurityBufferSize) {
+            emit error(tr("Invalid context (32-39)"),id);
             return;
         }
 
         output.append("Context: ").append(temp.toHex()).append("\n");
 
-        temp = buf.read(8);
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
+            emit error(tr("Invalid Target info (40-47)"),id);
+            return;
+        }
 
-        if (temp.size() != 8) {
-            emit error(tr("Invalid target info (40-47)"),id);
-            return;
-        }
-        memcpy(&length, temp.mid(0,2).data(),2);
-        memcpy(&maxLength, temp.mid(2,2).data(),2);
-        memcpy(&offset, temp.mid(4,4).data(),4);
-        if (offset + length > initial.size()) {
-            emit error(tr("Invalid Target info size (40-41)"),id);
-            return;
-        }
         temp2 = initial.mid(offset,length);
         if (temp2.isEmpty())
             str = "NULL";
@@ -249,116 +233,56 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
         }
         output.append("Target Info List: ").append(str);
 
-        temp = buf.read(8);
-        if (temp.size() != 8)
-            return;
-
-        output.append(extractOSVersion(temp));
+        output.append(extractOSVersion(buf));
 
     }
         break;
     case 3: {
-        temp = buf.read(8);
 
-        if (temp.size() != 8) {
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
             emit error(tr("Invalid LM (12-19)"),id);
             return;
         }
-        memcpy(&length, temp.mid(0,2).data(),2);
-        memcpy(&maxLength, temp.mid(2,2).data(),2);
-        memcpy(&offset, temp.mid(4,4).data(),4);
-        if (offset + length > initial.size()) {
-            emit error(tr("Invalid LM size (12-13)"),id);
-            return;
-        }
+
         temp = initial.mid(offset,length);
         output.append("LM/LMv2: ").append(temp.mid(8,16).toHex()).append("\n");
         output.append("LM challenge: ").append(temp.mid(0,8).toHex()).append("\n");
 
-        temp = buf.read(8);
-
-        if (temp.size() != 8) {
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
             emit error(tr("Invalid NTLM (20-27)"),id);
-            return;
-        }
-        memcpy(&length, temp.mid(0,2).data(),2);
-        memcpy(&maxLength, temp.mid(2,2).data(),2);
-        memcpy(&offset, temp.mid(4,4).data(),4);
-        if (offset + length > initial.size()) {
-            emit error(tr("Invalid NTLM size (20-21)"),id);
             return;
         }
         QByteArray ntlm = initial.mid(offset,length);
 
-        temp = buf.read(8);
-
-        if (temp.size() != 8) {
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
             emit error(tr("Invalid Target Name (28-35)"),id);
-            return;
-        }
-        memcpy(&length, temp.mid(0,2).data(),2);
-        memcpy(&maxLength, temp.mid(2,2).data(),2);
-        memcpy(&offset, temp.mid(4,4).data(),4);
-        if (offset + length > initial.size()) {
-            emit error(tr("Invalid Target Name size (28-29)"),id);
             return;
         }
         QByteArray targetName = initial.mid(offset,length);
 
-        temp = buf.read(8);
-
-        if (temp.size() != 8) {
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
             emit error(tr("Invalid User Name (36-43)"),id);
-            return;
-        }
-        memcpy(&length, temp.mid(0,2).data(),2);
-        memcpy(&maxLength, temp.mid(2,2).data(),2);
-        memcpy(&offset, temp.mid(4,4).data(),4);
-        if (offset + length > initial.size()) {
-            emit error(tr("Invalid User Name size (36-37)"),id);
             return;
         }
         QByteArray userName = initial.mid(offset,length);
 
-        temp = buf.read(8);
-
-        if (temp.size() != 8) {
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
             emit error(tr("Invalid Workstation Name (44-51)"),id);
-            return;
-        }
-        memcpy(&length, temp.mid(0,2).data(),2);
-        memcpy(&maxLength, temp.mid(2,2).data(),2);
-        memcpy(&offset, temp.mid(4,4).data(),4);
-        if (offset + length > initial.size()) {
-            emit error(tr("Invalid Workstation Name size (44-45)"),id);
             return;
         }
         QByteArray workstationName = initial.mid(offset,length);
 
-        temp = buf.read(8);
-
-        if (temp.size() != 8) {
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
             emit error(tr("Invalid Session Key (52-59)"),id);
-            return;
-        }
-        memcpy(&length, temp.mid(0,2).data(),2);
-        memcpy(&maxLength, temp.mid(2,2).data(),2);
-        memcpy(&offset, temp.mid(4,4).data(),4);
-        if (offset + length > initial.size()) {
-            emit error(tr("Invalid Session Key size (52-53)"),id);
             return;
         }
         QByteArray sessionKey = initial.mid(offset,length);
 
         quint32 flags = 0;
-        temp = buf.read(4);
-
-        if (temp.size() != 4) {
+        if (!readFlags(buf, &flags)) {
             emit error(tr("Invalid flags (20-23)"),id);
             return;
         }
-        memcpy(&flags, temp.data(),4);
-        oemString = (flags & 0x00000002) != 0;
 
         output.append("NTLM/NTLMv2: ").append(extractNTLM(ntlm)).append("\n");
         output.append("TARGET NAME: ").append(getString(targetName)).append("\n");
@@ -367,11 +291,7 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
         output.append("Session Key: ").append(sessionKey.toHex()).append("\n");
         output.append("Flags:\n").append(extractFlags(flags));
 
-        temp = buf.read(8);
-        if (temp.size() != 8)
-            return;
-
-        output.append(extractOSVersion(temp));
+        output.append(extractOSVersion(buf));
 
     }
         break;
@@ -379,7 +299,6 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
         output.append("Unmanaged type: ").append(QByteArray::number(type)).append("\n");
     }
     }
-
 }
 
 bool Ntlmssp::isTwoWays()
@@ -389,7 +308,11 @@ bool Ntlmssp::isTwoWays()
 
 QWidget *Ntlmssp::requestGui(QWidget * parent)
 {
-    return new NtlmsspWidget(this, parent);
+    QWidget * widget = new(std::nothrow) NtlmsspWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for NtlmsspWidget X{");
+    }
+    return widget;
 }
 
 QString Ntlmssp::help() const
@@ -402,7 +325,7 @@ QString Ntlmssp::help() const
 QHash<QString, QString> Ntlmssp::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(XMLDECODE,QString::number((int)doBase64));
+    properties.insert(XMLDECODE,QString::number(doBase64 ? 1 : 0));
     return properties;
 }
 
@@ -461,7 +384,7 @@ QByteArray Ntlmssp::extractTargetInfo(QByteArray &data)
     QByteArray str;
     QByteArray temp;
     ushort length = 0;
-    ushort typeString = 0;
+    quint16 typeString = 0;
     quint32 flags = 0;
 
     QBuffer buf;
@@ -524,28 +447,35 @@ QByteArray Ntlmssp::extractTargetInfo(QByteArray &data)
     return str;
 }
 
-QByteArray Ntlmssp::extractOSVersion(QByteArray &data)
+QByteArray Ntlmssp::extractOSVersion(QBuffer &input)
 {
     quint32 revision = 0;
+    quint8 major = 0;
+    quint8 minor = 0;
     QByteArray str ="\nOS Info:\n";
-    QBuffer buf;
-    buf.setBuffer(&data);
-    buf.open(QIODevice::ReadOnly);
 
-    QByteArray temp = buf.read(2);
-    if (temp.size() != 2)
+    QByteArray temp = input.read(1);
+    if (temp.size() != 1)
         return str;
 
-    str.append("  Major Version ").append(QByteArray::number(temp.at(0))).append("\n");
-    str.append("  Minor version ").append(QByteArray::number(temp.at(1))).append("\n");
-    temp = buf.read(2);
+    memcpy((void *)(&major),temp.data(),1);
+
+    temp = input.read(1);
+        if (temp.size() != 1)
+            return str;
+
+    memcpy((void *)(&minor),temp.data(),1);
+
+    str.append("  Major Version ").append(QByteArray::number(major)).append("\n");
+    str.append("  Minor version ").append(QByteArray::number(minor)).append("\n");
+    temp = input.read(2);
     if (temp.size() != 2)
         return str;
-    short val;
+    quint16 val;
     memcpy(&val, temp.data(),2);
     str.append("  Build ").append(QByteArray::number(val)).append("\n");
 
-    temp = buf.read(4);
+    temp = input.read(4);
     if (temp.size() != 4)
         return str;
 
@@ -654,18 +584,54 @@ QByteArray Ntlmssp::toTimeStamp(const QByteArray &data)
         return ret;
     }
 
-    QDateTime timestamp;
-    qint64 val1;
+    QDateTime date;
+    quint64 val1;
     quint64 timeStamp = 0;
     quint64 rest = 0;
-    memcpy(&timeStamp, data.data(),8);
-
+#ifdef MSVC
+    memcpy_s(&timeStamp,sizeof(quint64), data.data(),sizeof(quint64));
+#else
+    memcpy(&timeStamp, data.data(),sizeof(quint64));
+#endif
     val1 = timeStamp / (10000);
-    rest = timeStamp - (val1 * 10000);
-    timestamp.setTimeSpec(Qt::UTC);
-    timestamp.setDate(QDate(1601,1,1));
-    timestamp = timestamp.addMSecs(val1);
-    ret = timestamp.toString("ddd d MMMM yyyy hh:mm:ss.zzz").toUtf8();
+    rest = timeStamp % 10000;
+    date.setTimeSpec(Qt::UTC);
+    date.setDate(QDate(1601,1,1));
+    date = date.addMSecs(val1 > LONG_MAX ? LONG_MAX : (qint64) val1); // just in case there is a crazy value
+    ret = date.toString("ddd d MMMM yyyy hh:mm:ss.zzz").toUtf8();
     ret.append("ms ").append(QByteArray::number(rest)).append(" ns UTC");
     return ret;
+}
+
+bool Ntlmssp::readSecurityBuffer(QBuffer &input, quint16 *length, quint16 *maxLength, quint32 *offset, quint32 maxsize)
+{
+    QByteArray data = input.read(SecurityBufferSize);
+
+    if (data.size() != SecurityBufferSize) {
+        emit error(tr("Security buffer is truncated"),id);
+        return false;
+    }
+    memcpy(length, data.mid(0,sizeof(quint16)).data(),sizeof(quint16));
+    memcpy(maxLength, data.mid(2,sizeof(quint16)).data(),sizeof(quint16));
+    memcpy(offset, data.mid(4,sizeof(quint32)).data(),sizeof(quint32));
+
+    if ((*offset) + (*length) > maxsize) {
+        emit error(tr("Too large Security Buffer size"),id);
+        return false;
+    }
+    return true;
+}
+
+bool Ntlmssp::readFlags(QBuffer &input, quint32 *flags)
+{
+    QByteArray data = input.read(sizeof(quint32));
+
+    if (data.size() != sizeof(quint32)) {
+        emit error(tr("Flag value is truncated"),id);
+    }
+
+    memcpy(flags, data.data(),sizeof(quint32));
+    oemString = ((*flags) & 0x00000002) != 0;
+
+    return true;
 }

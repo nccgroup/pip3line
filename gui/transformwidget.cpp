@@ -35,26 +35,30 @@ Released under AGPL see LICENSE for more information
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QMimeData>
+#include "../tools/transformrequest.h"
 #include <QDebug>
 
 const int TransformWidget::MAX_DIRECTION_TEXT = 20;
 const QString TransformWidget::NEW_BYTE_ACTION = "New Byte(s)";
 
 TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::TransformWidget)
+    QWidget(parent)
 {
-    currentTransform = 0;
-    plainTextContextMenu = 0;
-    globalContextMenu = 0;
-    infoDialog = 0;
-    sendToMenu = 0;
-    markMenu = 0;
-    copyMenu = 0;
-    importMenu = 0;
-    insertAfterMenu = 0;
-    insertBeforeMenu = 0;
-    replaceMenu = 0;
+    ui = new(std::nothrow) Ui::TransformWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::TransformWidget X{");
+    }
+    currentTransform = NULL;
+    plainTextContextMenu = NULL;
+    globalContextMenu = NULL;
+    infoDialog = NULL;
+    sendToMenu = NULL;
+    markMenu = NULL;
+    copyMenu = NULL;
+    importMenu = NULL;
+    insertAfterMenu = NULL;
+    insertBeforeMenu = NULL;
+    replaceMenu = NULL;
     guiHelper = nguiHelper;
     transformFactory = guiHelper->getTransformFactory();
     manager = guiHelper->getNetworkManager();
@@ -95,44 +99,40 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
 TransformWidget::~TransformWidget()
 {
 
-    qDebug() << "Destroying:" << this << " " << (currentTransform == 0 ? "Null" : currentTransform->name());
+    qDebug() << "Destroying:" << this << " " << (currentTransform == NULL ? "Null" : currentTransform->name());
 
     clearCurrentTransform();
 
-    if (plainTextContextMenu != 0)
-        delete plainTextContextMenu;
-    if (globalContextMenu != 0)
-        delete globalContextMenu;
-
-    if (infoDialog != 0)
-        delete infoDialog;
-
+    delete plainTextContextMenu;
+    delete globalContextMenu;
+    delete infoDialog;
     delete hexTableView;
     // delete dataModel; no need to do that, the TableView should take care of it
-
-    if (sendToMenu != 0)
-        delete sendToMenu;
-    if (markMenu != 0)
-        delete markMenu;
-    if (copyMenu != 0)
-        delete copyMenu;
-    if (importMenu != 0)
-        delete importMenu;
-    if (insertAfterMenu != 0)
-        delete insertAfterMenu;
-    if (insertBeforeMenu != 0)
-        delete insertBeforeMenu;
-    if (replaceMenu != 0)
-        delete replaceMenu;
-
+    delete sendToMenu;
+    delete markMenu;
+    delete copyMenu;
+    delete importMenu;
+    delete insertAfterMenu;
+    delete insertBeforeMenu;
+    delete replaceMenu;
     delete ui;
     qDebug() << "Destroyed:" << this;
 }
 
 void TransformWidget::configureViewArea() {
-    hexTableView = new ByteTableView(this);
-    dataModel = new ByteItemModel(hexTableView);
-    connect(dataModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(updateView()));
+    hexTableView = new(std::nothrow) ByteTableView(this);
+    if (hexTableView == NULL) {
+        qFatal("Cannot allocate memory for ByteTableView X{");
+        return;
+    }
+    dataModel = new(std::nothrow) ByteItemModel(hexTableView);
+    if (dataModel == NULL) {
+        delete hexTableView;
+        hexTableView = NULL;
+        qFatal("Cannot allocate memory for ByteItemModel X{");
+        return;
+    }
+    connect(dataModel, SIGNAL(updatedFrom(ByteItemModel::UpdateSource)), this, SLOT(updateView(ByteItemModel::UpdateSource)));
     connect(dataModel, SIGNAL(error(QString)), this, SLOT(logError(QString)));
     connect(dataModel, SIGNAL(warning(QString)), this, SLOT(logWarning(QString)));
     hexTableView->setModel(dataModel);
@@ -145,7 +145,12 @@ void TransformWidget::configureViewArea() {
     this->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this,SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onRightClick(QPoint)));
 
-    nameDialog = new QDialog(this);
+    nameDialog = new(std::nothrow) QDialog(this);
+    if (nameDialog == NULL) {
+        qFatal("Cannot allocate memory for nameDialog X{");
+        return;
+    }
+
     nameUi.setupUi(nameDialog);
 
     ui->tabWidget->removeTab(2);
@@ -170,28 +175,60 @@ void TransformWidget::buildSelectionArea() {
 
 void TransformWidget::buildContextMenus()
 {
-    sendToMenu = new QMenu(tr("Send selection to"));
+    sendToMenu = new(std::nothrow) QMenu(tr("Send selection to"));
+    if (sendToMenu == NULL) {
+        qFatal("Cannot allocate memory for sendToMenu X{");
+        return;
+    }
     connect(sendToMenu, SIGNAL(triggered(QAction*)), this, SLOT(onMenuSendToTriggered(QAction*)), Qt::UniqueConnection);
 
-    markMenu = new QMenu(tr("Mark as"));
+    markMenu = new(std::nothrow) QMenu(tr("Mark as"));
+    if (markMenu == NULL) {
+        qFatal("Cannot allocate memory for markMenu X{");
+        return;
+    }
     connect(markMenu, SIGNAL(triggered(QAction*)), this, SLOT(onMenuMarkTriggered(QAction*)), Qt::UniqueConnection);
 
-    copyMenu = new QMenu(tr("Copy as"));
+    copyMenu = new(std::nothrow) QMenu(tr("Copy as"));
+    if (copyMenu == NULL) {
+        qFatal("Cannot allocate memory for copyMenu X{");
+        return;
+    }
     connect(copyMenu, SIGNAL(triggered(QAction*)), this, SLOT(onCopy(QAction*)), Qt::UniqueConnection);
 
-    importMenu = new QMenu(tr("Load from clipboard"));
+    importMenu = new(std::nothrow) QMenu(tr("Load from clipboard"));
+    if (importMenu == NULL) {
+        qFatal("Cannot allocate memory for importMenu X{");
+        return;
+    }
     connect(importMenu, SIGNAL(triggered(QAction*)), this, SLOT(onImport(QAction*)), Qt::UniqueConnection);
 
-    insertAfterMenu = new QMenu(tr("Insert after"));
+    insertAfterMenu = new(std::nothrow) QMenu(tr("Insert after"));
+    if (insertAfterMenu == NULL) {
+        qFatal("Cannot allocate memory for insertAfterMenu X{");
+        return;
+    }
     connect(insertAfterMenu, SIGNAL(triggered(QAction*)), this, SLOT(onInsertAfter(QAction*)), Qt::UniqueConnection);
 
-    replaceMenu = new QMenu(tr("Replace selection "));
+    replaceMenu = new(std::nothrow) QMenu(tr("Replace selection "));
+    if (replaceMenu == NULL) {
+        qFatal("Cannot allocate memory for replaceMenu X{");
+        return;
+    }
     connect(replaceMenu, SIGNAL(triggered(QAction*)), this, SLOT(onReplace(QAction*)), Qt::UniqueConnection);
 
-    insertBeforeMenu = new QMenu(tr("Insert before"));
+    insertBeforeMenu = new(std::nothrow) QMenu(tr("Insert before"));
+    if (insertBeforeMenu == NULL) {
+        qFatal("Cannot allocate memory for insertBeforeMenu X{");
+        return;
+    }
     connect(insertBeforeMenu, SIGNAL(triggered(QAction*)), this, SLOT(onInsertBefore(QAction*)), Qt::UniqueConnection);
 
-    globalContextMenu = new QMenu();
+    globalContextMenu = new(std::nothrow) QMenu();
+    if (globalContextMenu == NULL) {
+        qFatal("Cannot allocate memory for globalContextMenu X{");
+        return;
+    }
     globalContextMenu->addAction(ui->actionSelect_all);
     globalContextMenu->addAction(ui->actionKeep_only_Selected);
     globalContextMenu->addSeparator();
@@ -217,7 +254,7 @@ void TransformWidget::buildContextMenus()
 
 void TransformWidget::updateSendToMenu()
 {
-    QAction * action = 0;
+    QAction * action = NULL;
     sendToMenu->clear(); // action created on the fly should be automatically deleted
     sendToActions.clear(); // clearing mapping
     sendToMenu->addAction(ui->actionSend_to_new_tab);
@@ -225,7 +262,11 @@ void TransformWidget::updateSendToMenu()
 
     QList<TransformsGui *> list = guiHelper->getTabs();
     for (int i = 0; i < list.size(); i++) {
-        action = new QAction(list.at(i)->getName(),sendToMenu);
+        action = new(std::nothrow) QAction(list.at(i)->getName(),sendToMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateSendToMenu X{");
+            return;
+        }
         sendToActions.insert(action, list.at(i));
         sendToMenu->addAction(action);
     }
@@ -233,7 +274,7 @@ void TransformWidget::updateSendToMenu()
 
 void TransformWidget::updateMarkMenu()
 {
-    QAction * action = 0;
+    QAction * action = NULL;
     markMenu->clear(); // action created on the fly should be automatically deleted
     markMenu->addAction(ui->actionNewMarking);
     markMenu->addSeparator();
@@ -243,70 +284,131 @@ void TransformWidget::updateMarkMenu()
         i.next();
         QPixmap pix(48,48);
         pix.fill(i.value());
-        action = new QAction(QIcon(pix),i.key(), markMenu);
+        action = new(std::nothrow) QAction(QIcon(pix),i.key(), markMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateMarkMenu X{");
+            return;
+        }
         markMenu->addAction(action);
     }
 }
 
 void TransformWidget::updateImportExportMenus()
 {
-    QAction * action = 0;
+    QAction * action = NULL;
     copyMenu->clear();
 
-    action = new QAction(GuiHelper::ACTION_UTF8_STRING, copyMenu);
+    action = new(std::nothrow) QAction(GuiHelper::ACTION_UTF8_STRING, copyMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus UTF8 X{");
+        return;
+    }
     copyMenu->addAction(action);
 
     QStringList list = guiHelper->getImportExportFunctions();
     qSort(list);
     for (int i = 0; i < list.size(); i++) {
-        action = new QAction(list.at(i), copyMenu);
+        action = new(std::nothrow) QAction(list.at(i), copyMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateImportExportMenus copyMenu X{");
+            return;
+        }
         copyMenu->addAction(action);
     }
 
     replaceMenu->clear();
-    action = new QAction(NEW_BYTE_ACTION, replaceMenu);
+    action = new(std::nothrow) QAction(NEW_BYTE_ACTION, replaceMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus replaceMenu new byte X{");
+        return;
+    }
     replaceMenu->addAction(action);
     replaceMenu->addSeparator();
-    action = new QAction(tr("From clipboard as"), replaceMenu);
+    action = new(std::nothrow) QAction(tr("From clipboard as"), replaceMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus replaceMenu clipboard X{");
+        return;
+    }
     action->setDisabled(true);
     replaceMenu->addAction(action);
-    action = new QAction(GuiHelper::ACTION_UTF8_STRING, replaceMenu);
+    action = new(std::nothrow) QAction(GuiHelper::ACTION_UTF8_STRING, replaceMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus replaceMenu clipboard X{");
+        return;
+    }
+
     replaceMenu->addAction(action);
     for (int i = 0; i < list.size(); i++) {
-        action = new QAction(list.at(i), replaceMenu);
+        action = new(std::nothrow) QAction(list.at(i), replaceMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateImportExportMenus replaceMenu user X{");
+            return;
+        }
         replaceMenu->addAction(action);
     }
 
     importMenu->clear();
-    action = new QAction(GuiHelper::ACTION_UTF8_STRING, importMenu);
+    action = new(std::nothrow) QAction(GuiHelper::ACTION_UTF8_STRING, importMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus importMenu UTF8 X{");
+        return;
+    }
     importMenu->addAction(action);
 
     for (int i = 0; i < list.size(); i++) {
-        action = new QAction(list.at(i), importMenu);
+        action = new(std::nothrow) QAction(list.at(i), importMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateImportExportMenus importMenu user's X{");
+            return;
+        }
         importMenu->addAction(action);
     }
 
     insertAfterMenu->clear();
-    action = new QAction(NEW_BYTE_ACTION, insertAfterMenu);
+    action = new(std::nothrow) QAction(NEW_BYTE_ACTION, insertAfterMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus insertAfterMenu new byte X{");
+        return;
+    }
     insertAfterMenu->addAction(action);
     insertAfterMenu->addSeparator();
-    action = new QAction(GuiHelper::ACTION_UTF8_STRING, insertAfterMenu);
+    action = new(std::nothrow) QAction(GuiHelper::ACTION_UTF8_STRING, insertAfterMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus insertAfterMenu UTF8 X{");
+        return;
+    }
     insertAfterMenu->addAction(action);
 
     for (int i = 0; i < list.size(); i++) {
-        action = new QAction(list.at(i), insertAfterMenu);
+        action = new(std::nothrow) QAction(list.at(i), insertAfterMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateImportExportMenus insertAfterMenu user's X{");
+            return;
+        }
         insertAfterMenu->addAction(action);
     }
 
     insertBeforeMenu->clear();
-    action = new QAction(NEW_BYTE_ACTION, insertBeforeMenu);
+    action = new(std::nothrow) QAction(NEW_BYTE_ACTION, insertBeforeMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus insertBeforeMenu new byte X{");
+        return;
+    }
     insertBeforeMenu->addAction(action);
     insertBeforeMenu->addSeparator();
-    action = new QAction(GuiHelper::ACTION_UTF8_STRING, insertBeforeMenu);
+    action = new(std::nothrow) QAction(GuiHelper::ACTION_UTF8_STRING, insertBeforeMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus insertBeforeMenu UTF8 X{");
+        return;
+    }
     insertBeforeMenu->addAction(action);
 
     for (int i = 0; i < list.size(); i++) {
-        action = new QAction(list.at(i), insertBeforeMenu);
+        action = new(std::nothrow) QAction(list.at(i), insertBeforeMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateImportExportMenus insertBeforeMenu user's X{");
+            return;
+        }
         insertBeforeMenu->addAction(action);
     }
 }
@@ -364,16 +466,16 @@ void TransformWidget::onMenuMarkTriggered(QAction * action)
 
 void TransformWidget::clearCurrentTransform()
 {
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         delete currentTransform;
-        currentTransform = 0;
+        currentTransform = NULL;
         if (ui->tabWidget->count() > 2)
             ui->tabWidget->removeTab(2);
     }
-    if (infoDialog != 0) {
-        delete infoDialog;
-        infoDialog = 0;
-    }
+
+    delete infoDialog;
+    infoDialog = NULL;
+
 }
 
 void TransformWidget::updatingFromTransform() {
@@ -388,7 +490,7 @@ void TransformWidget::onCopy(QAction *action)
         clipboard->setText(QString::fromUtf8(getSelectedBytes()));
     } else {
         TransformAbstract *ta  = guiHelper->getImportExportFunction(action->text());
-        if (ta != 0) {
+        if (ta != NULL) {
             ta->setWay(TransformAbstract::INBOUND);
             clipboard->setText(ta->transform(getSelectedBytes()));
         }
@@ -400,7 +502,11 @@ void TransformWidget::onImport(QAction *action)
     QClipboard *clipboard = QApplication::clipboard();
     QString input = clipboard->text();
     if (action->text() == NEW_BYTE_ACTION) {
-        NewByteDialog *dialog = new NewByteDialog(this);
+        NewByteDialog *dialog = new(std::nothrow) NewByteDialog(this);
+        if (dialog == NULL) {
+            qFatal("Cannot allocate memory for action NewByteDialog X{");
+            return;
+        }
         dialog->setModal(true);
         int ret = dialog->exec();
         if (ret == QDialog::Accepted) {
@@ -412,7 +518,7 @@ void TransformWidget::onImport(QAction *action)
         dataModel->setRawData(input.toUtf8());
     } else {
         TransformAbstract *ta  = guiHelper->getImportExportFunction(action->text());
-        if (ta != 0) {
+        if (ta != NULL) {
             ta->setWay(TransformAbstract::OUTBOUND);
             dataModel->setRawData(ta->transform(input.toUtf8()));
         }
@@ -422,7 +528,11 @@ void TransformWidget::onImport(QAction *action)
 void TransformWidget::onReplace(QAction *action)
 {
     if (action->text() == NEW_BYTE_ACTION) {
-        NewByteDialog *dialog = new NewByteDialog(this,true);
+        NewByteDialog *dialog = new(std::nothrow) NewByteDialog(this,true);
+        if (dialog == NULL) {
+            qFatal("Cannot allocate memory for onReplace NewByteDialog X{");
+            return;
+        }
         dialog->setModal(true);
         int ret = dialog->exec();
         if (ret == QDialog::Accepted) {
@@ -430,7 +540,6 @@ void TransformWidget::onReplace(QAction *action)
         }
         delete dialog;
     } else {
-
         QClipboard *clipboard = QApplication::clipboard();
         QString input = clipboard->text();
 
@@ -438,7 +547,7 @@ void TransformWidget::onReplace(QAction *action)
             hexTableView->replaceSelectedBytes(input.toUtf8());
         } else {
             TransformAbstract *ta  = guiHelper->getImportExportFunction(action->text());
-            if (ta != 0) {
+            if (ta != NULL) {
                 ta->setWay(TransformAbstract::OUTBOUND);
                 hexTableView->replaceSelectedBytes(ta->transform(input.toUtf8()));
             }
@@ -452,7 +561,11 @@ void TransformWidget::onInsertAfter(QAction *action)
     QString input = clipboard->text();
     int pos = hexTableView->getHigherSelected() + 1;
     if (action->text() == NEW_BYTE_ACTION) {
-        NewByteDialog *dialog = new NewByteDialog(this);
+        NewByteDialog *dialog = new(std::nothrow) NewByteDialog(this);
+        if (dialog == NULL) {
+            qFatal("Cannot allocate memory for onInsertAfter NewByteDialog X{");
+            return;
+        }
         dialog->setModal(true);
         int ret = dialog->exec();
         if (ret == QDialog::Accepted) {
@@ -463,7 +576,7 @@ void TransformWidget::onInsertAfter(QAction *action)
         dataModel->insert(pos,input.toUtf8());
     } else {
         TransformAbstract *ta  = guiHelper->getImportExportFunction(action->text());
-        if (ta != 0) {
+        if (ta != NULL) {
             ta->setWay(TransformAbstract::OUTBOUND);
             dataModel->insert(pos,ta->transform(input.toUtf8()));
         }
@@ -476,7 +589,11 @@ void TransformWidget::onInsertBefore(QAction *action)
     QString input = clipboard->text();
     int pos = hexTableView->getLowerSelected();
     if (action->text() == NEW_BYTE_ACTION) {
-        NewByteDialog *dialog = new NewByteDialog(this);
+        NewByteDialog *dialog = new(std::nothrow) NewByteDialog(this);
+        if (dialog == NULL) {
+            qFatal("Cannot allocate memory for onInsertBefore NewByteDialog X{");
+            return;
+        }
         dialog->setModal(true);
         int ret = dialog->exec();
         if (ret == QDialog::Accepted) {
@@ -487,7 +604,7 @@ void TransformWidget::onInsertBefore(QAction *action)
         dataModel->insert(pos,input.toUtf8());
     } else {
         TransformAbstract *ta  = guiHelper->getImportExportFunction(action->text());
-        if (ta != 0) {
+        if (ta != NULL) {
             ta->setWay(TransformAbstract::OUTBOUND);
             dataModel->insert(pos,ta->transform(input.toUtf8()));
         }
@@ -508,7 +625,7 @@ void TransformWidget::onTransformSelected(QString name) {
     clearCurrentTransform();
 
     currentTransform = transformFactory->getTransform(name);
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         currentTransform->setWay(TransformAbstract::INBOUND);
         integrateTransform();
         buildSelectionArea();
@@ -522,11 +639,11 @@ void TransformWidget::onTransformSelected(QString name) {
 
 void TransformWidget::integrateTransform()
 {
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         ui->descriptionLabel->setText(currentTransform->description());
 
         QWidget *confGui = currentTransform->getGui(this);
-        if (confGui != 0) {
+        if (confGui != NULL) {
             ui->settingsTab->layout()->addWidget(confGui);
             ui->tabWidget->insertTab(2,ui->settingsTab, tr("Settings"));
         }
@@ -534,7 +651,6 @@ void TransformWidget::integrateTransform()
         connect(currentTransform,SIGNAL(confUpdated()),this,SLOT(updatingFromTransform()));
         connect(currentTransform, SIGNAL(error(QString,QString)), this, SLOT(logError(QString)));
         connect(currentTransform, SIGNAL(warning(QString,QString)), this, SLOT(logWarning(QString)));
-        connect(currentTransform, SIGNAL(resetMessages()), this, SLOT(clearMessages()));
 
         ui->deleteButton->setEnabled(true);
         ui->infoPushButton->setEnabled(true);
@@ -557,25 +673,48 @@ void TransformWidget::input(QByteArray text) {
 }
 
 QByteArray TransformWidget::output() {
-    QMutexLocker lock(&outputMutex);
     return outputData;
 }
 
 void TransformWidget::refreshOutput()
 {
-    clearMessages();
-    ui->activityStackedWidget->setCurrentIndex(0);
-    QTimer::singleShot(0,this, SLOT(internalProcessing()));
+    if (currentTransform != NULL) {
+
+        ui->activityStackedWidget->setCurrentIndex(0);
+        inputData = dataModel->getRawData();
+        TransformAbstract * ta = transformFactory->loadTransformFromConf(currentTransform->getConfiguration());
+        if (ta != NULL) {
+            TransformRequest *tr = new TransformRequest(
+                        ta,
+                        dataModel->getRawData(),
+                        (quintptr) this);
+
+            connect(tr,SIGNAL(finishedProcessing(QByteArray,Messages)), this, SLOT(processingFinished(QByteArray,Messages)));
+            guiHelper->processTransform(tr);
+        }
+    }
 }
 
-void TransformWidget::internalProcessing()
+void TransformWidget::processingFinished(QByteArray output, Messages messages)
 {
-    outputMutex.lock();
-    outputData.clear();
-    if (currentTransform != 0) {
-        currentTransform->transform(dataModel->getRawData() ,outputData);
+    clearMessages();
+    outputData = output;
+
+    for (int i = 0; i < messages.size() ; i++) {
+        switch (messages.at(i).level) {
+            case (LERROR):
+                logError(messages.at(i).message, messages.at(i).source);
+                break;
+            case (LWARNING):
+                logWarning(messages.at(i).message, messages.at(i).source);
+                break;
+            case (LSTATUS):
+                logStatus(messages.at(i).message, messages.at(i).source);
+                break;
+            default:
+                qWarning("[TransformWidget::processingFinished] Unkown error level");
+        }
     }
-    outputMutex.unlock();
 
     emit updated();
     ui->activityStackedWidget->setCurrentIndex(1);
@@ -583,7 +722,11 @@ void TransformWidget::internalProcessing()
 
 void TransformWidget::on_actionNew_byte_array_triggered()
 {
-    NewByteDialog *dialog = new NewByteDialog(this);
+    NewByteDialog *dialog = new(std::nothrow) NewByteDialog(this);
+    if (dialog == NULL) {
+        qFatal("Cannot allocate memory for on_actionNew_byte_array_triggered NewByteDialog X{");
+        return;
+    }
     dialog->setModal(true);
     int ret = dialog->exec();
     if (ret == QDialog::Accepted) {
@@ -620,8 +763,8 @@ void TransformWidget::on_actionSave_to_file_triggered()
 void TransformWidget::on_actionDelete_selected_bytes_triggered()
 {
     if (ui->tabWidget->currentWidget() == ui->plainTextTab) {
-        QString mess = tr("This function should never be called on the Text view. T_T");
-        logger->logError(mess);
+        QString mess = tr("[TransformWidget] This function should never be called on the Text view. T_T");
+        qWarning() << mess;
         QMessageBox::critical(this,tr("Error"),mess,QMessageBox::Ok);
     } else if (ui->tabWidget->currentWidget() == ui->hexViewTab) {
         hexTableView->deleteSelectedBytes();
@@ -692,7 +835,7 @@ void TransformWidget::onRightClick(QPoint pos)
 
 void TransformWidget::on_encodeRadioButton_toggled(bool checked)
 {
-    if (checked && currentTransform != 0) {
+    if (checked && currentTransform != NULL) {
         currentTransform->setWay(TransformAbstract::INBOUND);
         refreshOutput();
     }
@@ -700,7 +843,7 @@ void TransformWidget::on_encodeRadioButton_toggled(bool checked)
 
 void TransformWidget::on_decodeRadioButton_toggled(bool checked)
 {
-    if (checked && currentTransform!= 0) {
+    if (checked && currentTransform != NULL) {
         currentTransform->setWay(TransformAbstract::OUTBOUND);
         refreshOutput();
     }
@@ -718,7 +861,7 @@ TransformAbstract *TransformWidget::getTransform() {
 }
 
 bool TransformWidget::setTransform(TransformAbstract * transf)  {
-    if (transf != 0) {
+    if (transf != NULL) {
         clearCurrentTransform();
 
         currentTransform = transf;
@@ -748,6 +891,12 @@ void TransformWidget::logError(const QString message, const QString source) {
     emit error(message,source);
 }
 
+void TransformWidget::logStatus(const QString message, const QString source)
+{
+    addMessage(message,Qt::black);
+    emit status(message,source);
+}
+
 void TransformWidget::addMessage(const QString &message, QColor color)
 {
     ui->messagesDisplay->setTextColor(color);
@@ -762,7 +911,7 @@ void TransformWidget::clearMessages() {
 
 void TransformWidget::reset()
 {
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         clearCurrentTransform();
 
         ui->transfoComboBox->blockSignals(true);
@@ -780,8 +929,12 @@ void TransformWidget::reset()
 
 void TransformWidget::setDownload(QUrl url)
 {
-    if (manager != 0) {
-        DownloadManager * downloadManager = new DownloadManager(url, manager, dataModel);
+    if (manager != NULL) {
+        DownloadManager * downloadManager = new(std::nothrow) DownloadManager(url, manager, dataModel);
+        if (downloadManager == NULL) {
+            qFatal("Cannot allocate memory for setDownload downloadManager X{");
+            return;
+        }
         connect(downloadManager, SIGNAL(error(QString,QString)), this, SLOT(logError(QString, QString)));
         connect(downloadManager, SIGNAL(error(QString,QString)), this, SLOT(logWarning(QString, QString)));
         connect(downloadManager,SIGNAL(finished(DownloadManager *)),this, SLOT(downloadFinished(DownloadManager *)));
@@ -826,9 +979,8 @@ void TransformWidget::downloadFinished(DownloadManager * downloadManager)
     delete downloadManager;
 }
 
-void TransformWidget::updateView()
+void TransformWidget::updateView(ByteItemModel::UpdateSource)
 {
-    clearMessages();
     updateStats();
     refreshOutput();
 }
@@ -960,11 +1112,15 @@ void TransformWidget::addNullBytes(char byteSample, int pos, int count)
 
 void TransformWidget::on_infoPushButton_clicked()
 {
-    if (currentTransform == 0)
+    if (currentTransform == NULL)
         return;
 
-    if (infoDialog == 0) {
-        infoDialog = new InfoDialog(currentTransform,this);
+    if (infoDialog == NULL) {
+        infoDialog = new(std::nothrow) InfoDialog(currentTransform,this);
+        if (infoDialog == NULL) {
+            qFatal("Cannot allocate memory for InfoDialog X{");
+            return;
+        }
     }
     infoDialog->setVisible(true);
 }

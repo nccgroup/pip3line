@@ -26,7 +26,6 @@ Released under AGPL see LICENSE for more information
 #include <QMutex>
 #include <QTime>
 #include <QUrl>
-#include <QQueue>
 #include "downloadmanager.h"
 #include "guihelper.h"
 #include "loggerwidget.h"
@@ -61,6 +60,7 @@ class TransformWidget : public QWidget
         void updatingFrom();
         void logWarning(const QString message, const QString source = QString());
         void logError(const QString message, const QString source = QString());
+        void logStatus(const QString message, const QString source = QString());
         void clearMessages();
         void reset();
     private slots:
@@ -68,10 +68,10 @@ class TransformWidget : public QWidget
         void updateSendToMenu();
         void updateMarkMenu();
         void refreshOutput();
-        void internalProcessing();
+        void processingFinished(QByteArray output, Messages messages);
         void buildSelectionArea();
         void downloadFinished(DownloadManager *downloadManager);
-        void updateView();
+        void updateView(ByteItemModel::UpdateSource source);
         void updateStats();
         void onSelectionChanged();
         void onInvalidText();
@@ -103,8 +103,6 @@ class TransformWidget : public QWidget
         void on_clearMarkingsPushButton_clicked();
         void on_actionClear_marking_triggered();
         void on_clearDataPushButton_clicked();
-
-
         void on_actionNew_byte_array_triggered();
 
     private:
@@ -140,8 +138,9 @@ class TransformWidget : public QWidget
         QDialog * nameDialog;
         GuiHelper * guiHelper;
         LoggerWidget *logger;
+        QByteArray inputData;
         QByteArray outputData;
-        QMutex outputMutex;
+        QMutex processingMutex;
 };
 
 #endif // TRANSFORMWIDGET_H

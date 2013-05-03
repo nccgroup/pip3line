@@ -38,6 +38,9 @@ class UnittestsTest : public QObject
         void testHexencode();
         void testHieroglyphy();
         void testBytesToInteger();
+
+        void randomFuzzing(TransformAbstract * tr, QString text = QString());
+        QByteArray randomByteArray(int length = -1);
     private:
         void printConf(QHash<QString, QString> configuration);
         QTextStream *messlog;
@@ -87,10 +90,14 @@ void UnittestsTest::testBase32()
     connect(transf, SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
     connect(transf, SIGNAL(warning(QString,QString)), this, SLOT(logError(QString)));
 
+    randomFuzzing(transf, "default");
+
     transf->setWay(TransformAbstract::INBOUND);
     QCOMPARE(transf->transform(QByteArray("un test 1234")), QByteArray("OVXCA5DFON2CAMJSGM2A===="));
     QCOMPARE(transf->transform(QByteArray("a")), QByteArray("ME======"));
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
+
+
 
     configuration = transf->getConfiguration();
     QCOMPARE(configuration.size() , 5);
@@ -98,7 +105,7 @@ void UnittestsTest::testBase32()
 
     QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::INBOUND));
     QCOMPARE(configuration.value(XMLVARIANT) , QString::number(0));
-    QCOMPARE(configuration.value(XMLPADDINGCHAR) , QString::number((int)'='));
+    QCOMPARE(configuration.value(XMLPADDINGCHAR) , QString("3d"));
     QCOMPARE(configuration.value(XMLINCLUDEPADDING) , QString::number(true));
 
     configuration.insert(PROP_WAY,QString::number((int)TransformAbstract::INBOUND));
@@ -125,6 +132,8 @@ void UnittestsTest::testBase32()
     QCOMPARE(transf->transform(QByteArray("ME======")),QByteArray("a"));
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
 
+    randomFuzzing(transf, "Variant 0");
+
     configuration.insert(PROP_WAY,QString::number((int)TransformAbstract::OUTBOUND));
     configuration.insert(XMLVARIANT,QString::number(1));
     QVERIFY(transf->setConfiguration(configuration));
@@ -132,6 +141,8 @@ void UnittestsTest::testBase32()
     QCOMPARE(transf->transform(QByteArray("ENQ20X35EDT20C9J6CT0====")), QByteArray("un test 1234"));
     QCOMPARE(transf->transform(QByteArray("C4======")),QByteArray("a"));
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
+
+    randomFuzzing(transf, "Variant 1");
 
     configuration.insert(PROP_WAY,QString::number((int)TransformAbstract::OUTBOUND));
     configuration.insert(XMLVARIANT,QString::number(2));
@@ -141,9 +152,11 @@ void UnittestsTest::testBase32()
     QCOMPARE(transf->transform(QByteArray("C4======")),QByteArray("a"));
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
 
+    randomFuzzing(transf, "Variant 2");
+
     configuration.insert(PROP_WAY,QString::number((int)TransformAbstract::OUTBOUND));
     configuration.insert(XMLVARIANT,QString::number(1));
-    configuration.insert(XMLPADDINGCHAR, QString::number((int)'-'));
+    configuration.insert(XMLPADDINGCHAR, "2d");
     configuration.insert(XMLINCLUDEPADDING, QString::number(false));
     QVERIFY(transf->setConfiguration(configuration));
     configuration = transf->getConfiguration();
@@ -151,12 +164,11 @@ void UnittestsTest::testBase32()
     QCOMPARE(configuration.value(PROP_NAME) , name);
     QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::OUTBOUND));
     QCOMPARE(configuration.value(XMLVARIANT) , QString::number(1));
-    QCOMPARE(configuration.value(XMLPADDINGCHAR) , QString::number((int)'-'));
+    QCOMPARE(configuration.value(XMLPADDINGCHAR) , QString("2d"));
     QCOMPARE(configuration.value(XMLINCLUDEPADDING) , QString::number(false));
     QCOMPARE(transf->transform(QByteArray("ENQ20X35EDT20C9J6CT0")) , QByteArray("un test 1234"));
     QCOMPARE(transf->transform(QByteArray("c4")) , QByteArray("a"));
     QCOMPARE(transf->transform(QByteArray("")) , QByteArray(""));
-
 
     failconfiguration = configuration;
     failconfiguration.remove(XMLVARIANT);
@@ -176,22 +188,17 @@ void UnittestsTest::testBase32()
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLPADDINGCHAR,QString::number(-1));
+    failconfiguration.insert(XMLPADDINGCHAR, "zzzz");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLPADDINGCHAR,QString::number(256));
+    failconfiguration.insert(XMLINCLUDEPADDING,"zzzz");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLINCLUDEPADDING,QString::number(-1));
-
-    QVERIFY(!transf->setConfiguration(failconfiguration));
-
-    failconfiguration = configuration;
-    failconfiguration.insert(XMLINCLUDEPADDING,QString::number(100));
+    failconfiguration.insert(XMLINCLUDEPADDING,"2W2vds");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
@@ -210,6 +217,8 @@ void UnittestsTest::testBase64()
 
     connect(transf, SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
     connect(transf, SIGNAL(warning(QString,QString)), this, SLOT(logError(QString)));
+
+    randomFuzzing(transf, "default");
 
     transf->setWay(TransformAbstract::INBOUND);
     QCOMPARE(transf->transform(QByteArray("a")), QByteArray("YQ=="));
@@ -232,6 +241,8 @@ void UnittestsTest::testBase64()
     QCOMPARE(transf->transform(QByteArray("a")), QByteArray("YQ"));
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
 
+    randomFuzzing(transf, "Variant 1");
+
     configuration.insert(PROP_WAY,QString::number((int)TransformAbstract::INBOUND));
     configuration.insert(XMLVARIANT,QString::number(2));
     QVERIFY(transf->setConfiguration(configuration));
@@ -241,6 +252,8 @@ void UnittestsTest::testBase64()
     QCOMPARE(transf->transform(QByteArray(QString("un test 132*$<>?>?<").toUtf8())), QByteArray("dW4gdGVzdCAxMzIqJDw-Pz4_PA2"));
     QCOMPARE(transf->transform(QByteArray("a")), QByteArray("YQ2"));
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
+
+    randomFuzzing(transf, "Variant 2");
 
     configuration.insert(PROP_WAY,QString::number((int)TransformAbstract::OUTBOUND));
     configuration.insert(XMLVARIANT,QString::number(0));
@@ -274,24 +287,28 @@ void UnittestsTest::testBase64()
 
     configuration.insert(PROP_WAY,QString::number((int)TransformAbstract::OUTBOUND));
     configuration.insert(XMLVARIANT,QString::number(3));
-    configuration.insert(XMLPADDINGCHAR, QString::number((int)'%'));
-    configuration.insert(XMLCHAR62, QString::number((int)'$'));
-    configuration.insert(XMLCHAR63, QString::number((int)'!'));
+    configuration.insert(XMLPADDINGCHAR, QString("25"));
+    configuration.insert(XMLCHAR62, QString("24"));
+    configuration.insert(XMLCHAR63, QString("21"));
     configuration.insert(XMLPADDINGTYPE, QString::number(0));
-    printConf(configuration);
+
+
+
     QVERIFY(transf->setConfiguration(configuration));
     configuration = transf->getConfiguration();
     QCOMPARE(configuration.size(),7);
     QCOMPARE(configuration.value(PROP_NAME), name);
     QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::OUTBOUND));
     QCOMPARE(configuration.value(XMLVARIANT), QString::number(3));
-    QCOMPARE(configuration.value(XMLPADDINGCHAR), QString::number((int)'%'));
-    QCOMPARE(configuration.value(XMLCHAR62), QString::number((int)'$'));
-    QCOMPARE(configuration.value(XMLCHAR63), QString::number((int)'!'));
+    QCOMPARE(configuration.value(XMLPADDINGCHAR), QString("25"));
+    QCOMPARE(configuration.value(XMLCHAR62), QString("24"));
+    QCOMPARE(configuration.value(XMLCHAR63), QString("21"));
     QCOMPARE(configuration.value(XMLPADDINGTYPE), QString::number(0));
     QCOMPARE(transf->transform(QByteArray("dW4gdGVzdCAxMzIqJDw$Pz4!PA%%")), QByteArray("un test 132*$<>?>?<"));
     QCOMPARE(transf->transform(QByteArray("YQ--")), QByteArray("a"));
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
+
+    randomFuzzing(transf, "Variant 3");
 
     failconfiguration = configuration;
     failconfiguration.remove(XMLVARIANT);
@@ -309,32 +326,32 @@ void UnittestsTest::testBase64()
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLPADDINGCHAR,QString::number(-1));
+    failconfiguration.insert(XMLPADDINGCHAR,"");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLPADDINGCHAR,QString::number(256));
+    failconfiguration.insert(XMLPADDINGCHAR,"QStr");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLCHAR62,QString::number(-1));
+    failconfiguration.insert(XMLCHAR62,"");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLCHAR62,QString::number(256));
+    failconfiguration.insert(XMLCHAR62,"ZXZXZX");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLCHAR63,QString::number(-1));
+    failconfiguration.insert(XMLCHAR63,"");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
     failconfiguration = configuration;
-    failconfiguration.insert(XMLCHAR63,QString::number(256));
+    failconfiguration.insert(XMLCHAR63,"ZXZX");
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
@@ -509,13 +526,13 @@ void UnittestsTest::testCisco7()
     connect(transf, SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
     connect(transf, SIGNAL(warning(QString,QString)), this, SLOT(logError(QString)));
 
-    transf->setWay(TransformAbstract::INBOUND);
+    transf->setWay(TransformAbstract::OUTBOUND);
     QCOMPARE(transf->transform(QByteArray("062506324F41")), QByteArray("Cisco"));
 
     configuration = transf->getConfiguration();
     QCOMPARE(configuration.size() , 2);
     QCOMPARE(configuration.value(PROP_NAME) , name);
-    QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::INBOUND));
+    QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::OUTBOUND));
 
     failconfiguration = configuration;
     failconfiguration.remove(PROP_WAY);
@@ -798,6 +815,42 @@ void UnittestsTest::testBytesToInteger()
     failconfiguration.remove("IntegerSize");
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
+}
+
+void UnittestsTest::randomFuzzing(TransformAbstract *transf, QString text)
+{
+    for (int i = 0; i < 100 ;i++ ) {
+        transf->setWay(TransformAbstract::INBOUND);
+
+        QByteArray val1 = randomByteArray();
+        QByteArray val2;
+        QByteArray val3;
+        transf->transform(val1,val2);
+
+        transf->setWay(TransformAbstract::OUTBOUND);
+
+        transf->transform(val2,val3);
+        QVERIFY2( (val1 == val3) , QString("[%1] Failed fuzzing %2 <> %3").arg(text).arg(QString::fromUtf8(val1.toHex())).arg(QString::fromUtf8(val3.toHex())).toUtf8());
+    }
+}
+
+QByteArray UnittestsTest::randomByteArray(int length)
+{
+    QByteArray ret;
+    qsrand(QDateTime::currentDateTime().toTime_t());
+
+    if (length == -1) {
+        int val = (qrand() % 10);
+        length = ( val == 0 ? 1 : val ) * 10 ;
+    }
+
+    for (int i = 0; i < length; i++) {
+        ret.append(QByteArray::number(qrand() % 256, 16));
+    }
+
+    ret = QByteArray::fromHex(ret);
+
+    return ret;
 }
 
 void UnittestsTest::printConf(QHash<QString, QString> configuration)

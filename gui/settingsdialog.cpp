@@ -25,9 +25,12 @@ using namespace Pip3lineConst;
 const QString SettingsDialog::LOGID = "SettingsDialog";
 
 SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::SettingsDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::SettingsDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::SettingsDialog X{");
+    }
     helper = nhelper;
     tManager = helper->getTransformFactory();
     settings = tManager->getSettingsObj();
@@ -110,9 +113,13 @@ void SettingsDialog::updatePluginList()
     QHashIterator<QString, TransformFactoryPluginInterface *> i(pluginList);
     while (i.hasNext()) {
         i.next();
-        PluginConfWidget *widget = new PluginConfWidget(i.value());
-        stackedList.insert(i.key(), ui->pluginsStackedWidget->addWidget(widget));
-        ui->pluginsListWidget->addItem(i.key());
+        PluginConfWidget *widget = new(std::nothrow) PluginConfWidget(i.value());
+        if (widget != NULL) {
+            stackedList.insert(i.key(), ui->pluginsStackedWidget->addWidget(widget));
+            ui->pluginsListWidget->addItem(i.key());
+        } else {
+            qFatal("Cannot allocate memory for PluginConfWidget X{");
+        }
     }
     ui->pluginsListWidget->sortItems();
 }
@@ -123,11 +130,19 @@ void SettingsDialog::updateRegisteredList()
     QStringList list = tManager->getSavedConfs().keys();
 
     for (int i = 0; i < list.size(); i++) {
-        DeleteableListItem *itemWid = new DeleteableListItem(list.at(i));
-        connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(onDeleteSaved(QString)));
-        QListWidgetItem *item = new QListWidgetItem();
-        ui->savedListWidget->addItem(item);
-        ui->savedListWidget->setItemWidget(item, itemWid);
+        DeleteableListItem *itemWid = new(std::nothrow) DeleteableListItem(list.at(i));
+        if (itemWid != NULL) {
+            connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(onDeleteSaved(QString)));
+            QListWidgetItem *item = new(std::nothrow) QListWidgetItem();
+            if (item != NULL) {
+                ui->savedListWidget->addItem(item);
+                ui->savedListWidget->setItemWidget(item, itemWid);
+            } else {
+                qFatal("Cannot allocate memory for QListWidgetItem registered X{");
+            }
+        } else {
+            qFatal("Cannot allocate memory for DeleteableListItem registered X{");
+        }
     }
 }
 
@@ -140,11 +155,19 @@ void SettingsDialog::updateSavedMarkingColors()
         i.next();
         QPixmap pix(20,20);
         pix.fill(i.value());
-        DeleteableListItem *itemWid = new DeleteableListItem(i.key(), pix);
-        connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(onMarkingDelete(QString)));
-        QListWidgetItem *item = new QListWidgetItem();
-        ui->markingColorsListWidget->addItem(item);
-        ui->markingColorsListWidget->setItemWidget(item, itemWid);
+        DeleteableListItem *itemWid = new(std::nothrow) DeleteableListItem(i.key(), pix);
+        if (itemWid != NULL) {
+            connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(onMarkingDelete(QString)));
+            QListWidgetItem *item = new(std::nothrow) QListWidgetItem();
+            if (item != NULL) {
+                ui->markingColorsListWidget->addItem(item);
+                ui->markingColorsListWidget->setItemWidget(item, itemWid);
+            } else {
+                qFatal("Cannot allocate memory for QListWidgetItem Colors X{");
+            }
+        } else {
+            qFatal("Cannot allocate memory for DeleteableListItem Colors X{");
+        }
     }
 }
 
@@ -153,11 +176,19 @@ void SettingsDialog::updateImportExportFuncs()
     ui->importExportListWidget->clear();
     QStringList list = helper->getImportExportFunctions();
     for (int i = 0; i < list.size(); i++) {
-        DeleteableListItem *itemWid = new DeleteableListItem(list.at(i));
-        connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(onImportExportFuncDeletes(QString)));
-        QListWidgetItem *item = new QListWidgetItem();
-        ui->importExportListWidget->addItem(item);
-        ui->importExportListWidget->setItemWidget(item, itemWid);
+        DeleteableListItem *itemWid = new(std::nothrow) DeleteableListItem(list.at(i));
+        if (itemWid != NULL) {
+            connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(onImportExportFuncDeletes(QString)));
+            QListWidgetItem *item = new(std::nothrow) QListWidgetItem();
+            if (item != NULL) {
+                ui->importExportListWidget->addItem(item);
+                ui->importExportListWidget->setItemWidget(item, itemWid);
+            } else {
+                qFatal("Cannot allocate memory for QListWidgetItem Import/Export X{");
+            }
+        } else {
+            qFatal("Cannot allocate memory for DeleteableListItem Import/Export X{");
+        }
     }
 }
 
@@ -177,49 +208,56 @@ void SettingsDialog::onDoubleClickImportExportFuncs(QListWidgetItem *item)
 
     QString name = itemWid->getName();
 
+    QuickViewItemConfig *itemConfig = new(std::nothrow) QuickViewItemConfig(helper, this);
+    if (itemConfig != NULL) {
+        itemConfig->setWayBoxVisible(false);
+        itemConfig->setFormatVisible(false);
+        TransformAbstract *ta = helper->getImportExportFunction(name);
 
-    QuickViewItemConfig *itemConfig = new QuickViewItemConfig(helper, this);
-    itemConfig->setWayBoxVisible(false);
-    itemConfig->setFormatVisible(false);
-    TransformAbstract *ta = helper->getImportExportFunction(name);
+        if (ta != NULL) {
 
-    if (ta != 0) {
+            ta = tManager->loadTransformFromConf(ta->getConfiguration());
+            if (ta != NULL) {
+                itemConfig->setTransform(ta);
+                itemConfig->setName(name);
+                int ret = itemConfig->exec();
+                if (ret == QDialog::Accepted) {
+                    delete ta;
+                    ta = itemConfig->getTransform();
+                    QString newName = itemConfig->getName();
 
-        ta = tManager->loadTransformFromConf(ta->getConfiguration());
-        if (ta != 0) {
-            itemConfig->setTransform(ta);
-            itemConfig->setName(name);
-            int ret = itemConfig->exec();
-            if (ret == QDialog::Accepted) {
-                delete ta;
-                ta = itemConfig->getTransform();
-                QString newName = itemConfig->getName();
+                    helper->removeImportExportFunctions(name);
+                    helper->addImportExportFunctions(newName, ta);
+                } else {
+                    delete ta;
+                }
 
-                helper->removeImportExportFunctions(name);
-                helper->addImportExportFunctions(newName, ta);
-            } else {
-                delete ta;
             }
-
         }
+        delete itemConfig;
+    } else {
+        qFatal("Cannot allocate memory for QuickViewItemConfig Import/Export double X{");
     }
-    delete itemConfig;
 }
 
 void SettingsDialog::onAddImportExportFuncs()
 {
-    QuickViewItemConfig *itemConfig = new QuickViewItemConfig(helper, this);
-    itemConfig->setWayBoxVisible(false);
-    itemConfig->setFormatVisible(false);
-    int ret = itemConfig->exec();
-    if (ret == QDialog::Accepted) {
-        TransformAbstract *ta = itemConfig->getTransform();
-        if (ta != 0) {
-            helper->addImportExportFunctions(itemConfig->getName(),ta);
+    QuickViewItemConfig *itemConfig = new(std::nothrow) QuickViewItemConfig(helper, this);
+    if (itemConfig != NULL) {
+        itemConfig->setWayBoxVisible(false);
+        itemConfig->setFormatVisible(false);
+        int ret = itemConfig->exec();
+        if (ret == QDialog::Accepted) {
+            TransformAbstract *ta = itemConfig->getTransform();
+            if (ta != NULL) {
+                helper->addImportExportFunctions(itemConfig->getName(),ta);
+            }
         }
-    }
 
-    delete itemConfig;
+        delete itemConfig;
+    } else {
+        qFatal("Cannot allocate memory for QuickViewItemConfig Import/Export add X{");
+    }
 }
 
 void SettingsDialog::onPluginClicked(QModelIndex index)
@@ -229,7 +267,7 @@ void SettingsDialog::onPluginClicked(QModelIndex index)
     if (stackedList.contains(name)) {
         ui->pluginsStackedWidget->setCurrentIndex(stackedList.value(name));
     } else {
-        emit error(tr("Cannot find the item %1 in stackedList T_T").arg(name), LOGID);
+        qWarning() << tr("[SettingsDialog] Cannot find the item %1 in stackedList T_T").arg(name);
     }
 }
 

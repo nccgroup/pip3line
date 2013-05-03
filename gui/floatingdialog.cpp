@@ -13,9 +13,12 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 FloatingDialog::FloatingDialog(QWidget * widget, QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::FloatingDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::FloatingDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::FloatingDialog X{");
+    }
     ui->setupUi(this);
     setModal(false);
     ui->verticalLayout->addWidget(widget);

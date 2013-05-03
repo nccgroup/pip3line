@@ -13,13 +13,16 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 QuickViewDialog::QuickViewDialog(GuiHelper *nguiHelper, QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::QuickViewDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::QuickViewDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::QuickViewDialog X{");
+    }
     guiHelper = nguiHelper;
     ui->setupUi(this);
     setModal(false);
-    connect(ui->addPushButton, SIGNAL(clicked()), this, SLOT(NewItem()));
+    connect(ui->addPushButton, SIGNAL(clicked()), this, SLOT(newItem()));
     connect(ui->resetPushButton, SIGNAL(clicked()), this, SLOT(onReset()));
 
     QStringList saved = guiHelper->getQuickViewConf();
@@ -42,18 +45,22 @@ QuickViewDialog::~QuickViewDialog()
     delete ui;
 }
 
-void QuickViewDialog::NewItem()
+void QuickViewDialog::newItem()
 {
-    QuickViewItem * qvi = new QuickViewItem(guiHelper, this);
-    listLock.lockForWrite();
-    itemList.append(qvi);
-    listLock.unlock();
-    connect(qvi, SIGNAL(destroyed()), this, SLOT(itemDeleted()));
-    if (qvi->configure()) {
-        ui->itemLayout->addWidget(qvi);
-        dataLock.lockForRead();
-        qvi->processData(currentData);
-        dataLock.unlock();
+    QuickViewItem * qvi = new(std::nothrow) QuickViewItem(guiHelper, this);
+    if (qvi != NULL) {
+        listLock.lockForWrite();
+        itemList.append(qvi);
+        listLock.unlock();
+        connect(qvi, SIGNAL(destroyed()), this, SLOT(itemDeleted()));
+        if (qvi->configure()) {
+            ui->itemLayout->addWidget(qvi);
+            dataLock.lockForRead();
+            qvi->processData(currentData);
+            dataLock.unlock();
+        }
+    } else {
+        qFatal("Cannot allocate memory for QuickViewItem for newItem X{");
     }
 }
 
@@ -90,19 +97,23 @@ void QuickViewDialog::onReset()
 
 void QuickViewDialog::addItem(const QString &conf)
 {
-    QuickViewItem * qvi = new QuickViewItem(guiHelper, this, conf);
-    if (!qvi->isConfigured()) {
-        delete qvi;
-        return;
+    QuickViewItem * qvi = new(std::nothrow) QuickViewItem(guiHelper, this, conf);
+    if (qvi != NULL) {
+        if (!qvi->isConfigured()) {
+            delete qvi;
+            return;
+        }
+        listLock.lockForWrite();
+        itemList.append(qvi);
+        listLock.unlock();
+        ui->itemLayout->addWidget(qvi);
+        dataLock.lockForRead();
+        qvi->processData(currentData);
+        dataLock.unlock();
+        connect(qvi, SIGNAL(destroyed()), this, SLOT(itemDeleted()));
+    } else {
+        qFatal("Cannot allocate memory for QuickViewItem for addItem X{");
     }
-    listLock.lockForWrite();
-    itemList.append(qvi);
-    listLock.unlock();
-    ui->itemLayout->addWidget(qvi);
-    dataLock.lockForRead();
-    qvi->processData(currentData);
-    dataLock.unlock();
-    connect(qvi, SIGNAL(destroyed()), this, SLOT(itemDeleted()));
 }
 
 void QuickViewDialog::receivingData(const QByteArray &data)

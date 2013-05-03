@@ -8,7 +8,7 @@
 # Released under AGPL see LICENSE for more information
 ####
 
-message( STATUS " Configuring libtransform " )
+message( STATUS "Configuring libtransform --" )
 project( transform )
 cmake_minimum_required( VERSION 2.8.9 )
 set ( CMAKE_BUILD_TYPE Release )

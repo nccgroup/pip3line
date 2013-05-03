@@ -24,7 +24,7 @@ class SubstitutionTables : public QAbstractTableModel {
     public:
         static const int S_TABLE_SIZE;
         static const int S_ARRAY_SIZE;
-        SubstitutionTables();
+        explicit SubstitutionTables();
         ~SubstitutionTables();
         int columnCount ( const QModelIndex & parent = QModelIndex() ) const;
         int rowCount ( const QModelIndex & parent = QModelIndex() ) const;

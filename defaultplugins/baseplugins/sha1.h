@@ -13,10 +13,6 @@ Released under AGPL see LICENSE for more information
 
 #include "transformabstract.h"
 
-namespace Ui {
-class Sha1;
-}
-
 class Sha1 : public TransformAbstract
 {
     Q_OBJECT

@@ -12,12 +12,15 @@ Released under AGPL see LICENSE for more information
 #include "ui_customdialogdockwidget.h"
 
 CustomDialogDockWidget::CustomDialogDockWidget(const QString &title, QWidget *parent, QWidget *item) :
-    QDockWidget(parent),
-    ui(new Ui::CustomDialogDockWidget)
+    QDockWidget(parent)
 {
+    ui = new(std::nothrow) Ui::CustomDialogDockWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::CustomDialogDockWidget X{");
+    }
     ui->setupUi(this);
     this->setWindowTitle(title);
-    if (item != 0)
+    if (item != NULL)
         ui->verticalLayout->addWidget(item);
 }
 

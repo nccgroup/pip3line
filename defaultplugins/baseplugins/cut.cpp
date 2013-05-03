@@ -49,7 +49,7 @@ QHash<QString, QString> Cut::getConfiguration()
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
     properties.insert(XMLFROM,QString::number(from));
     properties.insert(XMLLENGTH,QString::number(length));
-    properties.insert(XMLEVERYTHING,QString::number(everything));
+    properties.insert(XMLEVERYTHING,QString::number(everything ? 1 : 0));
     return properties;
 }
 
@@ -86,7 +86,11 @@ bool Cut::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Cut::requestGui(QWidget *parent)
 {
-    return new CutWidget(this, parent);
+    QWidget * widget = new(std::nothrow) CutWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for CutWidget X{");
+    }
+    return widget;
 }
 
 QString Cut::help() const

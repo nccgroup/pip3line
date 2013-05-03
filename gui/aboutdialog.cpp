@@ -15,14 +15,19 @@ Released under AGPL see LICENSE for more information
 #include <QStyleFactory>
 
 AboutDialog::AboutDialog(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::AboutDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::AboutDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::AboutDialog X{");
+    }
+
     ui->setupUi(this);
     ui->versionLabel->setText(tr("%1 %2 (libtransform v%3)").arg(APPNAME).arg(VERSION_STRING).arg(LIB_TRANSFORM_VERSION));
     QString info;
 
     info.append(tr("<p>Compiled with <b>Qt %1</b> (currently running with Qt %2)</p>").arg(QT_VERSION_STR).arg(qVersion()));
+    info.append(tr("<p>Git commit: %1</p>").arg(GIT_COMMIT));
     info.append(tr("<p>Style(s) available on this platform: <ul>"));
     QStringList stylelist = QStyleFactory::keys();
     for (int i = 0; i < stylelist.size(); i++) {

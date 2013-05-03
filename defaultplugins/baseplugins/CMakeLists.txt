@@ -1,22 +1,14 @@
 ####
-# pip3line: easy encoder/decoder and more
-# Copyright (C) 2012-2013  Gabriel Caudrelier<gabriel.caudrelier@gmail.com>
+# Released as open source by NCC Group Plc - http://www.nccgroup.com/
 #
-# Pip3line is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
 #
-# Pip3line is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# https://github.com/nccgroup/pip3line
 #
-# You should have received a copy of the GNU General Public License
-# along with Pip3line.  If not, see <http://www.gnu.org/licenses/>.
+# Released under AGPL see LICENSE for more information
 ####
 
-message ( STATUS " Configuring the base plugin " )
+message ( STATUS "Configuring the base plugin --" )
 project( baseplugins )
 cmake_minimum_required( VERSION 2.8.9 )
 set ( CMAKE_BUILD_TYPE Release )
@@ -89,6 +81,7 @@ set ( baseplugins_HDRS
 	microsofttimestamp.h
 	bytesinteger.h
 	ntlmssp.h
+	bytestofloat.h
 	confgui/xorwidget.h
 	confgui/urlencodewidget.h
 	confgui/splitwidget.h
@@ -114,6 +107,8 @@ set ( baseplugins_HDRS
 	confgui/byteintegerwidget.h
 	confgui/basexwidget.h
 	confgui/ntlmsspwidget.h
+	confgui/numbertocharwidget.h
+	confgui/bytestofloatwdiget.h
 	)
 
 set ( baseplugins_SRCS
@@ -157,6 +152,7 @@ set ( baseplugins_SRCS
 	microsofttimestamp.cpp
 	bytesinteger.cpp
 	ntlmssp.cpp
+	bytestofloat.cpp
 	confgui/xorwidget.cpp
 	confgui/urlencodewidget.cpp
 	confgui/splitwidget.cpp
@@ -182,6 +178,8 @@ set ( baseplugins_SRCS
 	confgui/byteintegerwidget.cpp
 	confgui/basexwidget.cpp
 	confgui/ntlmsspwidget.cpp
+	confgui/numbertocharwidget.cpp
+	confgui/bytestofloatwdiget.cpp
 	)
 
 set ( baseplugins_UIS
@@ -210,8 +208,28 @@ set ( baseplugins_UIS
 	confgui/byteintegerwidget.ui
 	confgui/basexwidget.ui
 	confgui/ntlmsspwidget.ui
+	confgui/numbertocharwidget.ui
+	confgui/bytestofloatwdiget.ui
 	)
 
+if(WITH_QT5)
+	set ( baseplugins_HDRS
+		${baseplugins_HDRS}
+		sha224.h
+		sha256.h
+		sha384.h
+		sha512.h
+	)
+	
+	set ( baseplugins_SRCS
+		${baseplugins_SRCS}
+		sha224.cpp
+		sha256.cpp
+		sha384.cpp
+		sha512.cpp
+	)
+endif(WITH_QT5)
+	
 set ( baseplugins_RSCS
 	baseplugins_res.qrc
 	)

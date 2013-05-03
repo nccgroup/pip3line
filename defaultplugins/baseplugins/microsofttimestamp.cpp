@@ -44,7 +44,7 @@ void MicrosoftTimestamp::transform(const QByteArray &input, QByteArray &output)
 
     output.clear();
     QDateTime timestamp;
-    qint64 val1;
+    quint64 val1;
     quint64 val2;
     if (wayValue == INBOUND) {
         bool ok;
@@ -54,10 +54,10 @@ void MicrosoftTimestamp::transform(const QByteArray &input, QByteArray &output)
         if (ok) {
 
             val1 = val2 / (10000);
-            rest = val2 - (val1 * 10000);
+            rest = val2 % 10000;
             timestamp.setTimeSpec(Qt::UTC);
             timestamp.setDate(QDate(1601,1,1));
-            timestamp = timestamp.addMSecs(val1);
+            timestamp = timestamp.addMSecs(val1 > LONG_MAX ? LONG_MAX : (qint64) val1);
             output = timestamp.toString(dateFormat).toUtf8();
             output.append("ms ").append(QByteArray::number(rest)).append(" ns UTC");
         } else {
@@ -90,7 +90,11 @@ bool MicrosoftTimestamp::isTwoWays()
 
 QWidget *MicrosoftTimestamp::requestGui(QWidget * parent)
 {
-    return new MicrosoftTimestampWidget(this, parent);
+    QWidget * widget = new(std::nothrow) MicrosoftTimestampWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for MicrosoftTimestampWidget X{");
+    }
+    return widget;
 }
 
 QString MicrosoftTimestamp::help() const

@@ -13,15 +13,18 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 PluginConfWidget::PluginConfWidget(TransformFactoryPluginInterface *nplugin, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::PluginConfWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::PluginConfWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::PluginConfWidget X{");
+    }
     plugin = nplugin;
     ui->setupUi(this);
     ui->pluginNamelabel->setText(plugin->pluginName());
     QWidget * gui = plugin->getConfGui(this);
 
-    if (gui != 0) {
+    if (gui != NULL) {
         ui->mainLayout->addWidget(gui);
     }
 

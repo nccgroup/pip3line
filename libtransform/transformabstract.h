@@ -51,17 +51,19 @@ class LIBTRANSFORMSHARED_EXPORT TransformAbstract : public QObject
         // Base functions setting the current direction of the transformation process
         void setWay(Way nway);
         TransformAbstract::Way way();
-        // Utilities functions used for conversion
-        QByteArray fromHex(QByteArray in);
-        static QByteArray fromEscapedHex(const QByteArray &val);
-        static QByteArray fromCStyleArray(const QByteArray &val);
-        static QByteArray toEscapedHex(const QByteArray &val);
-        static QByteArray toCStyleArray(const QByteArray &val);
-        static QByteArray toCSV(const QByteArray &val);
-        static QByteArray toPrintableString(const QByteArray &val);
+
         // Convenience function which just calls "void transform(const QByteArray &input, QByteArray &output)"
         QByteArray transform(const QByteArray &input);
-    public Q_SLOTS:
+        // static utility functions
+        static QByteArray toPrintableString(const QByteArray &val, bool strict = true);
+        static bool isPrintable(const qint32 c);
+
+    protected:
+        // Utilities functions used for conversion
+        QByteArray fromHex(QByteArray in);
+        QString saveChar(const char c) const;
+        bool loadChar(const QString val, char *c);
+    protected Q_SLOTS:
         // Convenience functions used to manage errors and warnings internally
         virtual void logError(const QString message, const QString source);
         virtual void logWarning(const QString message, const QString source);
@@ -70,7 +72,6 @@ class LIBTRANSFORMSHARED_EXPORT TransformAbstract : public QObject
         void confUpdated(); // to be emitted when the internal configuration has been modified, so that the gui get notified
         void error(const QString, const QString); // signal for an error message (message, source)
         void warning(const QString, const QString); // signal for warning message (message, source)
-        void resetMessages(); // for gui purposes, tell the default gui to clean all previous error/warning messages
 
     protected:
         virtual QWidget * requestGui(QWidget * parent);

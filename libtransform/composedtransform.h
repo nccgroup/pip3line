@@ -18,7 +18,7 @@ class LIBTRANSFORMSHARED_EXPORT ComposedTransform : public TransformAbstract
 {
         Q_OBJECT
     public:
-        ComposedTransform(TransformChain transformChain);
+        explicit ComposedTransform(TransformChain transformChain);
         ~ComposedTransform();
         QString name() const;
         QString description() const;

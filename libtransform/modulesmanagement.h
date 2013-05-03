@@ -30,7 +30,7 @@ class LIBTRANSFORMSHARED_EXPORT ModulesManagement : public QObject
                 QString fileName;
                 ModuleType type;
         };
-        ModulesManagement(const QString &langName, const QString &extension, const QString & baseDir, const QStringList &initialPaths, Pip3lineCallback *callback);
+        explicit ModulesManagement(const QString &langName, const QString &extension, const QString & baseDir, const QStringList &initialPaths, Pip3lineCallback *callback);
         ~ModulesManagement();
         QStringList getPathsList();
         QStringList getModulesList();

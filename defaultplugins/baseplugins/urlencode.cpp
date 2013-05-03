@@ -40,7 +40,7 @@ bool UrlEncode::isTwoWays() {
 QHash<QString, QString> UrlEncode::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(XMLPERCENTCHAR,QString::number((int)percentSign));
+    properties.insert(XMLPERCENTCHAR,saveChar(percentSign));
     properties.insert(XMLINCLUDE,QString(include.toBase64()));
     properties.insert(XMLEXCLUDE,QString(exclude.toBase64()));
 
@@ -50,14 +50,14 @@ QHash<QString, QString> UrlEncode::getConfiguration()
 bool UrlEncode::setConfiguration(QHash<QString, QString> propertiesList)
 {
     bool res = TransformAbstract::setConfiguration(propertiesList);
-    bool ok;
 
-    int val = propertiesList.value(XMLPERCENTCHAR).toInt(&ok);
-    if (!ok || val < 0x00 || val > 0xFF) {
+    QString tmp = propertiesList.value(XMLPERCENTCHAR);
+    char tmpChar = '\x00';
+    if (!loadChar(tmp, &tmpChar)) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLPERCENTCHAR),id);
     } else {
-        setPercentSign((char)val);
+        setPercentSign(tmpChar);
     }
 
     include = QByteArray::fromBase64(propertiesList.value(XMLINCLUDE).toUtf8());
@@ -68,7 +68,11 @@ bool UrlEncode::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *UrlEncode::requestGui(QWidget *parent)
 {
-    return new UrlEncodeWidget(this, parent);
+    QWidget * widget = new(std::nothrow) UrlEncodeWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for UrlEncodeWidget X{");
+    }
+    return widget;
 }
 
 QString UrlEncode::help() const
@@ -104,20 +108,26 @@ QByteArray UrlEncode::getInclude()
 
 void UrlEncode::setPercentSign(char val)
 {
-    percentSign = val;
-    emit confUpdated();
+    if (percentSign != val) {
+        percentSign = val;
+        emit confUpdated();
+    }
 }
 
 void UrlEncode::setExclude(QByteArray vals)
 {
-    exclude = vals;
-    emit confUpdated();
+    if (exclude != vals) {
+        exclude = vals;
+        emit confUpdated();
+    }
 }
 
 void UrlEncode::setInclude(QByteArray vals)
 {
-    include = vals;
-    emit confUpdated();
+    if (include != vals) {
+        include = vals;
+        emit confUpdated();
+    }
 }
 
 

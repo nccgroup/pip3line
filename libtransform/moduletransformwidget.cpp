@@ -14,9 +14,12 @@ Released under AGPL see LICENSE for more information
 #include <QFileDialog>
 
 ModuleTransformWidget::ModuleTransformWidget(ScriptTransformAbstract *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::ModuleTransformWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::ModuleTransformWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::ModuleTransformWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->fileLineEdit->setText(transform->getModuleFileName());

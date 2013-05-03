@@ -19,7 +19,7 @@ class Base32 : public TransformAbstract
         Q_OBJECT
     public:
         static const QStringList VARIATIONS;
-        enum CharSetVariant {RFC4648 = 0, CROCKFORD, BASE32HEX};
+        enum CharSetVariant {RFC4648 = 0, CROCKFORD = 1, BASE32HEX = 2};
         static const QByteArray CharTableRFC4648;
         static const QByteArray CharTableCrockford;
         static const QByteArray CharTableBase32Hex;

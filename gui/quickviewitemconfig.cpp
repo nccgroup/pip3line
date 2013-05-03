@@ -15,14 +15,17 @@ Released under AGPL see LICENSE for more information
 const QString QuickViewItemConfig::LOGID = "QuickViewItemConfig";
 
 QuickViewItemConfig::QuickViewItemConfig(GuiHelper *nguiHelper, QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::QuickViewItemConfig)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::QuickViewItemConfig();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::QuickViewItemConfig X{");
+    }
     guiHelper = nguiHelper;
     ui->setupUi(this);
-    currentTransform = 0;
-    confGui = 0;
-    infoDialog = 0;
+    currentTransform = NULL;
+    confGui = NULL;
+    infoDialog = NULL;
     wayBoxVisible = true;
     formatBoxVisible = true;
     format = TEXTFORMAT;
@@ -43,13 +46,11 @@ QuickViewItemConfig::QuickViewItemConfig(GuiHelper *nguiHelper, QWidget *parent)
 
 QuickViewItemConfig::~QuickViewItemConfig()
 {
-    qDebug() << "Destroying " << this;
+    //qDebug() << "Destroying " << this;
 
-    clearCurrentTransform();
+    delete currentTransform;
 
-    if (infoDialog != 0)
-        delete infoDialog;
-
+    delete infoDialog;
     delete ui;
 
 }
@@ -63,25 +64,25 @@ void QuickViewItemConfig::closeEvent(QCloseEvent *event)
 
 TransformAbstract *QuickViewItemConfig::getTransform()
 {
-    if (currentTransform != 0)
+    if (currentTransform != NULL)
         return transformFactory->loadTransformFromConf(currentTransform->getConfiguration());
     else
-        return 0;
+        return NULL;
 }
 
 void QuickViewItemConfig::setTransform(TransformAbstract *transform)
 {
-    if (transform != 0) {
-        clearCurrentTransform();
+    if (transform != NULL) {
+        delete currentTransform;
         currentTransform = transformFactory->loadTransformFromConf(transform->getConfiguration());
-        if (currentTransform != 0) {
+        if (currentTransform != NULL) {
             int index = ui->transformComboBox->findText(currentTransform->name());
             if (index != -1) {
                 ui->transformComboBox->blockSignals(true);
                 ui->transformComboBox->setCurrentIndex(index);
                 ui->transformComboBox->blockSignals(false);
             } else {
-                guiHelper->getLogger()->logError(tr("Could not find the transform index T_T"), LOGID);
+                qWarning() << tr("[QuickViewItemConfig] Could not find the transform index T_T");
             }
 
             integrateTransform();
@@ -127,18 +128,18 @@ void QuickViewItemConfig::setFormatVisible(bool val)
 
 void QuickViewItemConfig::onTransformSelect(QString name)
 {
-    clearCurrentTransform();
+    delete currentTransform;
 
     currentTransform = transformFactory->getTransform(name);
 
-    if (currentTransform != 0)
+    if (currentTransform != NULL)
         integrateTransform();
 
 }
 
 void QuickViewItemConfig::onInboundWayChange(bool checked)
 {
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         if (checked) {
             currentTransform->setWay(TransformAbstract::INBOUND);
         } else {
@@ -157,24 +158,26 @@ void QuickViewItemConfig::onTextFormatToggled(bool checked)
 
 void QuickViewItemConfig::onInfo()
 {
-    if (currentTransform != 0) {
-        if (infoDialog != 0 && infoDialog->getTransform() != currentTransform){
+    if (currentTransform != NULL) {
+        if (infoDialog != NULL && infoDialog->getTransform() != currentTransform){
             // if transform changed only
             delete infoDialog;
-            infoDialog = 0;
+            infoDialog = NULL;
         }
 
-        if (infoDialog == 0) {
-            infoDialog = new InfoDialog(currentTransform,this);
+        infoDialog = new(std::nothrow) InfoDialog(currentTransform,this);
+        if (infoDialog == NULL) {
+            qFatal("Cannot allocate memory for infoDialog (QuickViewItemConfig) X{");
         }
-
-        infoDialog->setVisible(true);
+        else {
+            infoDialog->setVisible(true);
+        }
     }
 }
 
 void QuickViewItemConfig::integrateTransform()
 {
-    if (currentTransform != 0) {
+    if (currentTransform != NULL) {
         connect(currentTransform, SIGNAL(destroyed()), this, SLOT(onTransformDelete()));
         if (currentTransform->isTwoWays()) {
             ui->inboundRadioButton->setText(currentTransform->inboundString());
@@ -190,14 +193,14 @@ void QuickViewItemConfig::integrateTransform()
         }
         ui->formatGroupBox->setVisible(formatBoxVisible);
 
-        if (confGui != 0)
+        if (confGui != NULL)
             ui->confLayout->removeWidget(confGui);
         confGui = currentTransform->getGui(this);
         // never need to delete confgui, as it is taken care of by TransformAbstract upon destruction
 
         ui->infoPushButton->setEnabled(true);
         ui->nameLineEdit->setText(currentTransform->name());
-        if (confGui != 0) {
+        if (confGui != NULL) {
             ui->confLayout->addWidget(confGui);
         }
         this->adjustSize();
@@ -206,16 +209,10 @@ void QuickViewItemConfig::integrateTransform()
 
 void QuickViewItemConfig::onTransformDelete()
 {
-    currentTransform = 0;
+    currentTransform = NULL;
     ui->transformComboBox->blockSignals(true);
     ui->transformComboBox->setCurrentIndex(0);
     ui->transformComboBox->blockSignals(false);
     ui->wayGroupBox->setVisible(false);
     ui->formatGroupBox->setVisible(false);
-}
-
-void QuickViewItemConfig::clearCurrentTransform()
-{
-    if (currentTransform != 0)
-        delete currentTransform;
 }

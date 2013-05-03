@@ -38,8 +38,8 @@ bool Reverse::isTwoWays() {
 QHash<QString, QString> Reverse::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(XMLNOBLOCK,QString::number((int)noBlock));
-    properties.insert(XMLBLOCKSIZE,QString::number((int)blockSize));
+    properties.insert(XMLNOBLOCK,QString::number(noBlock ? 1 : 0));
+    properties.insert(XMLBLOCKSIZE,QString::number(blockSize));
 
     return properties;
 }
@@ -70,7 +70,11 @@ bool Reverse::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Reverse::requestGui(QWidget *parent)
 {
-    return new ReverseWidget(this, parent);
+    QWidget * widget = new(std::nothrow) ReverseWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for ReverseWidget X{");
+    }
+    return widget;
 }
 
 QString Reverse::help() const

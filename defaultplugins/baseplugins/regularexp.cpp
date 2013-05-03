@@ -114,14 +114,14 @@ bool RegularExp::isTwoWays()
 QHash<QString, QString> RegularExp::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(XMLPROCESSLINEBYLINE,QString::number((int)processLineByLine));
+    properties.insert(XMLPROCESSLINEBYLINE,QString::number(processLineByLine ? 1 : 0));
     properties.insert(XMLACTIONTYPE,QString::number((int)actionType));
-    properties.insert(XMLGREEDYQUANT,QString::number((int)useGreedyQuantifier));
+    properties.insert(XMLGREEDYQUANT,QString::number(useGreedyQuantifier ? 1 : 0));
     properties.insert(XMLREGEXP,QString(expression.toUtf8().toBase64()));
-    properties.insert(XMLCASEINSENSITIVE,QString::number((int)caseInsensitive));
+    properties.insert(XMLCASEINSENSITIVE,QString::number(caseInsensitive ? 1 : 0));
 
     if (actionType == EXTRACT) {
-        properties.insert(XMLALLGROUPS, QString::number((int)allGroups));
+        properties.insert(XMLALLGROUPS, QString::number(allGroups ? 1 : 0));
         properties.insert(XMLGROUP, QString::number((int)selectedGroup));
     } else {
         properties.insert(XMLREPLACEWITH, QString(replacement.toUtf8().toBase64()));
@@ -195,7 +195,11 @@ bool RegularExp::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *RegularExp::requestGui(QWidget *parent)
 {
-    return new RegularExpWidget(this, parent);
+    QWidget * widget = new(std::nothrow) RegularExpWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for RegularExpWidget X{");
+    }
+    return widget;
 }
 
 QString RegularExp::help() const

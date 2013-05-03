@@ -17,7 +17,7 @@ class Rotx : public TransformAbstract
         Q_OBJECT
         
     public:
-        enum RotVariant {ROT13 = 0, ROT5, ROT47};
+        enum RotVariant {ROT13 = 0, ROT5 = 1, ROT47 = 2};
         explicit Rotx();
         ~Rotx();
         QString name() const;

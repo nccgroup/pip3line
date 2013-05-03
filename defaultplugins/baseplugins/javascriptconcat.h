@@ -17,7 +17,7 @@ class JavaScriptConcat : public TransformAbstract
 {
     Q_OBJECT
     public:
-        JavaScriptConcat() {}
+        explicit JavaScriptConcat() {}
         QString name() const;
         QString description() const;
         void transform(const QByteArray &input, QByteArray &output);

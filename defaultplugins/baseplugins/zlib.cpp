@@ -54,7 +54,7 @@ QHash<QString, QString> Zlib::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
     properties.insert(XMLLEVEL,QString::number((int)compressionLevel));
-    properties.insert(XMLREMOVEHEADER,QString::number((int)removeHeader));
+    properties.insert(XMLREMOVEHEADER,QString::number(removeHeader ? 1 : 0));
 
     return properties;
 }
@@ -64,7 +64,7 @@ bool Zlib::setConfiguration(QHash<QString, QString> propertiesList)
     bool res = TransformAbstract::setConfiguration(propertiesList);
     bool ok = true;
     int val = propertiesList.value(XMLLEVEL).toInt(&ok);
-    if (!ok || val < 0 || val > 9) {
+    if (!ok || val < 0 || val > 9) { // min and max value for compression level
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLLEVEL),id);
     } else {
@@ -84,7 +84,11 @@ bool Zlib::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Zlib::requestGui(QWidget * parent)
 {
-    return new ZlibWidget(this, parent);
+    QWidget * widget = new(std::nothrow) ZlibWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for ZlibWidget X{");
+    }
+    return widget;
 }
 
 QString Zlib::help() const
@@ -111,9 +115,10 @@ bool Zlib::setCompression(int level)
         return false;
     }
 
-    compressionLevel = level;
-
-    emit confUpdated();
+    if (compressionLevel != level) {
+        compressionLevel = level;
+        emit confUpdated();   
+    }
     return true;
 }
 
@@ -124,8 +129,10 @@ int Zlib::getCompression()
 
 void Zlib::setRemoveHeader(bool flag)
 {
-    removeHeader = flag;
-    emit confUpdated();
+    if (removeHeader != flag) {
+        removeHeader = flag;
+        emit confUpdated();
+    }
 }
 
 bool Zlib::doRemoveHeader()

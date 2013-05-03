@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_basexwidget.h"
 
 BaseXWidget::BaseXWidget(BaseX *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::BaseXWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::BaseXWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::BaseXWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->baseSpinBox->setValue(transform->getBase());

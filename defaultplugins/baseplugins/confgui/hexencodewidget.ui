@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<comment>
+ <comment>
   * Released as open source by NCC Group Plc - http://www.nccgroup.com/
   *
   * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
@@ -33,7 +33,14 @@
    <item>
     <widget class="QRadioButton" name="escapedRadioButton">
      <property name="text">
-      <string>Escaped format</string>
+      <string>Escaped strict (all char)</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="escapedMixedRadioButton">
+     <property name="text">
+      <string>Escaped mixed (only non-printable char)</string>
      </property>
     </widget>
    </item>
@@ -50,6 +57,19 @@
       <string>CSV</string>
      </property>
     </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

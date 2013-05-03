@@ -8,7 +8,7 @@
 # Released under AGPL see LICENSE for more information
 ####
 
-message ( STATUS " Configuring pip3line" )
+message ( STATUS "Configuring pip3line gui --" )
 project( pip3line )
 cmake_minimum_required( VERSION 2.8.9 )
 set ( CMAKE_BUILD_TYPE Release )
@@ -78,6 +78,8 @@ set ( pip3line_HDRS
 	../tools/binaryprocessor.h
 	../tools/textprocessor.h
 	../tools/serverabstract.h
+	../tools/transformrequest.h
+	../tools/centralprocessor.h
 	../version.h
 	)
 
@@ -119,6 +121,8 @@ set ( pip3line_SRCS
 	../tools/streamprocessor.cpp
 	../tools/tcpserver.cpp
 	../tools/serverabstract.cpp
+	../tools/transformrequest.cpp
+	../tools/centralprocessor.cpp
 	)
 
 set ( pip3line_UIS

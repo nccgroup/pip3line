@@ -17,7 +17,7 @@ class HexEncode : public TransformAbstract
 {
     Q_OBJECT
     public:
-        enum Type {NORMAL = 0, ESCAPED, CSTYLE, CSV};
+        enum Type {NORMAL = 0, ESCAPED = 1, CSTYLE = 2, CSV = 3, ESCAPED_MIXED = 4};
         explicit HexEncode();
         ~HexEncode();
         QString name() const;

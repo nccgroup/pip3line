@@ -17,7 +17,7 @@ class PostgresConcat : public TransformAbstract
 {
     Q_OBJECT
     public:
-        PostgresConcat() {}
+        explicit PostgresConcat() {}
         QString name() const;
         QString description() const;
         void transform(const QByteArray &input, QByteArray &output);

@@ -8,7 +8,29 @@
 # Released under AGPL see LICENSE for more information
 ####
 
-message( STATUS " Configuring everything " )
+cmake_policy(VERSION 2.8.9)
+
+message( STATUS "Git information --" )
+
+execute_process(COMMAND git branch
+	OUTPUT_VARIABLE GIT_BRANCH)
+
+STRING(REGEX REPLACE "(\r?\n)+$" "" GIT_BRANCH "${GIT_BRANCH}")
+message(STATUS "Git branches: \n ${GIT_BRANCH}")
+
+
+execute_process(COMMAND git rev-parse HEAD
+	OUTPUT_VARIABLE GIT_COMMIT)
+
+STRING(REGEX REPLACE "(\r?\n)+$" "" GIT_COMMIT "${GIT_COMMIT}")
+if (GIT_COMMIT STREQUAL "")
+	SET(GIT_COMMIT "Unknown")
+endif()
+
+add_definitions(-DGIT_COMMIT=\"${GIT_COMMIT}\")
+message(STATUS "Building using git commit: ${GIT_COMMIT}")
+
+message( STATUS "General Configuration --" )
 
 project( pip3lineall )
 cmake_minimum_required( VERSION 2.8 )
@@ -33,22 +55,67 @@ link_directories (
 	${PROJECT_SOURCE_DIR}/bin
         ${PROJECT_SOURCE_DIR}/bin/plugins
 	)
+if (ALL)
+	message ( STATUS  "Selecting all packages")
+	SET (WITH_LIB ON)
+	SET (WITH_GUI ON)
+	SET (WITH_CMD ON)
+	SET (WITH_OPENSSL ON)
+	SET (WITH_PYTHON27 ON)
+	SET (WITH_PYTHON3 ON)
 
-add_subdirectory(libtransform)
-add_subdirectory(defaultplugins/baseplugins)
-add_subdirectory(gui)
-add_subdirectory(cmdline)
+	if (WITH_DISTORM STREQUAL "OFF")
+		message(WARNING "The Distorm plugin has been manually disabled")
+	else()
+		SET (WITH_DISTORM ON)
+	endif()
+
+	if (WITH_EAMPLE STREQUAL "OFF")
+		message(WARNING "The example plugin has been manually disabled")
+	else()
+		SET (WITH_EXAMPLE ON)
+	endif()
+
+elseif ( BASIC )
+	message ( STATUS "Selecting only base packages ")
+	SET (WITH_LIB ON)
+	SET (WITH_GUI ON)
+	SET (WITH_CMD ON)
+endif ()
+
+if (WITH_LIB OR WITH_GUI OR WITH_CMD)
+	add_subdirectory(libtransform)
+	add_subdirectory(defaultplugins/baseplugins)
+endif ()
+
+if ( WITH_GUI )
+	add_subdirectory(gui)
+endif ( WITH_GUI )
+
+if ( WITH_CMD )
+	add_subdirectory(cmdline)
+endif( WITH_CMD )
+
 if ( WITH_OPENSSL ) 
 	add_subdirectory(defaultplugins/opensslplugin)
 endif ( WITH_OPENSSL )
 
+if ( WITH_PYTHON3 ) 
+	add_subdirectory(defaultplugins/pythonplugin)
+endif ( WITH_PYTHON3 )
+
 if ( WITH_PYTHON27 ) 
-	add_subdirectory(defaultplugins/pythonplugin27)
+	add_subdirectory(defaultplugins/python27plugin)
 endif ( WITH_PYTHON27 )
 
-if ( WITH_PYTHON3 ) 
-	add_subdirectory(defaultplugins/pythonplugin3)
-endif ( WITH_PYTHON3 )
+if ( WITH_DISTORM ) 
+	add_subdirectory(defaultplugins/distormplugin)
+endif ( WITH_DISTORM )
+
+if ( WITH_EXAMPLE ) 
+	add_subdirectory(defaultplugins/exampleplugin)
+endif ( WITH_EXAMPLE )
+
 
 # uninstall target
 configure_file(

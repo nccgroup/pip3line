@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_splitwidget.h"
 
 SplitWidget::SplitWidget(Split *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::SplitWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::SplitWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::SplitWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

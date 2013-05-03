@@ -63,10 +63,12 @@ GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nm
     }
 
     loadImportExportFunctions();
+    centralTransProc.start();
 }
 
 GuiHelper::~GuiHelper()
 {
+    centralTransProc.stop();
     saveImportExportFunctions();
     deleteImportExportFuncs();
     delete settings;
@@ -87,6 +89,11 @@ QNetworkAccessManager *GuiHelper::getNetworkManager()
     return networkManager;
 }
 
+void GuiHelper::processTransform(TransformRequest *request)
+{
+    centralTransProc.addToProcessingQueue(request);
+}
+
 void GuiHelper::sendNewSelection(const QByteArray &selection)
 {
     emit newSelection(selection);
@@ -99,9 +106,7 @@ void GuiHelper::sendToNewTab(const QByteArray &initialValue)
 
 void GuiHelper::addTab(TransformsGui * tab)
 {
-    tabsMutex.lock();
     tabs.insert(tab);
-    tabsMutex.unlock();
     connect(tab, SIGNAL(destroyed()), this, SLOT(onTabDeleted()), Qt::UniqueConnection);
     updateSortedTabs();
     emit tabsUpdated();
@@ -109,28 +114,22 @@ void GuiHelper::addTab(TransformsGui * tab)
 
 void GuiHelper::removeTab(TransformsGui * tab)
 {
-    tabsMutex.lock();
     tabs.remove(tab);
-    tabsMutex.unlock();
     updateSortedTabs();
     emit tabsUpdated();
 }
 
 QList<TransformsGui *> GuiHelper::getTabs()
 {
-    QMutexLocker lock(&sortedTabMutex);
     return sortedTabs.values();
 }
 
 void GuiHelper::onTabDeleted()
 {
     TransformsGui * tg = (TransformsGui *)sender();
-    tabsMutex.lock();
     if (!tabs.remove(tg)) {
-        tabsMutex.unlock();
         logger->logError(tr("Deleted Tab not found"), LOGID);
     } else {
-        tabsMutex.unlock();
         updateSortedTabs();
         emit tabsUpdated();
     }
@@ -138,30 +137,31 @@ void GuiHelper::onTabDeleted()
 
 void GuiHelper::updateSortedTabs()
 {
-    sortedTabMutex.lock();
     sortedTabs.clear();
-    tabsMutex.lock();
     QSetIterator<TransformsGui *> i(tabs);
     while (i.hasNext()) {
      TransformsGui * tg = i.next();
      sortedTabs.insertMulti(tg->getName(), tg);
     }
-    tabsMutex.unlock();
-    sortedTabMutex.unlock();
 }
 
 NameDialog *GuiHelper::getNameDialog(QWidget *parent,const QString &defaultvalue, const QString &title)
 {
     NameDialog *nameDialog; // yes this has to be cleaned at the upper layer.
 
-    nameDialog = new NameDialog(parent);
+    nameDialog = new(std::nothrow) NameDialog(parent);
+    if (nameDialog != NULL) {
 
-    nameDialog->setModal(true);
-    if (title.isEmpty())
-        nameDialog->setWindowTitle(tr("Name"));
-    else
-        nameDialog->setWindowTitle(title);
-    nameDialog->setDefaultValue(defaultvalue);
+        nameDialog->setModal(true);
+        if (title.isEmpty())
+            nameDialog->setWindowTitle(tr("Name"));
+        else
+            nameDialog->setWindowTitle(title);
+        nameDialog->setDefaultValue(defaultvalue);
+    } else {
+        qFatal("Could not instanciate nameDialog X{");
+    }
+
     return nameDialog;
 }
 
@@ -215,18 +215,30 @@ void GuiHelper::buildTransformComboBox(QComboBox *box, const QString &defaultSel
 void GuiHelper::buildFilterComboBox(QComboBox *box)
 {
     QStringList typesList = transformFactory->getTypesList();
-    QStandardItemModel *model = new QStandardItemModel(typesList.size(), 1);
-    QStandardItem* item = new QStandardItem(tr("Transformations filter"));
+    QStandardItemModel *model = new(std::nothrow) QStandardItemModel(typesList.size(), 1);
+    if (model == NULL ) {
+        qFatal("Cannot allocate memory for QStandardItemModel X{");
+        return;
+    }
+    QStandardItem* item = new(std::nothrow) QStandardItem(tr("Transformations filter"));
+    if (item == NULL) {
+        qFatal("Cannot allocate memory for QStandardItem 1 X{");
+        delete model;
+        return;
+    }
+
     item->setEnabled(false);
     model->setItem(0, 0, item);
     for (int i = 0; i < typesList.size(); ++i)
     {
-        item = new QStandardItem(typesList.at(i));
-
-        item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-        item->setData( (typesBlacklist.contains(typesList.at(i)) ? Qt::Unchecked : Qt::Checked), Qt::CheckStateRole);
-
-        model->setItem(i + 1, 0, item);
+        item = new(std::nothrow) QStandardItem(typesList.at(i));
+        if (item != NULL) {
+            item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+            item->setData( (typesBlacklist.contains(typesList.at(i)) ? Qt::Unchecked : Qt::Checked), Qt::CheckStateRole);
+            model->setItem(i + 1, 0, item);
+        } else {
+          qFatal("Cannot allocate memory for QStandardItem 2 X{");
+        }
     }
     connect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(onFilterChanged(QModelIndex,QModelIndex)));
     box->setModel(model);
@@ -305,10 +317,11 @@ void GuiHelper::loadImportExportFunctions()
         list.append(getXMLfromRes(":/xmlconfs/defaultsxml/base64decode.xml"));
         list.append(getXMLfromRes(":/xmlconfs/defaultsxml/hexadecimal.xml"));
         list.append(getXMLfromRes(":/xmlconfs/defaultsxml/escapedhexadecimal.xml"));
+        list.append(getXMLfromRes(":/xmlconfs/defaultsxml/escapedhexadecimalmixed.xml"));
         list.append(getXMLfromRes(":/xmlconfs/defaultsxml/cstylearray.xml"));
         list.append(getXMLfromRes(":/xmlconfs/defaultsxml/urlencoded.xml"));
     }
-    TransformAbstract * ta = 0;
+    TransformAbstract * ta = NULL;
     for (int i = 0; i < list.size(); i++) {
         TransformChain talist = transformFactory->loadConfFromXML(list.at(i));
         if (talist.isEmpty()) {
@@ -356,11 +369,18 @@ QStringList GuiHelper::getImportExportFunctions()
 
 TransformAbstract *GuiHelper::getImportExportFunction(const QString &name)
 {
+
+    if (name.isEmpty()) {
+        logger->logError(tr("Empty export/import function name"));
+        return NULL;
+    }
+
     if (importExportFunctions.contains(name)) {
         return importExportFunctions.value(name);
     }
 
-    return 0;
+    logger->logError(tr("Unkown import/export function name: \"%1\"").arg(name));
+    return NULL;
 }
 
 void GuiHelper::resetImportExportFuncs()
@@ -378,7 +398,7 @@ void GuiHelper::addImportExportFunctions(const QString &name, TransformAbstract 
         return;
     }
 
-    if (ta == 0) {
+    if (ta == NULL) {
         logger->logError(tr("Empty export/import function \"%1\" is NULL. Ignoring add request.").arg(name));
         return;
     }

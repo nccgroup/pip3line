@@ -25,7 +25,7 @@ class OPENSSLPLUGINSHARED_EXPORT OpensslPlugin : public QObject, public Transfor
         Q_INTERFACES(TransformFactoryPluginInterface)
     public:
         static const QStringList blacklistHash;
-        OpensslPlugin();
+        explicit OpensslPlugin();
         ~OpensslPlugin();
         QString pluginName() const;
         QString compiledWithQTversion() const;

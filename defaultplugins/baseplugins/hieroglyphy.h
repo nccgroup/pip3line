@@ -18,7 +18,7 @@ class Hieroglyphy : public TransformAbstract
 {
         Q_OBJECT
     public:
-        Hieroglyphy();
+        explicit Hieroglyphy();
         ~Hieroglyphy();
         QString name() const;
         QString description() const;

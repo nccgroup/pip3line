@@ -20,9 +20,12 @@ const int SubstitutionTables::S_ARRAY_SIZE = 256;
 const QByteArray SubstitutionWidget::HEXCHAR("abcdefABCDEF1234567890");
 
 SubstitutionWidget::SubstitutionWidget(Substitution *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::SubstitutionWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::SubstitutionWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::SubstitutionWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 
@@ -155,13 +158,11 @@ bool SubstitutionTables::setData(const QModelIndex &index, const QVariant &value
 
         quint32 pos = S_TABLE_SIZE * index.row() + index.column();
         if (pos <  (quint32)S_ARRAY_SIZE) {
-            beginResetModel();
             if (hexVal.isEmpty())
                 array[pos] = (char)pos;
             else
                 array[pos] = hexVal.at(0);
             highlighting();
-            endResetModel();
             emit dataChanged(index, index);
             return true;
         }
@@ -208,8 +209,6 @@ void SubstitutionTables::setRawData(QByteArray sTable)
 
     highlighting();
     endResetModel();
-
-    emit dataChanged(QAbstractTableModel::createIndex(0,0),QAbstractTableModel::createIndex(S_TABLE_SIZE, S_TABLE_SIZE));
 }
 
 QByteArray SubstitutionTables::getRawData()

@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_htmlwidget.h"
 
 HtmlWidget::HtmlWidget(Html *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::HtmlWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::HtmlWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::HtmlWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

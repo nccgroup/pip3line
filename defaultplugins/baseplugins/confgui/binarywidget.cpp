@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_binarywidget.h"
 
 BinaryWidget::BinaryWidget(Binary *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::BinaryWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::BinaryWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::BinaryWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

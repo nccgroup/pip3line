@@ -19,7 +19,7 @@ class Substitution : public TransformAbstract
         Q_OBJECT
     public:
         static QStringList knownTables;
-        Substitution();
+        explicit Substitution();
         ~Substitution();
         QString name() const;
         QString description() const;

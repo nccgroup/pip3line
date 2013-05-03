@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_newbytedialog.h"
 
 NewByteDialog::NewByteDialog(QWidget *parent, bool isSimple) :
-    QDialog(parent),
-    ui(new Ui::NewByteDialog)
+    QDialog(parent)
 {
+    ui = new(std::nothrow) Ui::NewByteDialog();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::NewByteDialog X{");
+    }
     ui->setupUi(this);
     if (isSimple) {
         ui->countLabel->setVisible(false);

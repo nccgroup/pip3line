@@ -9,6 +9,7 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "streamprocessor.h"
+#include <commonstrings.h>
 
 StreamProcessor::StreamProcessor(TransformMgmt *tFactory, QObject *parent) :
     Processor(tFactory,parent)
@@ -18,7 +19,7 @@ StreamProcessor::StreamProcessor(TransformMgmt *tFactory, QObject *parent) :
 void StreamProcessor::run()
 {
     QByteArray data;
-    QByteArray buffer;
+    QByteArray block;
     QList<QByteArray> dataList;
 
     while (true) {
@@ -35,9 +36,9 @@ void StreamProcessor::run()
 
             if (count > 0) {
                 dataList = data.split(separator);
-                buffer.append(dataList.takeFirst());
+                block.append(dataList.takeFirst());
 
-                writeBlock(buffer);
+                writeBlock(block);
 
                 count--;
 
@@ -46,12 +47,18 @@ void StreamProcessor::run()
                 }
 
                 if (count < dataList.size())
-                    buffer = dataList.last();
+                    block = dataList.last();
                 else
-                    buffer.clear();
+                    block.clear();
 
             } else {
-                buffer.append(data);
+                block.append(data);
+                if (block.size() > BLOCK_MAX_SIZE) {
+                    block.resize(BLOCK_MAX_SIZE);
+                    emit error("Data received from the pipe is too large, the block has been truncated.","StreamProcessor");
+                    writeBlock(block);
+                    block.clear();
+                }
             }
         }
 
@@ -59,8 +66,8 @@ void StreamProcessor::run()
             break;
 
     }
-    if (!buffer.isEmpty())
-        writeBlock(buffer);
+    if (!block.isEmpty())
+        writeBlock(block);
 
 }
 

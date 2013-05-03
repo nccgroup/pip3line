@@ -31,7 +31,11 @@ bool RandomCase::isTwoWays() {
 
 QWidget *RandomCase::requestGui(QWidget *parent)
 {
-    return new RandomCaseWidget(this, parent);
+    QWidget * widget = new(std::nothrow) RandomCaseWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for RandomCaseWidget X{");
+    }
+    return widget;
 }
 
 void RandomCase::reRandomize()

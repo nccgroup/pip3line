@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_regularexpwidget.h"
 
 RegularExpWidget::RegularExpWidget(RegularExp *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::RegularExpWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::RegularExpWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::RegularExpWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

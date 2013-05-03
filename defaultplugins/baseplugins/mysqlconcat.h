@@ -17,7 +17,7 @@ class MysqlConcat : public TransformAbstract
 {
     Q_OBJECT
     public:
-        MysqlConcat() {}
+        explicit MysqlConcat() {}
         QString name() const;
         QString description() const;
         void transform(const QByteArray &input, QByteArray &output);

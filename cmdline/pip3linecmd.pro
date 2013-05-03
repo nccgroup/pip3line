@@ -7,6 +7,7 @@
 # Released under AGPL see LICENSE for more information
 
 QT      += core gui
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 VERSION  = 1.2
 
@@ -17,7 +18,14 @@ DESTDIR  = ../bin
 TEMPLATE = app
 
 INCLUDEPATH += "../libtransform"
-LIBS += -L"../bin" -ltransform
+
+unix {
+    LIBS += -L"../bin" -ltransform
+}
+
+win32 {
+    LIBS += -L"../lib" -ltransform
+}
 
 SOURCES += main.cpp \
     ../tools/processor.cpp \
@@ -38,6 +46,3 @@ unix {
     INSTALLS += target
 }
 
-win32 {
-
-}

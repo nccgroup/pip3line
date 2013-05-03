@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_ntlmsspwidget.h"
 
 NtlmsspWidget::NtlmsspWidget(Ntlmssp *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::NtlmsspWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::NtlmsspWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::NtlmsspWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->decodeCheckBox->setChecked(transform->decodeBase64());

@@ -22,12 +22,12 @@ TextProcessor::~TextProcessor()
 
 void TextProcessor::run()
 {
-    if (in == 0) {
+    if (in == NULL) {
         logError(tr("Input is not defined, TextProcessor will not run"), "TextProcessor");
         return;
     }
 
-    if (out == 0) {
+    if (out == NULL) {
         logError(tr("output is not defined, TextProcessor will not run"), "TextProcessor");
         return;
     }

@@ -47,7 +47,7 @@ QHash<QString, QString> Padding::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
     properties.insert(XMLVARIANT,QString::number((int)choosenVariant));
-    properties.insert(XMLPADDINGCHAR,QString::number((int)padChar));
+    properties.insert(XMLPADDINGCHAR,saveChar(padChar));
     properties.insert(XMLBLOCKSIZE,QString::number((int)blockSize));
 
     return properties;
@@ -74,12 +74,13 @@ bool Padding::setConfiguration(QHash<QString, QString> propertiesList)
         setVariant((PaddingVariant)val);
     }
 
-    val = propertiesList.value(XMLPADDINGCHAR).toInt(&ok);
-    if (!ok || val < 0x00 || val > 0xFF) {
+    QString tmp = propertiesList.value(XMLPADDINGCHAR);
+    char tmpChar = '\x00';
+    if (!loadChar(tmp,&tmpChar)) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLPADDINGCHAR),id);
     } else {
-        setPadChar((char)val);
+        setPadChar(tmpChar);
     }
 
     return res;
@@ -87,7 +88,11 @@ bool Padding::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Padding::requestGui(QWidget *parent)
 {
-    return new PaddingWidget(this, parent);
+    QWidget * widget = new(std::nothrow) PaddingWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for PaddingWidget X{");
+    }
+    return widget;
 }
 
 char Padding::getPadChar()

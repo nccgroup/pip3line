@@ -27,6 +27,7 @@ Released under AGPL see LICENSE for more information
 #include <QMutex>
 #include <transformabstract.h>
 #include "transformsgui.h"
+#include "../tools/centralprocessor.h"
 #include "ui_tabname.h"
 
 class TransformsGui;
@@ -48,11 +49,14 @@ class GuiHelper : public QObject
         Q_OBJECT
     public:
         static const QString ACTION_UTF8_STRING;
-        GuiHelper( TransformMgmt *transformFactory, QNetworkAccessManager *networkManager, LoggerWidget *logger);
+        explicit GuiHelper( TransformMgmt *transformFactory, QNetworkAccessManager *networkManager, LoggerWidget *logger);
         ~GuiHelper();
         LoggerWidget *getLogger();
         TransformMgmt *getTransformFactory();
         QNetworkAccessManager *getNetworkManager();
+
+        void processTransform(TransformRequest * request);
+
         void sendNewSelection(const QByteArray &selection);
 
         void sendToNewTab(const QByteArray &initialValue = QByteArray());
@@ -122,8 +126,6 @@ class GuiHelper : public QObject
         QSettings *settings;
         QSet<TransformsGui *> tabs;
         QMultiMap<QString, TransformsGui *> sortedTabs;
-        QMutex sortedTabMutex;
-        QMutex tabsMutex;
         int defaultServerPort;
         QString defaultServerIp;
         QString defaultServerPipeName;
@@ -133,6 +135,7 @@ class GuiHelper : public QObject
         QSet<QString> typesBlacklist;
         QHash<QString, QColor> markingColors;
         QHash<QString , TransformAbstract *> importExportFunctions;
+        CentralProcessor centralTransProc;
 };
 
 #endif // GUIHELPER_H

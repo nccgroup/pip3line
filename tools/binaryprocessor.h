@@ -16,8 +16,8 @@ Released under AGPL see LICENSE for more information
 class BinaryProcessor: public Processor
 {
     public:
-        static const int BLOCKSIZE = 4096;
-        BinaryProcessor(TransformMgmt *tFactory, QObject * parent = 0);
+        static const int BLOCKSIZE;
+        explicit BinaryProcessor(TransformMgmt *tFactory, QObject * parent = 0);
         ~BinaryProcessor();
         void run();
     private:

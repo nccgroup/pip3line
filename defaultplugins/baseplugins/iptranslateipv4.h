@@ -18,7 +18,7 @@ class IPTranslateIPv4 : public TransformAbstract
         Q_OBJECT
     public:
         enum BASE {BASE10 = 0, BASE16};
-        IPTranslateIPv4();
+        explicit IPTranslateIPv4();
         ~IPTranslateIPv4() {}
         QString name() const;
         QString description() const;

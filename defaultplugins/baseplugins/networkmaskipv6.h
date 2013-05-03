@@ -17,7 +17,7 @@ class NetworkMaskIPv6 : public TransformAbstract
 {
         Q_OBJECT
     public:
-        NetworkMaskIPv6();
+        explicit NetworkMaskIPv6();
         ~NetworkMaskIPv6() {}
         QString name() const;
         QString description() const;

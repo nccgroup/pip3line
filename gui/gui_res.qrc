@@ -37,5 +37,6 @@
         <file>defaultsxml/escapedhexadecimal.xml</file>
         <file>defaultsxml/hexadecimal.xml</file>
         <file>defaultsxml/urlencoded.xml</file>
+        <file>defaultsxml/escapedhexadecimalmixed.xml</file>
     </qresource>
 </RCC>

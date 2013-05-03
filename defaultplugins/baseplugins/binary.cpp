@@ -99,7 +99,7 @@ bool Binary::isTwoWays() {
 QHash<QString, QString> Binary::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(XMLBLOCKSIZE,QString::number((int)blockSize));
+    properties.insert(XMLBLOCKSIZE,QString::number(blockSize));
 
     return properties;
 }
@@ -124,7 +124,11 @@ bool Binary::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *Binary::requestGui(QWidget *parent)
 {
-    return new BinaryWidget(this, parent);
+    QWidget * widget = new(std::nothrow) BinaryWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for BinaryWidget X{");
+    }
+    return widget;
 }
 
 QString Binary::help() const

@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_xorwidget.h"
 
 XorWidget::XorWidget(Xor *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::XorWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::XorWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::XorWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     connect(ui->keyPlainTextEdit,SIGNAL(textChanged()),this,SLOT(onKeyChange()));

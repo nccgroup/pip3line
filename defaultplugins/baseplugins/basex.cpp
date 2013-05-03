@@ -64,8 +64,8 @@ void BaseX::transform(const QByteArray &input, QByteArray &output) {
 QHash<QString, QString> BaseX::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
-    properties.insert(XMLBASE,QString::number((int)base));
-    properties.insert(XMLUPPERCASE,QString::number((int)uppercase));
+    properties.insert(XMLBASE,QString::number(base));
+    properties.insert(XMLUPPERCASE,QString::number(uppercase ? 1 : 0));
 
     return properties;
 }
@@ -79,7 +79,7 @@ bool BaseX::setConfiguration(QHash<QString, QString> propertiesList)
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLBASE),id);
     } else {
-        res = res && setBase(val);
+        res = setBase(val) && res;
     }
 
     val = propertiesList.value(XMLUPPERCASE).toInt(&ok);
@@ -95,7 +95,11 @@ bool BaseX::setConfiguration(QHash<QString, QString> propertiesList)
 
 QWidget *BaseX::requestGui(QWidget *parent)
 {
-    return new BaseXWidget(this, parent);
+    QWidget * widget = new(std::nothrow) BaseXWidget(this, parent);
+    if (widget == NULL) {
+        qFatal("Cannot allocate memory for BaseXWidget X{");
+    }
+    return widget;
 }
 
 QString BaseX::help() const

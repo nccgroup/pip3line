@@ -18,7 +18,7 @@ class RandomCase : public TransformAbstract
     Q_OBJECT
 
     public:
-        RandomCase();
+        explicit RandomCase();
         ~RandomCase() {}
         QString name() const;
         QString description() const;

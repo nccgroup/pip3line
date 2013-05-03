@@ -17,6 +17,7 @@ Released under AGPL see LICENSE for more information
 #include <transformabstract.h>
 #include <QTextCodec>
 #include <QString>
+#include <QBuffer>
 
 class Ntlmssp : public TransformAbstract
 {
@@ -40,12 +41,14 @@ class Ntlmssp : public TransformAbstract
     private:
         QByteArray extractFlags(int flags);
         QByteArray extractTargetInfo(QByteArray &data);
-        QByteArray extractOSVersion(QByteArray &data);
+        QByteArray extractOSVersion(QBuffer &input);
         QByteArray extractNTLM(QByteArray &data);
         QByteArray getString(const QByteArray &data);
         quint32 reverseBytes(quint32 val);
         QByteArray reverseBytes(const QByteArray &data);
         QByteArray toTimeStamp(const QByteArray &data);
+        bool readSecurityBuffer(QBuffer &input, quint16 *length, quint16 *maxLength, quint32 *offset, quint32 maxsize);
+        bool readFlags(QBuffer &input, quint32 *flags );
         QHash<int, QString> NTMLSSP_TYPE;
         QMap<quint32, QString> FLAGS_VAL;
         QMap<quint16, QString> TARGET_INFO;
@@ -53,7 +56,8 @@ class Ntlmssp : public TransformAbstract
         bool doBase64;
         bool oemString;
         QTextCodec *unicodeCodec;
-        
+        static const int SecurityBufferSize;
+        static const int OSFooterSize;
 };
 
 #endif // NTLMSSP_H

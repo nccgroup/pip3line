@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_cutwidget.h"
 
 CutWidget::CutWidget(Cut *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::CutWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::CutWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::CutWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
 

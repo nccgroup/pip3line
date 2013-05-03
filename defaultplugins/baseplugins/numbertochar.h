@@ -17,15 +17,26 @@ class NumberToChar : public TransformAbstract
 {
         Q_OBJECT
     public:
-        NumberToChar();
+        explicit NumberToChar();
         ~NumberToChar();
         QString name() const;
         QString description() const;
         void transform(const QByteArray &input, QByteArray &output);
         bool isTwoWays();
         static const QString id;
-
         QString help() const;
+        QWidget * requestGui(QWidget * parent);
+        QHash<QString, QString> getConfiguration();
+        bool setConfiguration(QHash<QString, QString> propertiesList);
+        QString inboundString() const;
+        QString outboundString() const;
+
+        char getSeparator() const;
+        bool setSeparator(char c);
+
+    private:
+        static const char DEFAULT_SEPARATOR;
+        char separator;
 };
 
 #endif // NUMBERTOCHAR_H

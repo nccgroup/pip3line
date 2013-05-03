@@ -21,8 +21,15 @@ MasterThread::MasterThread(bool nbinaryInput, bool hideErrorsFlag, bool verboseF
     hideErrors = hideErrorsFlag;
     binaryInput = nbinaryInput;
     singleWay = TransformAbstract::INBOUND;
-    errlog = new QTextStream(stderr);
-    messlog = new QTextStream(stdout);
+    errlog = new(std::nothrow) QTextStream(stderr);
+    if (errlog == NULL) {
+        qFatal("Cannot allocate memory for errlog X{");
+    }
+    messlog = new(std::nothrow) QTextStream(stdout);
+    if (messlog == NULL) {
+        qFatal("Cannot allocate memory for messlog X{");
+    }
+
     connect(&transformFactory, SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
     connect(&transformFactory, SIGNAL(status(QString,QString)), this, SLOT(logStatus(QString)));
     transformFactory.initialize(QCoreApplication::applicationDirPath());
@@ -38,16 +45,22 @@ void MasterThread::run()
 {
     QFile fin;
     QFile fout;
-    Processor * pt = 0;
+    Processor * pt = NULL;
 
     fin.open(stdin, QFile::ReadOnly | QIODevice::Unbuffered);
     fout.open(stdout,QFile::WriteOnly | QIODevice::Unbuffered);
 
     if (binaryInput) {
-        pt = new BinaryProcessor(&transformFactory);
+        pt = new(std::nothrow) BinaryProcessor(&transformFactory);
+        if (pt == NULL) {
+            qFatal("Cannot allocate memory for BinaryProcessor X{");
+        }
 
     } else {
-        pt = new TextProcessor(&transformFactory);
+        pt = new(std::nothrow) TextProcessor(&transformFactory);
+        if (pt == NULL) {
+            qFatal("Cannot allocate memory for TextProcessor X{");
+        }
     }
     pt->setInput(&fin);
     pt->setOutput(&fout);

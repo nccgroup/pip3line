@@ -17,7 +17,7 @@ class CiscoSecret7 : public TransformAbstract
 {
         Q_OBJECT
     public:
-        CiscoSecret7();
+        explicit CiscoSecret7();
         ~CiscoSecret7() {}
         QString name() const;
         QString description() const;

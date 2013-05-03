@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "ui_paddingwidget.h"
 
 PaddingWidget::PaddingWidget(Padding *ntransform, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::PaddingWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::PaddingWidget();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::PaddingWidget X{");
+    }
     transform = ntransform;
     ui->setupUi(this);
     ui->blockSizeSpinBox->setMinimum(Padding::MINBLOCKSIZE);

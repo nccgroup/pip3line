@@ -13,9 +13,12 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 DeleteableListItem::DeleteableListItem(const QString &text, const QPixmap &im, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::DeleteableListItem)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::DeleteableListItem();
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::DeleteableListItem X{");
+    }
     ui->setupUi(this);
     ui->textLabel->setText(text);
 

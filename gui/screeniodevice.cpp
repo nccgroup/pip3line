@@ -20,12 +20,12 @@ ScreenIODevice::ScreenIODevice(QPlainTextEdit *outWidget, QObject *parent) :
 
 bool ScreenIODevice::atEnd() const
 {
-    return widget == 0 || pos() >= widget->toPlainText().toUtf8().size();
+    return widget == NULL || pos() >= widget->toPlainText().toUtf8().size();
 }
 
 qint64 ScreenIODevice::bytesAvailable() const
 {
-    return widget != 0 && widget->toPlainText().toUtf8().size() - pos();
+    return widget != NULL && widget->toPlainText().toUtf8().size() - pos();
 }
 
 qint64 ScreenIODevice::bytesToWrite() const
@@ -35,12 +35,12 @@ qint64 ScreenIODevice::bytesToWrite() const
 
 bool ScreenIODevice::canReadLine() const
 {
-    return widget != 0 &&  (!atEnd() || QIODevice::canReadLine());
+    return widget != NULL &&  (!atEnd() || QIODevice::canReadLine());
 }
 
 bool ScreenIODevice::seek(qint64 pos)
 {
-    if (widget == 0)
+    if (widget == NULL)
         return false;
 
     if (pos >= widget->toPlainText().toUtf8().size()) {
@@ -51,7 +51,7 @@ bool ScreenIODevice::seek(qint64 pos)
 
 qint64 ScreenIODevice::size() const
 {
-    if (widget == 0)
+    if (widget == NULL)
         return 0;
     else
         return widget->toPlainText().toUtf8().size();
@@ -59,17 +59,17 @@ qint64 ScreenIODevice::size() const
 
 bool ScreenIODevice::waitForBytesWritten(int /* Unused */)
 {
-    return widget != 0;
+    return widget != NULL;
 }
 
 bool ScreenIODevice::waitForReadyRead(int /* Unused */)
 {
-    return widget != 0;
+    return widget != NULL;
 }
 
 qint64 ScreenIODevice::readData(char *dest, qint64 maxSize)
 {
-    if (widget == 0)
+    if (widget == NULL)
         return -1;
     if ( maxSize < 1)
         return 0;
@@ -91,7 +91,7 @@ qint64 ScreenIODevice::readData(char *dest, qint64 maxSize)
 
 qint64 ScreenIODevice::writeData(const char *src, qint64 maxSize)
 {
-    if (widget == 0)
+    if (widget == NULL)
         return -1;
 
 
