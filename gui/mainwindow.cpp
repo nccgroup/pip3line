@@ -211,12 +211,14 @@ void MainWindow::processingCheckForUpdate(DownloadManager *dm)
     QString data = QString::fromUtf8(dm->getData());
 
     QString message = "Unknown";
-    QRegExp versionRegExp("#define VERSION_STRING \"(.*)\"");
+    QRegExp versionRegExp("#define VERSION_STRING \"([0-9]\\.[0-9]\\.?[0-9]?)\"");
     if (data.isEmpty()) {
         message = tr("Empty network response, cannot check for new Pip3line version");
         logger->logWarning(message);
     } else {
+
         int pos = versionRegExp.indexIn(data,0);
+        qDebug() << "Version? " << versionRegExp.cap(1);
         if (pos != -1) {
             float last = versionRegExp.cap(1).mid(0,3).toFloat();
             float current = QString(VERSION_STRING).mid(0,3).toFloat();
