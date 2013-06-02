@@ -14,7 +14,7 @@ project( distormplugin )
 cmake_minimum_required( VERSION 2.8.9 )
 cmake_policy(SET CMP0015 NEW)
 set ( CMAKE_BUILD_TYPE Release )
-add_definitions ( -Wall -DDISTORM_LIBRARY)
+add_definitions ( -Wall -DDISTORM_LIBRARY -DSUPPORT_64BIT_OFFSET)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
