@@ -13,8 +13,11 @@ Released under AGPL see LICENSE for more information
 #include <QtPlugin>
 #include <QDebug>
 #include <QStyleFactory>
+#include <QObject>
+
 
 #define DEBUG_CMD "--debug"
+#define FILE_CMD "--file"
 
 #if QT_VERSION >= 0x050000
 
@@ -27,51 +30,68 @@ Released under AGPL see LICENSE for more information
 #include <QMutex>
 
 FILE * _logFile = NULL; // logFile
-QMutex logFileMutex;
 
-void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+void myMessageOutput(QtMsgType type, const QMessageLogContext &, const QString &msg)
 {
-    QByteArray localMsg = msg.toLocal8Bit();
-    QString currentTime = QDateTime::currentDateTime().toString(Qt::ISODate);
+    QByteArray localMsg = msg.toUtf8();
+    QByteArray currentTime = QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8();
 
     switch (type) {
     case QtDebugMsg:
-        logFileMutex.lock();
-        fprintf(stderr, "%s Debug: %s (%s:%u, %s)\n",currentTime.toUtf8().constData(), localMsg.constData(), context.file, context.line, context.function);
+        fprintf(stderr, "%s Debug: %s\n",currentTime.constData(), localMsg.constData());
         if (_logFile != NULL)
-            fprintf(_logFile, "%s Debug: %s (%s:%u, %s)\n",currentTime.toUtf8().constData(), localMsg.constData(), context.file, context.line, context.function);
-        logFileMutex.unlock();
+            fprintf(_logFile, "%s Debug: %s\n",currentTime.constData(), localMsg.constData());
         break;
     case QtWarningMsg:
-        logFileMutex.lock();
-        fprintf(stderr, "%s Warning: %s (%s:%u, %s)\n",currentTime.toUtf8().constData(), localMsg.constData(), context.file, context.line, context.function);
+        fprintf(stderr, "%s Warning: %s\n",currentTime.constData(), localMsg.constData());
         if (_logFile != NULL)
-            fprintf(_logFile, "%s Warning: %s (%s:%u, %s)\n",currentTime.toUtf8().constData(), localMsg.constData(), context.file, context.line, context.function);
-        logFileMutex.unlock();
+            fprintf(_logFile, "%s Warning: %s\n",currentTime.constData(), localMsg.constData());
         break;
     case QtCriticalMsg:
-        logFileMutex.lock();
-        fprintf(stderr, "%s Critical: %s (%s:%u, %s)\n",currentTime.toUtf8().constData(), localMsg.constData(), context.file, context.line, context.function);
+        fprintf(stderr, "%s Critical: %s\n",currentTime.constData(), localMsg.constData());
         if (_logFile != NULL)
-            fprintf(_logFile, "%s Critical: %s (%s:%u, %s)\n",currentTime.toUtf8().constData(), localMsg.constData(), context.file, context.line, context.function);
-        logFileMutex.unlock();
+            fprintf(_logFile, "%s Critical: %s\n",currentTime.constData(), localMsg.constData());
         break;
     case QtFatalMsg:
-        logFileMutex.lock();
-        fprintf(stderr, "%s Fatal: %s (%s:%u, %s)\n",currentTime.toUtf8().constData(), localMsg.constData(), context.file, context.line, context.function);
+        fprintf(stderr, "%s Fatal: %s\n",currentTime.constData(), localMsg.constData());
         if (_logFile != NULL) {
-            fprintf(_logFile, "%s Fatal: %s (%s:%u, %s)\n",currentTime.toUtf8().constData(), localMsg.constData(), context.file, context.line, context.function);
+            fprintf(_logFile, "%s Fatal: %s\n",currentTime.constData(), localMsg.constData());
             fclose (_logFile);
             _logFile = NULL;
         }
-        logFileMutex.unlock();
         abort();
     }
 }
 #endif
 
+
+
+#ifdef Q_OS_LINUX
+#include <signal.h>
+
+void termSignalHandler(int) {
+    QTimer::singleShot(0,QCoreApplication::instance(),SLOT(quit()));
+}
+
+static void setup_unix_signal_handlers()
+{
+    struct sigaction term;
+
+    term.sa_handler = termSignalHandler;
+    sigemptyset(&term.sa_mask);
+    term.sa_flags |= SA_RESTART;
+
+    if (sigaction(SIGTERM, &term, 0) == -1)
+        qWarning("Could not set the signal handler");
+
+}
+#endif
+
 int main(int argc, char *argv[])
 {
+#ifdef Q_OS_LINUX
+    setup_unix_signal_handlers();
+#endif
 
 #if QT_VERSION >= 0x050000
     QStringList pathlist = QCoreApplication::libraryPaths();
@@ -91,19 +111,19 @@ int main(int argc, char *argv[])
 
     homeDir = QDir::home();
     if (homeDir.cd(Pip3lineConst::USER_DIRECTORY)) {
-        QString logdir = homeDir.absolutePath().append(QDir::separator()).append("pip3line_gui.log");
-#ifdef _MSC_VER
+        QByteArray logdir = homeDir.absolutePath().append(QDir::separator()).append("pip3line_gui.log").toLocal8Bit();
+#ifdef Q_CC_MSVC
 #define BUFFERSIZE 200
 
         char buffer[BUFFERSIZE];
         memset((void *)buffer, 0, BUFFERSIZE);
 
-        errno_t err = fopen_s (&_logFile, logdir.toUtf8().data(),"w");
+        errno_t err = fopen_s (&_logFile, logdir.constData(),"w");
         if ( err != 0) {
             strerror_s(buffer, BUFFERSIZE, err);
             qWarning( buffer );
 #else
-        _logFile = fopen (logdir.toUtf8().data(),"w");
+        _logFile = fopen (logdir.constData(),"w");
 
         if (_logFile == NULL) {
             qWarning("Cannot open log file for writing");
@@ -116,6 +136,7 @@ int main(int argc, char *argv[])
 
 #endif
 
+#ifdef Q_CC_MSVC
     // forcing style on windows. can be overwritten at runtime
     // with the option --style
     QStringList stylelist = QStyleFactory::keys();
@@ -124,6 +145,7 @@ int main(int argc, char *argv[])
         QApplication::setStyle("WindowsVista");
     else if (stylelist.contains("WindowsXP"))
         QApplication::setStyle("WindowsXP");
+#endif
 
     // Qt initialisation
     QApplication a(argc, argv);
@@ -131,7 +153,7 @@ int main(int argc, char *argv[])
     // Cleaning the PATH to avoid library loading corruption
     qputenv("PATH", QByteArray());
 
-#ifndef _MSC_VER
+#ifdef Q_OS_UNIX
     qputenv("LD_PRELOAD", QByteArray());
 #endif
 
@@ -140,21 +162,36 @@ int main(int argc, char *argv[])
     bool debugging =  false;
     if (list.contains(DEBUG_CMD)) {
         debugging = true;
+        list.removeAll(DEBUG_CMD);
+    }
+
+    QString fileName;
+    if (list.contains(FILE_CMD)) {
+        int index = list.indexOf(FILE_CMD);
+        if (list.size() > index + 1) {
+            fileName = list.at(index + 1);
+            list.removeAt(index);
+            list.removeAt(index);
+        } else {
+            qCritical() << QObject::tr("Missing file name for --file, ignoring.");
+        }
     }
 
     QApplication::setQuitOnLastWindowClosed(false);
-    MainWindow w(debugging);
-    w.show();
+
+    MainWindow * w = new MainWindow(debugging);
+    if (!fileName.isEmpty())
+        w->loadFile(fileName);
+    w->show();
 
     int ret = a.exec();
 
+    delete w;
 #if QT_VERSION >= 0x050000
-    logFileMutex.lock();
     if (_logFile != NULL) {
         fclose (_logFile);
         _logFile = NULL;
     }
-    logFileMutex.unlock();
 #endif
 
     return ret;

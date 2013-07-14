@@ -31,6 +31,7 @@ class LocalSocketProcessor : public StreamProcessor
     signals:
         void finished(LocalSocketProcessor *);
     private :
+        Q_DISABLE_COPY(LocalSocketProcessor)
         explicit LocalSocketProcessor(TransformMgmt * tFactory, quintptr socketDescriptor, QObject * parent = 0);
         quintptr socketDescriptor;
 };
@@ -42,6 +43,7 @@ class InternalLocalSocketServer : public QLocalServer
     signals:
         void newClient(quintptr socketDescriptor);
     private:
+        Q_DISABLE_COPY(InternalLocalSocketServer)
         explicit InternalLocalSocketServer(QObject *parent = 0);
         void incomingConnection(quintptr socketDescriptor);
 };
@@ -62,6 +64,7 @@ class PipeServer : public ServerAbstract
         void processingNewClient(quintptr socketDescriptor);
         void processorFinished(LocalSocketProcessor *target);
     private:
+        Q_DISABLE_COPY(PipeServer)
         InternalLocalSocketServer * pipeServer;
         QString pipeName;
 };

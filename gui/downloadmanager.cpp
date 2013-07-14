@@ -14,7 +14,7 @@ Released under AGPL see LICENSE for more information
 
 const QString DownloadManager::ID = "DownloadManager";
 
-DownloadManager::DownloadManager(QUrl &url,QNetworkAccessManager * nnetworkManager, ByteItemModel *destModel, QObject *parent) :
+DownloadManager::DownloadManager(QUrl &url,QNetworkAccessManager * nnetworkManager, ByteSourceAbstract *destModel, QObject *parent) :
     QObject(parent)
 {
     resource = url;
@@ -55,8 +55,8 @@ void DownloadManager::requestFinished()
         emit error(tr("[Failed to load \"%1\"] %2\n").arg(resource.toString()).arg(reply->errorString()),ID);
     } else {
         qDebug() << tr("%1 successfully loaded (%2 bytes) ").arg(resource.toEncoded().constData()).arg(reply->size());
-        if (model != 0) {
-            model->setRawData(reply->readAll());
+        if (model != NULL) {
+            model->setData(reply->readAll());
         } else {
             dataMutex.lock();
             data = reply->readAll();

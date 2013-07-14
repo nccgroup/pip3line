@@ -28,6 +28,7 @@ class FloatingDialog : public QDialog
         void closeEvent(QCloseEvent * event);
         
     private:
+        Q_DISABLE_COPY(FloatingDialog)
         Ui::FloatingDialog *ui;
 };
 

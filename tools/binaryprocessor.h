@@ -21,6 +21,7 @@ class BinaryProcessor: public Processor
         ~BinaryProcessor();
         void run();
     private:
+        Q_DISABLE_COPY(BinaryProcessor)
         BinaryProcessor() {}
 };
 

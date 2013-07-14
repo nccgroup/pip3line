@@ -21,14 +21,64 @@ Released under AGPL see LICENSE for more information
 #include <QScrollBar>
 #include <QDebug>
 
-int HexDelegate::MAXCOL = 32;
+
+HexValidator::HexValidator(int size, QObject *parent) :
+    QValidator(parent)
+{
+    maxSize = size < 0 ? 0 : size;
+}
+
+QValidator::State HexValidator::validate(QString &input, int &) const
+{
+    if (input.isEmpty() || input.size() < maxSize)
+        return QValidator::Intermediate;
+
+    if (input.size() > maxSize)
+        return QValidator::Invalid;
+
+    // we don't need to verify if these are hex characters, as the filter should already prevent invalid char
+
+    return QValidator::Acceptable;
+}
+
+HexLineEdit::HexLineEdit(QWidget *parent) : QLineEdit(parent)
+{
+    setInputMask("HH");
+    setFrame(false);
+    HexValidator *validator = new(std::nothrow) HexValidator(maxLength(),parent);
+    if (validator == NULL) {
+        qFatal("Cannot allocate memory for HexValidator X{");
+    } else {
+        setValidator(validator);
+    }
+    connect(this, SIGNAL(textEdited(QString)), this, SLOT(onInputChanged()));
+}
+
+void HexLineEdit::onInputChanged()
+{
+    if (hasAcceptableInput()) {
+        emit inputValid();
+    }
+}
+
+void HexLineEdit::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)
+        event->accept();
+    else
+        QLineEdit::keyPressEvent(event);
+}
+
+// ===============================================================================
+
 int HexDelegate::colFlags[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
                                  0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000, 0x8000};
 int HexDelegate::COMPLETE_LINE = 0x8001;
 
-HexDelegate::HexDelegate(QObject *parent) : QStyledItemDelegate (parent), normalCell(24,20),  previewCell(130,20){
+HexDelegate::HexDelegate(int nhexColumncount, QObject *parent) : QStyledItemDelegate (parent), normalCell(24,20),  previewCell(130,20){
     labelFont.setFamily("Courier New");
     labelFont.setPointSize(10);
+    hexColumncount = nhexColumncount;
     //qDebug() << "Created: " << this;
 }
 
@@ -38,19 +88,17 @@ HexDelegate::~HexDelegate()
 }
 
 QWidget *HexDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem & /* Unused */, const QModelIndex & /* Unused */) const {
-    QLineEdit *editor = new(std::nothrow) QLineEdit(parent);
-    if (editor != NULL) {
-        editor->setInputMask("HH");
-        editor->setFrame(false);
-    } else {
+    HexLineEdit *editor = new(std::nothrow) HexLineEdit(parent);
+    if (editor == NULL) {
         qFatal("Cannot allocate memory for delegate editor X{");
     }
+    connect(editor, SIGNAL(inputValid()), this, SLOT(onEditorValid()));
     return editor;
 }
 
 void HexDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const {
     QLineEdit * weditor = static_cast<QLineEdit *>(editor);
-    weditor->setText(index.model()->data(index, Qt::EditRole).toByteArray());
+    weditor->setText(index.model()->data(index, Qt::DisplayRole).toString());
 }
 
 void HexDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const {
@@ -63,10 +111,10 @@ void HexDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewIt
 }
 
 void HexDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
-    if (index.column() == ((ByteItemModel *)index.model())->getColumnNumbers()) {
+    if (index.column() == hexColumncount) {
         QStyleOptionViewItemV4 optionV4 = option;
         initStyleOption(&optionV4, index);
-        int maxColumn = qMin(((ByteItemModel *)index.model())->getColumnNumbers(),MAXCOL);
+        int maxColumn = qMin(hexColumncount,ByteTableView::MAXCOL);
 
         QStyle *style = optionV4.widget? optionV4.widget->style() : QApplication::style();
 
@@ -122,7 +170,7 @@ void HexDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, c
 }
 
 QSize HexDelegate::sizeHint(const QStyleOptionViewItem & /*unused*/, const QModelIndex & index) const {
-    if (index.column() == ((ByteItemModel *)index.model())->getColumnNumbers()) {
+    if (index.column() == hexColumncount) {
         return previewCell;
     } else
         return normalCell;
@@ -133,15 +181,35 @@ void HexDelegate::clearSelected()
     selectedLines.clear();
 }
 
+void HexDelegate::setColumnCount(int val)
+{
+    if (val < ByteTableView::MINCOL || val > ByteTableView::MAXCOL)
+        qWarning("invalid column count for HexDelegate, ignoring");
+    else {
+        hexColumncount = val;
+    }
+}
+
+void HexDelegate::onEditorValid()
+{
+    QLineEdit * editor = static_cast<QLineEdit *>(sender());
+    emit commitData(editor);
+    emit closeEditor(editor, QAbstractItemDelegate::EditNextItem);
+}
+
 // ===================================== SelectionModel functions =============================================
 
-HexSelectionModel::HexSelectionModel(QAbstractItemModel *model) : QItemSelectionModel(model)
+HexSelectionModel::HexSelectionModel(int nhexColumncount, QAbstractItemModel *model) : QItemSelectionModel(model)
 {
+    delegate = NULL;
+    hexColumncount = nhexColumncount;
     //qDebug() << "Created: " << this;
 }
 
-HexSelectionModel::HexSelectionModel(QAbstractItemModel *model, QObject *parent) : QItemSelectionModel(model,parent)
+HexSelectionModel::HexSelectionModel(int nhexColumncount, QAbstractItemModel *model, QObject *parent) : QItemSelectionModel(model,parent)
 {
+    delegate = NULL;
+    hexColumncount = nhexColumncount;
     //qDebug() << "Created: " << this << " parent:" << parent;
 }
 
@@ -163,15 +231,16 @@ void HexSelectionModel::select(const QModelIndex &index, QItemSelectionModel::Se
     QItemSelectionModel::select(index,command);
 }
 
-void HexSelectionModel::select(const QItemSelection &/* Unused */, QItemSelectionModel::SelectionFlags command)
+void HexSelectionModel::select(const QItemSelection & , QItemSelectionModel::SelectionFlags command)
 {
     QItemSelection newSelection;
+
     delegate->clearSelected();
     if (!startIndex.isValid() || !endIndex.isValid()) {
         return;
     }
 
-    int maxColumn = ((ByteItemModel *)model())->getColumnNumbers() -1;
+    int maxColumn = hexColumncount - 1;
 
     if (startIndex == endIndex) {
         delegate->selectedLines.insert(startIndex.row(),HexDelegate::colFlags[startIndex.column()]);
@@ -198,31 +267,50 @@ void HexSelectionModel::select(const QItemSelection &/* Unused */, QItemSelectio
             delegate->selectedLines.insert(i,HexDelegate::COMPLETE_LINE);
         }
     }
-
     QItemSelectionModel::select(newSelection,command);
 
 }
 
 void HexSelectionModel::clear()
 {
+    // this function only clear the delegate and the parent selection
+    // it does not clear the actual selection (on purpose)
     delegate->clearSelected();
+
     QItemSelectionModel::clear();
+}
+
+void HexSelectionModel::setColumnCount(int val)
+{
+    if (val < ByteTableView::MINCOL || val > ByteTableView::MAXCOL)
+        qWarning("invalid column count for HexSelectionModel, ignoring");
+    else {
+        hexColumncount = val;
+    }
 }
 
 
 // ===================================== TableView functions =============================================
+
+int ByteTableView::MAXCOL = 32;
+int ByteTableView::MINCOL = 16;
+int ByteTableView::TEXTCOLUMNWIDTH = 131; // arbitratry number, dont' ask
+int ByteTableView::HEXCOLUMNWIDTH = 28; // arbitratry number, dont' ask
+const QString ByteTableView::LOGID = "ByteTableView";
+
 ByteTableView::ByteTableView(QWidget *parent) :
     QTableView(parent)
 {
+    hexColumncount = MINCOL;
     setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Expanding);
-    delegate = new(std::nothrow) HexDelegate(this);
+    delegate = new(std::nothrow) HexDelegate(hexColumncount,this);
     if (delegate != NULL) {
         setItemDelegate(delegate);
     } else {
         qFatal("Cannot allocate memory for hex delegate X{");
     }
     setSelectionMode(QAbstractItemView::ContiguousSelection);
-    //setAttribute(Qt::WA_NoMousePropagation);
+
 #if QT_VERSION >= 0x050000
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
@@ -232,13 +320,14 @@ ByteTableView::ByteTableView(QWidget *parent) :
 #endif
     currentSelectionModel = NULL;
     currentModel = NULL;
+    lastSearchIndex = 0;
     //qDebug() << "Created: " << this;
 
 }
 
 ByteTableView::~ByteTableView()
 {
-    // no need to delete currentModel as it should be taken care by the parent
+    currentModel = NULL;// no need to delete currentModel as it should be taken care by the parent
     delete delegate;
     delete currentSelectionModel;
     //qDebug() << "Destroyed: " << this;
@@ -251,11 +340,12 @@ void ByteTableView::setModel(ByteItemModel *nmodel)
     delete m;
 
     currentModel = nmodel;
-    for (int i = 0; i < 16; i++)
-        setColumnWidth(i,25);
-    setColumnWidth(16,131);
+    currentModel->setHexColumnCount(hexColumncount);
+    for (int i = 0; i < hexColumncount; i++)
+        setColumnWidth(i,HEXCOLUMNWIDTH);
+    setColumnWidth(hexColumncount,TEXTCOLUMNWIDTH);
 
-    currentSelectionModel = new(std::nothrow) HexSelectionModel(nmodel, this);
+    currentSelectionModel = new(std::nothrow) HexSelectionModel(hexColumncount, nmodel, this);
     if (currentSelectionModel == NULL) {
         qFatal("Cannot allocate memory for currentSelectionModel X{");
     } else {
@@ -276,19 +366,43 @@ void ByteTableView::setModel(ByteItemModel *nmodel)
 void ByteTableView::mousePressEvent(QMouseEvent *event)
 {
     QPersistentModelIndex current = indexAt(event->pos());
-    if (event->button() == Qt::RightButton) {
-        QTableView::mousePressEvent(event);
-        return;
+    qint64 pos = currentModel->position(current);
+    if (event->button() == Qt::RightButton) { // handling right click
+
+        qint64 start = currentModel->position(currentSelectionModel->startIndex);
+        qint64 stop = currentModel->position(currentSelectionModel->endIndex);
+
+        if (pos == ByteItemModel::INVALID_POSITION ||
+                (currentSelectionModel->startIndex.isValid()
+                && currentSelectionModel->endIndex.isValid()
+                && pos >= qMin(start, stop)
+                && pos <= qMax(start, stop))) {
+
+            // inside the selection or outside the table, nothing to do
+            QTableView::mousePressEvent(event);
+            return;
+
+        }
+
     }
     currentSelectionModel->clear();
     if (current.isValid()) {
-        if (currentModel->position(current) == ByteItemModel::INVALID_POSITION) {
+        if (pos == ByteItemModel::INVALID_POSITION) {
             current = current.sibling(-1,-1);
-            viewport()->update();
+            currentSelectionModel->startIndex = current;
+            currentSelectionModel->endIndex = current;
+            emit newSelection();
+        } else {
+            if (!(event->modifiers().testFlag(Qt::ShiftModifier) && currentSelectionModel->startIndex.isValid()))
+                currentSelectionModel->startIndex = current;
+            currentSelectionModel->endIndex = current;
         }
+    } else {
         currentSelectionModel->startIndex = current;
         currentSelectionModel->endIndex = current;
+        emit newSelection();
     }
+
     QTableView::mousePressEvent(event);
 
 }
@@ -296,6 +410,7 @@ void ByteTableView::mousePressEvent(QMouseEvent *event)
 void ByteTableView::mouseMoveEvent(QMouseEvent *event)
 {
     QPersistentModelIndex current = indexAt(event->pos());
+    // checking if the mouse pointer is in the table, and extending the selection if needed
     if (current.isValid() && currentModel->position(current) != ByteItemModel::INVALID_POSITION ) {
         currentSelectionModel->endIndex = indexAt(event->pos());
     }
@@ -357,6 +472,7 @@ void ByteTableView::keyPressEvent(QKeyEvent *event)
         clipboard->setText(temp2);
 
         event->accept();
+
     } else {
         QAbstractItemView::keyPressEvent(event);
     }
@@ -365,7 +481,58 @@ void ByteTableView::keyPressEvent(QKeyEvent *event)
 void ByteTableView::onSelectionChanged(const QItemSelection & /* Unused */, const QItemSelection & /* Unused */)
 {
     viewport()->update();
-    emit selectionChanged();
+    emit newSelection();
+}
+
+void ByteTableView::closeEditor(QWidget *editor, QAbstractItemDelegate::EndEditHint hint)
+{
+    if (hint == QAbstractItemDelegate::SubmitModelCache) {
+        hint = QAbstractItemDelegate::EditNextItem;
+    }
+    QTableView::closeEditor(editor, hint);
+}
+
+QModelIndex ByteTableView::moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
+{
+    QModelIndex nextIndex;
+    if (cursorAction == QAbstractItemView::MoveNext || cursorAction == QAbstractItemView::MoveRight) {
+        nextIndex = currentModel->createIndex(getCurrentPos() + 1);
+    } else if (cursorAction == QAbstractItemView::MovePrevious || cursorAction == QAbstractItemView::MoveLeft) {
+        nextIndex = currentModel->createIndex(getCurrentPos() - 1);
+    } else if (cursorAction == QAbstractItemView::MoveDown) {
+        nextIndex = currentModel->createIndex(getCurrentPos() + hexColumncount);
+    } else if (cursorAction == QAbstractItemView::MoveUp) {
+        nextIndex = currentModel->createIndex(getCurrentPos() - hexColumncount);
+    } else if (cursorAction == QAbstractItemView::MoveHome) {
+        nextIndex = currentModel->createIndex(0);
+    } else if (cursorAction == QAbstractItemView::MoveEnd) {
+        nextIndex = currentModel->createIndex(currentModel->size() - 1);
+    } else if (cursorAction == QAbstractItemView::MovePageDown) {
+        nextIndex = currentModel->createIndex(getCurrentPos() + (hexColumncount * 16));
+        if (!nextIndex.isValid()) {
+            if (getCurrentPos() % hexColumncount < currentModel->size() % hexColumncount)
+                nextIndex = currentModel->createIndex((currentModel->rowCount() - 1), getCurrentPos() % hexColumncount);
+            else
+                nextIndex = currentModel->createIndex(currentModel->size() - 1);
+        }
+    } else if (cursorAction == QAbstractItemView::MovePageUp) {
+        nextIndex = currentModel->createIndex(getCurrentPos() - (hexColumncount * 16));
+        if (!nextIndex.isValid())
+            nextIndex = currentModel->createIndex(getCurrentPos() % hexColumncount);
+    }
+
+    if (nextIndex.isValid() && currentModel->position(nextIndex) != ByteItemModel::INVALID_POSITION) {
+        if (! (modifiers & Qt::ShiftModifier))
+            currentSelectionModel->startIndex = nextIndex;
+
+        currentSelectionModel->endIndex = nextIndex;
+
+        currentSelectionModel->clear();
+       // currentSelectionModel->setCurrentIndex(nextIndex,QItemSelectionModel::Select);
+
+    }
+
+    return nextIndex;
 }
 
 void ByteTableView::wheelEvent(QWheelEvent *event)
@@ -380,8 +547,8 @@ void ByteTableView::wheelEvent(QWheelEvent *event)
 bool ByteTableView::getSelectionInfo(int *pos, int *length)
 {
     if (currentSelectionModel->startIndex.isValid() && currentSelectionModel->endIndex.isValid()) {
-        int pos1 = currentModel->position(currentSelectionModel->startIndex);
-        int pos2 = currentModel->position(currentSelectionModel->endIndex);
+        qint64 pos1 = currentModel->position(currentSelectionModel->startIndex);
+        qint64 pos2 = currentModel->position(currentSelectionModel->endIndex);
         (*length) = qAbs(pos1 -pos2) + 1;
         if (pos1 <= pos2)
             (*pos) = pos1;
@@ -488,11 +655,16 @@ int ByteTableView::getHigherSelected() const
     return currentModel->position(ref);
 }
 
+qint64 ByteTableView::getCurrentPos() const
+{
+    return currentModel->position(currentIndex());
+}
+
 void ByteTableView::markSelected(const QColor &color, QString text)
 {
     if (currentSelectionModel->startIndex.isValid() && currentSelectionModel->endIndex.isValid()) {
-        int pos1 = currentModel->position(currentSelectionModel->startIndex);
-        int pos2 = currentModel->position(currentSelectionModel->endIndex);
+        qint64 pos1 = currentModel->position(currentSelectionModel->startIndex);
+        qint64 pos2 = currentModel->position(currentSelectionModel->endIndex);
 
         currentModel->mark(pos1, pos2, color, text);
     }
@@ -501,8 +673,8 @@ void ByteTableView::markSelected(const QColor &color, QString text)
 void ByteTableView::clearMarkOnSelected()
 {
     if (currentSelectionModel->startIndex.isValid() && currentSelectionModel->endIndex.isValid()) {
-        int pos1 = currentModel->position(currentSelectionModel->startIndex);
-        int pos2 = currentModel->position(currentSelectionModel->endIndex);
+        qint64 pos1 = currentModel->position(currentSelectionModel->startIndex);
+        qint64 pos2 = currentModel->position(currentSelectionModel->endIndex);
 
         currentModel->clearMarking(pos1, pos2);
     }
@@ -511,4 +683,79 @@ void ByteTableView::clearMarkOnSelected()
 bool ByteTableView::hasSelection()
 {
     return currentSelectionModel->startIndex.isValid() && currentSelectionModel->endIndex.isValid();
+}
+
+bool ByteTableView::goTo(qint64 offset, bool absolute, bool select)
+{
+    qint64 startingOffset = 0;
+    if (!absolute) {
+        startingOffset = getCurrentPos();
+        if (startingOffset == ByteItemModel::INVALID_POSITION)
+            startingOffset = 0;
+    }
+
+    if (offset > 0 && currentModel->getSource()->size() - offset < startingOffset) {
+        emit error(tr("Real offset too large (%1, %2)").arg(offset).arg(absolute),LOGID);
+    } else if (offset < 0 && startingOffset + offset < 0) {
+        emit error(tr("Real offset is negative (%1, %2)").arg(offset).arg(absolute),LOGID);
+    } else {
+        QPersistentModelIndex nextIndex = currentModel->createIndex(startingOffset + offset);
+        QPersistentModelIndex currIndex = currentIndex();
+        if (select && currIndex.isValid()) {
+            currentSelectionModel->startIndex = currIndex;
+        } else {
+            currentSelectionModel->startIndex = nextIndex;
+        }
+        currentSelectionModel->endIndex = nextIndex;
+
+        currentSelectionModel->clear();
+        currentSelectionModel->setCurrentIndex(nextIndex,QItemSelectionModel::Select);
+        scrollTo(nextIndex);
+        return true;
+    }
+    return false;
+}
+
+bool ByteTableView::search(QByteArray item, bool)
+{
+    qint64 curPos = getCurrentPos();
+    if (lastSearchIndex == curPos)
+        curPos++;
+
+    qint64 pos = currentModel->getSource()->indexOf(item,curPos);
+    if (pos < 0) {
+        if (curPos > 0) {
+            pos = currentModel->getSource()->indexOf(item,0); // going back to the beginning
+            if (pos < 0)
+                return false;
+        }
+    }
+
+    lastSearchIndex = pos;
+
+    QPersistentModelIndex searchStartIndex = currentModel->createIndex(pos);
+    QPersistentModelIndex searchEndIndex = currentModel->createIndex(pos + item.size() - 1);
+
+    if (!(searchStartIndex.isValid() && searchEndIndex.isValid())) {
+        return false;
+    }
+
+    currentSelectionModel->startIndex = searchStartIndex;
+    currentSelectionModel->endIndex = searchEndIndex;
+
+    currentSelectionModel->clear();
+    currentSelectionModel->setCurrentIndex(searchEndIndex,QItemSelectionModel::Select);
+    scrollTo(searchStartIndex);
+
+    return true;
+}
+
+void ByteTableView::setColumnCount(int val)
+{
+    if (val < ByteTableView::MINCOL || val > ByteTableView::MAXCOL) {
+        emit error(tr("invalid column count for ByteTableView, ignoring"),LOGID);
+    }
+    else {
+        hexColumncount = val;
+    }
 }

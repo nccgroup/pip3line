@@ -11,7 +11,10 @@ Released under AGPL see LICENSE for more information
 #include "loggerwidget.h"
 #include "ui_loggerwidget.h"
 #include <QMutexLocker>
+#include <QTime>
+#include <QDebug>
 
+using namespace Pip3lineConst;
 
 LoggerWidget::LoggerWidget(QWidget *parent) :
     QWidget(parent)
@@ -21,20 +24,13 @@ LoggerWidget::LoggerWidget(QWidget *parent) :
         qFatal("Cannot allocate memory for Ui::LoggerWidget X{");
     }
     ui->setupUi(this);
-    cerr = new(std::nothrow) QTextStream(stderr);
-    if (cerr == NULL)
-        qFatal("Cannot allocate memory for logger cerr X{");
-    cout = new(std::nothrow) QTextStream(stdout);
-    if (cout == NULL)
-        qFatal("Cannot allocate memory for logger cout X{");
+
     uncheckedError = false;
 }
 
 LoggerWidget::~LoggerWidget()
 {
     delete ui;
-    delete cerr;
-    delete cout;
 }
 
 void LoggerWidget::showEvent(QShowEvent *event)
@@ -51,27 +47,33 @@ bool LoggerWidget::hasUncheckedError() const
 
 void LoggerWidget::logError(const QString &message, const QString &source)
 {
-    addMessage(message,source,Error);
+    addMessage(message,source,LERROR);
 }
 
 void LoggerWidget::logWarning(const QString &message, const QString &source)
 {
-    addMessage(message,source,Warning);
+    addMessage(message,source,LWARNING);
 }
 
 void LoggerWidget::logStatus(const QString &message, const QString &source)
 {
-    addMessage(message,source,Normal);
+    addMessage(message,source,LSTATUS);
+}
+
+void LoggerWidget::logMessage(const QString &message, const QString &source, Pip3lineConst::LOGLEVEL level)
+{
+    addMessage(message,source,level);
 }
 
 
-void LoggerWidget::addMessage(const QString &message, const QString &source, const Levels level)
+void LoggerWidget::addMessage(const QString &message, const QString &source, LOGLEVEL level)
 {
     QMutexLocker locking(&lock);
     QString fmess;
     QColor color;
 
 
+    fmess = QString("[%1]").arg(QTime::currentTime().toString());
 
     if (!source.isEmpty())
         fmess.append(source).append(": ").append(message);
@@ -79,21 +81,21 @@ void LoggerWidget::addMessage(const QString &message, const QString &source, con
         fmess.append(message);
 
     switch (level) {
-        case Error:
+        case LERROR:
             color = Qt::red;
-            *cerr << fmess << endl;
+            qCritical() << fmess;
             if (!(uncheckedError && isVisible())) {
                 uncheckedError = true;
                 emit errorRaised();
             }
             break;
-        case Warning:
+        case LWARNING:
             color = Qt::blue;
-            *cerr << fmess << endl;
+            qWarning() << fmess;
             break;
         default:
             color = Qt::black;
-            *cout << fmess << endl;
+            qWarning() << fmess;
             break;
 
     }

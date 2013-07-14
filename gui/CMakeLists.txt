@@ -52,8 +52,6 @@ set ( pip3line_HDRS
 	regexphelpdialog.h
 	customdialogdockwidget.h
 	loggerwidget.h
-	bytetableview.h
-	byteitemmodel.h
 	infodialog.h
 	screeniodevice.h
 	settingsdialog.h
@@ -66,11 +64,10 @@ set ( pip3line_HDRS
 	quickviewdialog.h
 	quickviewitem.h
 	quickviewitemconfig.h
-	rendertextview.h
-	textwidget.h
 	newbytedialog.h
 	hexwidget.h
 	debugdialog.h
+	textinputdialog.h
 	../tools/processor.h
 	../tools/pipeserver.h
 	../tools/streamprocessor.h
@@ -81,7 +78,15 @@ set ( pip3line_HDRS
 	../tools/transformrequest.h
 	../tools/centralprocessor.h
 	../version.h
+	sources/basicsource.h
+	sources/bytesourceabstract.h
+	views/hexview.h
+	views/textview.h
+	views/bytetableview.h
+	views/byteitemmodel.h
+	views/doubleviewwidget.h
 	)
+
 
 set ( pip3line_SRCS
 	main.cpp
@@ -95,8 +100,6 @@ set ( pip3line_SRCS
 	regexphelpdialog.cpp
 	customdialogdockwidget.cpp
 	loggerwidget.cpp
-	bytetableview.cpp
-	byteitemmodel.cpp
 	infodialog.cpp
 	screeniodevice.cpp
 	settingsdialog.cpp
@@ -109,11 +112,10 @@ set ( pip3line_SRCS
 	quickviewdialog.cpp
 	quickviewitem.cpp
 	quickviewitemconfig.cpp
-	rendertextview.cpp
-	textwidget.cpp
 	newbytedialog.cpp
 	hexwidget.cpp
 	debugdialog.cpp
+	textinputdialog.cpp
 	../tools/processor.cpp
 	../tools/binaryprocessor.cpp
 	../tools/textprocessor.cpp
@@ -123,6 +125,13 @@ set ( pip3line_SRCS
 	../tools/serverabstract.cpp
 	../tools/transformrequest.cpp
 	../tools/centralprocessor.cpp
+	sources/basicsource.cpp
+	sources/bytesourceabstract.cpp
+	views/hexview.cpp
+	views/bytetableview.cpp
+	views/byteitemmodel.cpp
+	views/textview.cpp
+	views/doubleviewwidget.cpp
 	)
 
 set ( pip3line_UIS
@@ -140,15 +149,17 @@ set ( pip3line_UIS
 	settingsdialog.ui
 	pluginconfwidget.ui
 	transformsgui.ui
-	tabname.ui
 	floatingdialog.ui
 	quickviewdialog.ui
 	quickviewitem.ui
 	quickviewitemconfig.ui
-	textwidget.ui
 	newbytedialog.ui
 	hexwidget.ui
 	debugdialog.ui
+	views/hexview.ui
+	textinputdialog.ui
+	views/textview.ui
+	views/doubleviewwidget.ui
 	)
 
 set ( pip3line_RSCS

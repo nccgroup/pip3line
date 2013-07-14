@@ -15,8 +15,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>736</width>
-    <height>414</height>
+    <width>858</width>
+    <height>449</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -63,7 +63,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>736</width>
+        <width>858</width>
         <height>72</height>
        </rect>
       </property>
@@ -164,39 +164,8 @@
          </sizepolicy>
         </property>
         <property name="currentIndex">
-         <number>0</number>
+         <number>-1</number>
         </property>
-        <widget class="TextWidget" name="plainTextTab">
-         <attribute name="title">
-          <string>Plain text (UTF-8)</string>
-         </attribute>
-        </widget>
-        <widget class="QWidget" name="hexViewTab">
-         <attribute name="title">
-          <string>Hex view</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <property name="spacing">
-           <number>0</number>
-          </property>
-          <property name="margin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="sizeHexLabel">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="settingsTab">
-         <attribute name="title">
-          <string>Settings</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_2"/>
-        </widget>
        </widget>
       </item>
       <item>
@@ -368,7 +337,7 @@
               </property>
              </widget>
             </item>
-            <item alignment="Qt::AlignLeft">
+            <item alignment="Qt::AlignRight">
              <widget class="QPushButton" name="forwardPushButton">
               <property name="maximumSize">
                <size>
@@ -455,6 +424,47 @@
            </property>
            <property name="wordWrap">
             <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="searchLineEdit">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Default search will be based on the current view:&lt;br/&gt;Text view =&amp;gt; normal text search in the text view&lt;br/&gt;Hexa view =&amp;gt; search in the hex view from an hexadecimal value&lt;/p&gt;&lt;p&gt;Otherwise one can force the conversion with the following shortcuts:&lt;br/&gt;shift + enter =&amp;gt; hexadecimal search&lt;br/&gt;alt + enter =&amp;gt; UTF-8 search&lt;br/&gt;ctrl + enter =&amp;gt; UTF-16 search&lt;/p&gt;&lt;p&gt;When using shortcut the view will switch to hexadecimal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>find (ctrl+f)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="gotoLineEdit">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;First character defines relativity:&lt;br/&gt;'=' =&amp;gt; absolute offset (default)&lt;br/&gt;+ =&amp;gt; positive relative offset&lt;br/&gt;- =&amp;gt; negative relative offset&lt;/p&gt;&lt;p&gt;Second character defines the format:&lt;br/&gt;x = hexadecimal number&lt;br/&gt;o = octal number&lt;br/&gt;n = decimal number&lt;br/&gt;Default is configured from the  global settings&lt;/p&gt;&lt;p&gt;The range validity is between 0 and signed INT64_MAX&lt;/p&gt;&lt;p&gt;ENTER will go to the offset&lt;br/&gt;shift+enter will also select everything since the last position&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="statusTip">
+            <string/>
+           </property>
+           <property name="whatsThis">
+            <string/>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="placeholderText">
+            <string>goto offset (ctrl+g)</string>
            </property>
           </widget>
          </item>
@@ -575,69 +585,7 @@
     </widget>
    </item>
   </layout>
-  <action name="actionImport_From_File">
-   <property name="text">
-    <string>Load From File</string>
-   </property>
-   <property name="toolTip">
-    <string>Load From File</string>
-   </property>
-  </action>
-  <action name="actionDelete_selected_bytes">
-   <property name="text">
-    <string>Delete selected bytes</string>
-   </property>
-  </action>
-  <action name="actionSave_to_file">
-   <property name="text">
-    <string>Save to file</string>
-   </property>
-  </action>
-  <action name="actionSelect_all">
-   <property name="text">
-    <string>&amp;Select all</string>
-   </property>
-  </action>
-  <action name="actionKeep_only_Selected">
-   <property name="text">
-    <string>&amp;Keep only Selected</string>
-   </property>
-  </action>
-  <action name="actionSend_to_new_tab">
-   <property name="text">
-    <string>New tab</string>
-   </property>
-   <property name="toolTip">
-    <string>New tab</string>
-   </property>
-  </action>
-  <action name="actionNewMarking">
-   <property name="text">
-    <string>New marking</string>
-   </property>
-   <property name="toolTip">
-    <string>New Marking on selected</string>
-   </property>
-  </action>
-  <action name="actionClear_marking">
-   <property name="text">
-    <string>Clear marking(s)</string>
-   </property>
-  </action>
-  <action name="actionNew_byte_array">
-   <property name="text">
-    <string>New byte array</string>
-   </property>
-  </action>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>TextWidget</class>
-   <extends>QWidget</extends>
-   <header>textwidget.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources>
   <include location="gui_res.qrc"/>
  </resources>

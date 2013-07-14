@@ -51,7 +51,7 @@ class UnittestsTest : public QObject
 UnittestsTest::UnittestsTest()
 {
     messlog = new QTextStream(stdout);
-
+    transformFactory = NULL;
 }
 
 void UnittestsTest::logError(const QString mess)
@@ -75,6 +75,7 @@ void UnittestsTest::initTestCase()
 
 void UnittestsTest::cleanupTestCase()
 {
+    delete transformFactory;
 }
 
 void UnittestsTest::testBase32()

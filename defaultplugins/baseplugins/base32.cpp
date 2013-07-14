@@ -105,13 +105,12 @@ void Base32::transform(const QByteArray &input, QByteArray &output)
         int index = 0;
         uchar current = 0;
         uchar newchar = (uchar)charTable.indexOf(temp.at(index));;
-        int bitsToRead = 0;
         int bitsRest = BlockSize;
         int needMore = ByteSize;
 
         while (index < temp.size() || bitsRest != 0) {
 
-            bitsToRead = qMin(needMore,bitsRest);
+            int bitsToRead = qMin(needMore,bitsRest);
 
             current = current | ((newchar >> (bitsRest - bitsToRead) << (needMore - bitsToRead)));
             needMore = needMore - bitsToRead;

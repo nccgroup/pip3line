@@ -9,6 +9,7 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "xorwidget.h"
+#include <QDebug>
 #include "ui_xorwidget.h"
 
 XorWidget::XorWidget(Xor *ntransform, QWidget *parent) :
@@ -22,6 +23,7 @@ XorWidget::XorWidget(Xor *ntransform, QWidget *parent) :
     ui->setupUi(this);
     connect(ui->keyPlainTextEdit,SIGNAL(textChanged()),this,SLOT(onKeyChange()));
     connect(ui->fromHexcheckBox,SIGNAL(toggled(bool)),this,SLOT(onFromHexChange(bool)));
+    connect(ui->typeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onTypeChange(int)));
     ui->keyPlainTextEdit->appendPlainText(transform->getKey());
     ui->fromHexcheckBox->setChecked(transform->isFromHex());
 }
@@ -39,4 +41,21 @@ void XorWidget::onFromHexChange(bool val)
 void XorWidget::onKeyChange()
 {
     transform->setKey(ui->keyPlainTextEdit->toPlainText().toUtf8());
+}
+
+void XorWidget::onTypeChange(int index)
+{
+    switch (index) {
+        case Xor::Basic:
+            transform->setType(Xor::Basic);
+            break;
+        case Xor::PREVIOUSINPUT:
+            transform->setType(Xor::PREVIOUSINPUT);
+            break;
+        case Xor::PREVIOUSOUTPUT:
+            transform->setType(Xor::PREVIOUSOUTPUT);
+            break;
+        default:
+            qCritical() << tr("Unknown index for Xor type T_T");
+    }
 }

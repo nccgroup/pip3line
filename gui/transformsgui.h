@@ -18,6 +18,7 @@ Released under AGPL see LICENSE for more information
 #include "loggerwidget.h"
 #include "guihelper.h"
 #include "transformchain.h"
+#include "sources/bytesourceabstract.h"
 
 namespace Ui {
 class TransformsGui;
@@ -39,6 +40,9 @@ class TransformsGui : public QWidget
         void setName(const QString & name);
         QString getName() const ;
         void bringFront();
+        void loadFromFile(QString fileName);
+        int getBlockCount() const;
+        ByteSourceAbstract * getBytesFrom(int blockIndex);
 
     signals:
         void nameChanged(TransformsGui *tab);
@@ -59,8 +63,10 @@ class TransformsGui : public QWidget
         void buildSavedCombo();
         void onSwitchWindowTab();
         void onTransformChanged();
+        void onNameChangeRequest(QString name);
 
     private:
+        Q_DISABLE_COPY(TransformsGui)
         TransformChain getCurrentTransformChain();
         void setCurrentTransformChain(TransformChain list);
         void addWidget(TransformWidget * transformWidget);

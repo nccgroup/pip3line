@@ -110,7 +110,7 @@ QString Zlib::outboundString() const
 
 bool Zlib::setCompression(int level)
 {
-    if (level < 0 && level > 9) {
+    if (level < 0 || level > 9) {
         emit error(tr("Incorrect compression level"),id);
         return false;
     }

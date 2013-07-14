@@ -28,6 +28,7 @@ class DebugDialog : public QDialog
     private slots:
         void on_loadPushButton_clicked();
     private:
+        Q_DISABLE_COPY(DebugDialog)
         Ui::DebugDialog *ui;
 };
 

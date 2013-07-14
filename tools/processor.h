@@ -58,6 +58,7 @@ class Processor : public QThread
         char separator;
         long ocount;
     private:
+        Q_DISABLE_COPY(Processor)
         inline void clearChain();
         TransformMgmt * transformFactory;
         QMutex tranformsLock;

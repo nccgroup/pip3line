@@ -19,6 +19,7 @@ Released under AGPL see LICENSE for more information
 #include <QMutex>
 #include <QHash>
 #include <QColor>
+#include "../sources/bytesourceabstract.h"
 
 class ByteItemModel : public QAbstractTableModel
 {
@@ -26,32 +27,30 @@ class ByteItemModel : public QAbstractTableModel
     public:
         enum UpdateSource {TEXTVIEW = 0, HEXVIEW = 1, EXTERNAL = 2};
         static int INVALID_POSITION;
-        explicit ByteItemModel(QObject *parent = 0);
+        explicit ByteItemModel(ByteSourceAbstract * byteSource, QObject *parent = 0);
         ~ByteItemModel();
-        void setRawData(const QByteArray &data, UpdateSource source = ByteItemModel::EXTERNAL);
-        int size() const;
-        QByteArray getRawData();
+        void setSource(ByteSourceAbstract * byteSource);
+        ByteSourceAbstract *getSource() const;
+        int size();
         int columnCount ( const QModelIndex & parent = QModelIndex() ) const;
         int rowCount ( const QModelIndex & parent = QModelIndex() ) const;
         QVariant data ( const QModelIndex & index, int role = Qt::DisplayRole ) const;
         QVariant headerData ( int section, Qt::Orientation orientation, int role = Qt::DisplayRole ) const;
         Qt::ItemFlags flags(const QModelIndex &index) const;
         bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
+        void setHexColumnCount(int val);
 
-        int getColumnNumbers() const;
-        QModelIndex createIndex(int pos) const;
-        void insert(int pos, const QByteArray &data);
-        void remove(int pos, int length);
-        void replace(int pos, int length, QByteArray val);
-        QByteArray extract(int pos, int length);
+        QModelIndex createIndex(qint64 pos);
+        QModelIndex createIndex(int row, int column) const;
+        void insert(qint64 pos, const QByteArray &data);
+        void remove(qint64 pos, int length);
+        void replace(qint64 pos, int length, QByteArray val);
+        QByteArray extract(qint64 pos, int length);
         void clear();
-        int position(const QModelIndex &index) const;
+        qint64 position(const QModelIndex &index) const;
 
-        bool isStringValid();
-        bool isReadableText();
-
-        void mark(int start, int end, const QColor &color, QString toolTip = QString());
-        void clearMarking(int start, int end);
+        void mark(qint64 start, qint64 end, const QColor &color, QString toolTip = QString());
+        void clearMarking(qint64 start, qint64 end);
         void clearAllMarkings();
         bool hasMarking() const;
 
@@ -60,25 +59,18 @@ class ByteItemModel : public QAbstractTableModel
     signals:
         void error(QString message);
         void warning(QString message);
-        void updatedFrom(ByteItemModel::UpdateSource);
     public slots:
-        void fromLocalFile(QString filename);
+        void receivedSourceUpdate(quintptr viewSource);
     private:
-        static const QByteArray TEXT;
-        inline QString toPrintableString(const QByteArray &val) const;
-        inline void notifyUpdate(UpdateSource source = ByteItemModel::EXTERNAL);
-        inline void addDataToHistory(const QByteArray &data);
-        QByteArray rawData;
-        int columnNumbers;
-        QMutex rawDataMutex;
+        Q_DISABLE_COPY(ByteItemModel)
+        int hexColumncount;
         struct Markings {
                 QColor color;
                 QString text;
         };
 
-        QHash<int, Markings> marked;
-        QList<QByteArray> history;
-        int currentHistoryPointer;
+        QHash<qint64, Markings> marked;
+        ByteSourceAbstract * byteSource;
 };
 
 #endif // BYTEITEMMODEL_H

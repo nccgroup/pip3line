@@ -9,13 +9,16 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "xor.h"
+#include <QDebug>
 #include "confgui/xorwidget.h"
 
 const QString Xor::id = "Xor";
+const QString Xor::XMLXORALGORITHM = "Algorithm";
 
 Xor::Xor()
 {
     hexDecode = false;
+    xortype = Basic;
 }
 
 Xor::~Xor()
@@ -40,7 +43,7 @@ QHash<QString, QString> Xor::getConfiguration()
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
     properties.insert(XMLKEY,QString(key.toBase64()));
     properties.insert(XMLFROMHEX,QString::number(hexDecode ? 1 : 0));
-
+    properties.insert(XMLXORALGORITHM, QString::number(xortype));
     return properties;
 }
 
@@ -53,8 +56,17 @@ bool Xor::setConfiguration(QHash<QString, QString> propertiesList)
     if (!ok || (val != 0 && val != 1)) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLFROMHEX),id);
+    } else {
+        setFromHex(val == 1);
     }
-    setFromHex(val == 1);
+
+    val = propertiesList.value(XMLXORALGORITHM).toInt(&ok);
+    if (!ok || (val != Basic && val != PREVIOUSINPUT && val != PREVIOUSOUTPUT)) {
+        res = false;
+        emit error(tr("Invalid value for %1").arg(XMLXORALGORITHM),id);
+    } else {
+        setType((Xor::Type)val);
+    }
 
     setKey(QByteArray::fromBase64(propertiesList.value(XMLKEY).toUtf8()));
     return res;
@@ -91,15 +103,44 @@ void Xor::transform(const QByteArray &input, QByteArray &output){
         return;
     }
 
-    if (finalKey.size() < input.size()) {
-        emit warning(tr("Key length (%1) is inferior to the data length (%2). Reusing the key multiple time.").arg(finalKey.size()).arg(input.size()),id);
-    }
-    for (int i = 0 ; i < input.size(); i++) {
-        output.append(input.at(i) ^ finalKey.at(i % finalKey.size()));
+    switch (xortype) {
+        case Basic:
+            {
+                if (finalKey.size() < input.size()) {
+                    emit warning(tr("Key length (%1) is inferior to the data length (%2). Reusing the key multiple time.").arg(finalKey.size()).arg(input.size()),id);
+                }
+                for (int i = 0 ; i < input.size(); i++) {
+                    output.append(input.at(i) ^ finalKey.at(i % finalKey.size()));
+                }
+            }
+            break;
+        case PREVIOUSINPUT:
+            {
+                QByteArray temp = input;
+                temp.prepend(finalKey);
+
+                for (int i = finalKey.size() ; i < temp.size(); i++) {
+                    output.append(temp.at(i) ^ temp.at(i - finalKey.size()));
+                }
+
+            }
+            break;
+        case PREVIOUSOUTPUT:
+            {
+                output = finalKey;
+
+                for (int i = 0 ; i < input.size(); i++) {
+                    output.append(input.at(i) ^ output.at(i));
+                }
+                output = output.mid(finalKey.size());
+            }
+            break;
+        default:
+            emit error(tr("Unknown Xor type T_T"),id);
     }
 }
 
-QByteArray Xor::getKey()
+QByteArray Xor::getKey() const
 {
     return key;
 }
@@ -112,7 +153,7 @@ void Xor::setKey(QByteArray val)
     }
 }
 
-bool Xor::isFromHex()
+bool Xor::isFromHex() const
 {
     return hexDecode;
 }
@@ -123,4 +164,17 @@ void Xor::setFromHex(bool val)
         hexDecode = val;
         emit confUpdated();
     }
+}
+
+void Xor::setType(Xor::Type val)
+{
+    if (xortype != val) {
+        xortype = val;
+        emit confUpdated();
+    }
+}
+
+Xor::Type Xor::getType() const
+{
+    return xortype;
 }

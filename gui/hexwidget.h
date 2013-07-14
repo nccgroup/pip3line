@@ -31,6 +31,7 @@ class HexWidget : public QWidget
     private slots:
         void onHexChanged();
     private:
+        Q_DISABLE_COPY(HexWidget)
         Ui::HexWidget *ui;
 };
 

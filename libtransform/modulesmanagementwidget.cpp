@@ -95,5 +95,5 @@ void ModulesManagementWidget::unload(QString name)
 
 void ModulesManagementWidget::onModuleSelected(QListWidgetItem *item)
 {
-    QString name = ((DeleteableListItem *)ui->modulesListWidget->itemWidget(item))->getName();
+    QString name = (static_cast<DeleteableListItem *>(ui->modulesListWidget->itemWidget(item)))->getName();
 }

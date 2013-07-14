@@ -59,6 +59,7 @@ class LIBTRANSFORMSHARED_EXPORT ModulesManagement : public QObject
     private Q_SLOTS:
         void onGuiDelete();
     private:
+        Q_DISABLE_COPY(ModulesManagement)
         static const QString SETTINGS_USER_MODULES_LIST;
 
         void savePersistentModules();

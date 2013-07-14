@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<comment>
+ <comment>
   * Released as open source by NCC Group Plc - http://www.nccgroup.com/
   *
   * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
@@ -15,8 +15,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>254</width>
-    <height>147</height>
+    <width>283</width>
+    <height>217</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -24,7 +24,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="keyWidget" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <widget class="QLabel" name="keyLabel">
@@ -42,11 +42,39 @@
       <item alignment="Qt::AlignHCenter">
        <widget class="QCheckBox" name="fromHexcheckBox">
         <property name="text">
-         <string>From hexadecimal</string>
+         <string>Hexadecimal key</string>
         </property>
         <property name="checked">
          <bool>true</bool>
         </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="typeGroupBox">
+     <property name="title">
+      <string>Xor algorithm</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="QComboBox" name="typeComboBox">
+        <item>
+         <property name="text">
+          <string>Classic</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Rolling using previous input</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Rolling using previous output</string>
+         </property>
+        </item>
        </widget>
       </item>
      </layout>

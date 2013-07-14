@@ -15,7 +15,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>425</width>
+    <width>454</width>
     <height>563</height>
    </rect>
   </property>
@@ -35,14 +35,14 @@
    <item>
     <widget class="QToolBox" name="toolBox">
      <property name="currentIndex">
-      <number>5</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="generalPage">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>415</width>
+        <width>444</width>
         <height>372</height>
        </rect>
       </property>
@@ -111,6 +111,102 @@
             </property>
             <property name="text">
              <string>Unchecked</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="miscGroupBox">
+         <property name="title">
+          <string>Search &amp;&amp; Goto offset</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_4">
+          <property name="labelAlignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="defaultOffsetLabel">
+            <property name="text">
+             <string>Default goto offset base</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="offsetBaseComboBox">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="currentIndex">
+             <number>2</number>
+            </property>
+            <item>
+             <property name="text">
+              <string>8</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>10</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>16</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="shortcutLabel">
+            <property name="text">
+             <string>Keys combinations for the search box</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="shiftenterLabel">
+            <property name="text">
+             <string>shift + enter</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Convert input from hexadecimal</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="ctrlenterLabel">
+            <property name="text">
+             <string>ctrl + enter</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="altenterLabel">
+            <property name="text">
+             <string>alt + enter</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>Convert input from UTF-8</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Convert input from UTF-16</string>
             </property>
            </widget>
           </item>

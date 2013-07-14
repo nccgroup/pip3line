@@ -13,23 +13,23 @@ Released under AGPL see LICENSE for more information
 #include <QTime>
 #include <QDebug>
 
-TransformRequest::TransformRequest(TransformAbstract *ntransform, const QByteArray &in, quintptr nptid) :
+TransformRequest::TransformRequest(TransformAbstract *ntransform, const QByteArray &in, quintptr nptid, bool takeOwnerShip) :
     QThread(0),
     inputData(in)
 {
     transform = ntransform;
     connect(transform, SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)),Qt::DirectConnection);
     connect(transform, SIGNAL(warning(QString,QString)), this, SLOT(logWarning(QString,QString)),Qt::DirectConnection);
+    deleteObject = takeOwnerShip;
     mutex = NULL;
     ptid = nptid;
-    qDebug() << "Created " << this;
 
 }
 
 TransformRequest::~TransformRequest()
 {
-    qDebug() << "Destroying " << this;
-    delete transform;
+    if (deleteObject)
+        delete transform;
 }
 
 void TransformRequest::run()
@@ -37,15 +37,14 @@ void TransformRequest::run()
     QMutexLocker lock(mutex);
 
     QTime timer;
-    qDebug() << "Processor running: " << this;
     timer.start();
     if (transform != NULL) {
         transform->transform(inputData,outputData);
     } else {
-        qDebug() << "[TransformRequest] transform is null";
+        qWarning() << "[TransformRequest] transform is null, ignoring";
     }
 
-    qDebug() << "Processor fisnished: " << this <<  " exec time: " << timer.elapsed() << "ms";
+ //   qDebug() << "Processor fisnished: " << this <<  " exec time: " << timer.elapsed() << "ms";
 
     emit finishedProcessing(outputData, messagesList);
 

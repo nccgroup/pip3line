@@ -40,6 +40,7 @@ class SettingsDialog : public QDialog
         void updateRegisteredList();
         void updateSavedMarkingColors();
         void updateImportExportFuncs();
+        void updateMisc();
         void onPluginClicked(QModelIndex index);
         void onSavedClicked(QListWidgetItem*item);
         void onDeleteSaved(const QString &name);
@@ -55,8 +56,10 @@ class SettingsDialog : public QDialog
         void onServerEncodeChanged(bool val);
         void onServerSeparatorChanged(char c);
         void onServerPipeNameChanged(QString name);
+        void onOffsetBaseChanged(QString val);
         
     private:
+        Q_DISABLE_COPY(SettingsDialog)
         static const QString LOGID;
         TransformMgmt *tManager;
         QHash<QString, int> stackedList;

@@ -121,7 +121,7 @@ bool BaseX::getUppercase() const
 
 bool BaseX::setBase(int val)
 {
-    if (base < MINBASE && base > MAXBASE) {
+    if (base < MINBASE || base > MAXBASE) {
         emit error(tr("Base value outside valid range [%1-%2]").arg(MINBASE).arg(MAXBASE),id);
         return false;
     }

@@ -15,6 +15,7 @@ Released under AGPL see LICENSE for more information
 #include <QMutex>
 #include <QTextStream>
 #include <QShowEvent>
+#include <commonstrings.h>
 
 namespace Ui {
 class LoggerWidget;
@@ -36,13 +37,12 @@ class LoggerWidget : public QWidget
         void logError(const QString &message, const QString &source = QString());
         void logWarning(const QString &message,const QString &source = QString());
         void logStatus(const QString &message,const QString &source = QString());
+        void logMessage(const QString &message,const QString &source = QString(), Pip3lineConst::LOGLEVEL level = Pip3lineConst::LSTATUS);
     private:
-        enum Levels {Normal = 0, Warning, Error};
-        void addMessage(const QString &message, const QString &source, const Levels level);
+        Q_DISABLE_COPY(LoggerWidget)
+        void addMessage(const QString &message, const QString &source, Pip3lineConst::LOGLEVEL level);
         Ui::LoggerWidget *ui;
         QMutex lock;
-        QTextStream *cerr;
-        QTextStream *cout;
         bool uncheckedError;
 };
 

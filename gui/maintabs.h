@@ -19,7 +19,6 @@ Released under AGPL see LICENSE for more information
 #include <transformmgmt.h>
 #include "guihelper.h"
 #include "transformsgui.h"
-#include "ui_tabname.h"
 #include "loggerwidget.h"
 #include "floatingdialog.h"
 
@@ -31,8 +30,9 @@ class MainTabs : public QTabWidget
         ~MainTabs();
         bool eventFilter(QObject * receiver, QEvent * event);
         void askForRenaming(int index);
+        void loadFile(QString fileName);
     public slots:
-        void newTabTransform(const QByteArray &initialValue = QByteArray(), const QString &conf = QString());
+        int newTabTransform(const QByteArray &initialValue = QByteArray(), const QString &conf = QString());
         void onDeleteTab(int index);
         void showLogs();
     private slots:
@@ -43,6 +43,7 @@ class MainTabs : public QTabWidget
         void receivedBringToFront(TransformsGui * tab);
         void onFloatingWindowsReject();
     private:
+        Q_DISABLE_COPY(MainTabs)
         static const QString ID;
         QTabBar * tabBarRef;
         GuiHelper *guiHelper;

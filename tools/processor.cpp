@@ -133,7 +133,7 @@ void Processor::writeBlock(const QByteArray &data)
     QByteArray temp2;
     QByteArray * outputval;
     int i = 0;
-    int whatHasBeenDone = 0;
+
     if (decode)
         temp = QByteArray::fromBase64(temp);
 
@@ -156,7 +156,7 @@ void Processor::writeBlock(const QByteArray &data)
             outputLock->lock();
 
         while (outputval->size() > 0) {
-            whatHasBeenDone = out->write(*outputval);
+            int whatHasBeenDone = out->write(*outputval);
             if (whatHasBeenDone < 0) {
                 emit error(out->errorString(), "Processor");
                 break;

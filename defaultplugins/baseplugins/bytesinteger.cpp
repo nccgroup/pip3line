@@ -45,9 +45,11 @@ void BytesInteger::transform(const QByteArray &input, QByteArray &output)
         return;
 
     bool reverseByteOrdering = false;
-    bool currentSystemLittleEndian = false;
+
 #ifdef Q_LITTLE_ENDIAN
-    currentSystemLittleEndian = true;
+    bool currentSystemLittleEndian = true;
+#else
+    bool currentSystemLittleEndian = false;
 #endif
 
     if (currentSystemLittleEndian != littleendian) {
@@ -63,7 +65,10 @@ void BytesInteger::transform(const QByteArray &input, QByteArray &output)
         }
 
         if (temp.size() < integerSize) {
-            temp.append(QByteArray(integerSize - temp.size(),'\x00'));
+            if (reverseByteOrdering)
+                temp.prepend(QByteArray(integerSize - temp.size(),'\x00'));
+            else
+                temp.append(QByteArray(integerSize - temp.size(),'\x00'));
             emit error(tr("Input size too small for the selected Integer size. Padded with zeros"),id);
         }
 

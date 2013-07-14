@@ -27,6 +27,7 @@ class CustomDialogDockWidget : public QDockWidget
         void addWidget(QWidget *item);
         
     private:
+        Q_DISABLE_COPY(CustomDialogDockWidget)
         Ui::CustomDialogDockWidget *ui;
 };
 

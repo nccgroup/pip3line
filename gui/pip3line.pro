@@ -37,8 +37,8 @@ SOURCES += main.cpp\
     ../tools/textprocessor.cpp \
     ../tools/processor.cpp \
     ../tools/binaryprocessor.cpp \
-    bytetableview.cpp \
-    byteitemmodel.cpp \
+    views/bytetableview.cpp \
+    views/byteitemmodel.cpp \
     infodialog.cpp \
     massprocessingdialog.cpp \
     ../tools/tcpserver.cpp \
@@ -56,13 +56,18 @@ SOURCES += main.cpp\
     quickviewdialog.cpp \
     quickviewitem.cpp \
     quickviewitemconfig.cpp \
-    rendertextview.cpp \
-    textwidget.cpp \ 
     hexwidget.cpp \
     newbytedialog.cpp \
     debugdialog.cpp \
     ../tools/centralprocessor.cpp \
-    ../tools/transformrequest.cpp
+    ../tools/transformrequest.cpp \
+    sources/bytesourceabstract.cpp \
+    sources/basicsource.cpp \
+    views/hexview.cpp \
+    textinputdialog.cpp \
+    views/textview.cpp \
+    sources/filesource.cpp \
+    views/doubleviewwidget.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -75,8 +80,8 @@ HEADERS  += mainwindow.h \
     ../tools/textprocessor.h \
     ../tools/processor.h \
     ../tools/binaryprocessor.h \
-    bytetableview.h \
-    byteitemmodel.h \
+    views/bytetableview.h \
+    views/byteitemmodel.h \
     infodialog.h \
     massprocessingdialog.h \
     ../tools/tcpserver.h \
@@ -95,13 +100,19 @@ HEADERS  += mainwindow.h \
     quickviewdialog.h \
     quickviewitem.h \
     quickviewitemconfig.h \
-    rendertextview.h \
-    textwidget.h \ 
     hexwidget.h \
     newbytedialog.h \
     debugdialog.h \
     ../tools/centralprocessor.h \
-    ../tools/transformrequest.h
+    ../tools/transformrequest.h \
+    sources/bytesourceabstract.h \
+    sources/basicsource.h \
+    views/hexview.h \
+    textinputdialog.h \
+    views/textview.h \
+    sources/filesource.h \
+    crossplatform.h \
+    views/doubleviewwidget.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \
@@ -116,15 +127,17 @@ FORMS    += mainwindow.ui \
     settingsdialog.ui \
     pluginconfwidget.ui \
     transformsgui.ui \
-    tabname.ui \
     floatingdialog.ui \
     quickviewdialog.ui \
     quickviewitem.ui \
     quickviewitemconfig.ui \
-    textwidget.ui \ 
     hexwidget.ui \
     newbytedialog.ui \
-    debugdialog.ui
+    debugdialog.ui \
+    views/hexview.ui \
+    textinputdialog.ui \
+    views/textview.ui \
+    views/doubleviewwidget.ui
 
 OTHER_FILES += icons/pip3line.png \
     win.rc

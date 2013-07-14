@@ -20,7 +20,7 @@ class TransformRequest : public QThread
         Q_OBJECT
     public:
         // takes ownership of the TransformAbstract object
-        explicit TransformRequest(TransformAbstract *transform, const QByteArray &in, quintptr nptid);
+        explicit TransformRequest(TransformAbstract *transform, const QByteArray &in, quintptr nptid,bool takeOwnerShip = true);
         ~TransformRequest();
         void run();
         void setMutex(QMutex *mutex);
@@ -32,6 +32,7 @@ class TransformRequest : public QThread
         void logWarning(QString message, QString source = QString());
         void logStatus(QString message, QString source = QString());
     private:
+        Q_DISABLE_COPY(TransformRequest)
         void logMessage(QString message, QString source = QString(), LOGLEVEL level = LSTATUS);
         const QByteArray inputData;
         QByteArray outputData;
@@ -39,7 +40,7 @@ class TransformRequest : public QThread
         QList<Message> messagesList;
         QMutex *mutex;
         quintptr ptid;
-        
+        bool deleteObject;
 };
 
 #endif // TRANSFORMREQUEST_H

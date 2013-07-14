@@ -13,7 +13,6 @@ Released under AGPL see LICENSE for more information
 
 #include <QDialog>
 #include <QList>
-#include <QReadWriteLock>
 #include "quickviewitem.h"
 #include "guihelper.h"
 
@@ -36,13 +35,12 @@ class QuickViewDialog : public QDialog
         void onReset();
 
     private:
+        Q_DISABLE_COPY(QuickViewDialog)
         void addItem(const QString & conf);
         Ui::QuickViewDialog *ui;
         QList<QuickViewItem *> itemList;
         GuiHelper * guiHelper;
         QByteArray currentData;
-        QReadWriteLock dataLock;
-        QReadWriteLock listLock;
 };
 
 #endif // QUICKVIEWDIALOG_H

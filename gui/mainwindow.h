@@ -17,6 +17,7 @@ Released under AGPL see LICENSE for more information
 #include <QSystemTrayIcon>
 #include <QMenu>
 #include <QNetworkProxy>
+#include <QPushButton>
 #include "analysedialog.h"
 #include "massprocessingdialog.h"
 #include "regexphelpdialog.h"
@@ -39,8 +40,7 @@ class MainWindow : public QMainWindow
     public:
         explicit MainWindow(bool debug = false, QWidget *parent = 0);
         ~MainWindow();
-        void closeEvent(QCloseEvent *event);
-
+        void loadFile(QString fileName);
     private slots:
         void onAboutPip3line();
         void onAnalyse();
@@ -58,6 +58,10 @@ class MainWindow : public QMainWindow
         void updateTrayIcon();
         void onDebug();
     private:
+        Q_DISABLE_COPY(MainWindow)
+        void buildToolBar();
+        void initializeLibTransform();
+        void closeEvent(QCloseEvent *event);
         void createTrayIcon();
         void showWindow();
 
@@ -78,6 +82,7 @@ class MainWindow : public QMainWindow
         bool quickViewWasVisible;
         bool settingsWasVisible;
         QNetworkProxy networkProxy;
+      //  QPushButton *newPushButton;
 };
 
 #endif // MAINWINDOW_H

@@ -33,6 +33,7 @@ class CentralProcessor : public QThread
     private slots:
         void onChildThreadDestroyed();
     private:
+        Q_DISABLE_COPY(CentralProcessor)
         QHash<quintptr, QMutex * > current;
         QHash<TransformRequest * , quintptr> children;
         QMutex globalMutex;

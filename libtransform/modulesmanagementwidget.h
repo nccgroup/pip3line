@@ -36,6 +36,7 @@ class LIBTRANSFORMSHARED_EXPORT ModulesManagementWidget : public QWidget
         void unload(QString name = QString());
         void onModuleSelected(QListWidgetItem* item);
     private:
+        Q_DISABLE_COPY(ModulesManagementWidget)
         QString moduleTitle;
         ModulesManagement * modulesMgmt;
         Ui::ModulesManagementWidget *ui;

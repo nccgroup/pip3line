@@ -57,7 +57,7 @@ void PythonPlugin::setCallBack(Pip3lineCallback *ncallback)
     callback = ncallback;
 
     settingUpStderr();
-    modules = new(std::nothrow) ModulesManagement(PYTHON_TYPE, PYTHON_EXTENSION, BASE_SCRIPTS_DIR, getCurrentSysPath(), callback);
+    modules = new(std::nothrow) ModulesManagement(PythonTransform::id, PYTHON_EXTENSION, BASE_SCRIPTS_DIR, getCurrentSysPath(), callback);
     if (modules == NULL) {
        qFatal("Cannot allocate memory for ModulesManagement (PythonPlugin) X{");
        return;
@@ -171,6 +171,7 @@ void PythonPlugin::updatePath()
 
 void PythonPlugin::retrievePythonErrors()
 {
+    qDebug() << "Processing " << PYTHON_TYPE << " error";
     PyErr_Print(); // Dump the error message(s) in the buffer
     if (pyGetValFunc == NULL || pyTruncateFunc == NULL || pySeekFunc ==NULL || pyStringIO == NULL) {
         callback->logError(tr("The error catching mecanism was not properly initialized, ignoring Python error request."));
@@ -179,7 +180,7 @@ void PythonPlugin::retrievePythonErrors()
 
     // call getvalue() method in StringIO instance
     PyObject *obResult = NULL;
-    QString final;
+    QString final = "[Script error]";
 
     obResult = PyObject_CallObject(pyGetValFunc, NULL);
     if (!checkPyObject(obResult)){
@@ -206,7 +207,7 @@ void PythonPlugin::retrievePythonErrors()
     Py_ssize_t size = PyString_Size(obResult);
 #endif
     if (size < 1) {
-        callback->logError("[stderr read] invalid size returned");
+        callback->logError(tr("[stderr read] invalid size returned %1").arg(size));
         Py_XDECREF(obResult);
         return;
     }

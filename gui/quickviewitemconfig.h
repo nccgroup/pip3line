@@ -50,6 +50,7 @@ class QuickViewItemConfig : public QDialog
         void integrateTransform();
         void onTransformDelete();
     private:
+        Q_DISABLE_COPY(QuickViewItemConfig)
         static const QString LOGID;
         Ui::QuickViewItemConfig *ui;
         GuiHelper *guiHelper;

@@ -218,10 +218,9 @@ QByteArray SubstitutionTables::getRawData()
 
 void SubstitutionTables::highlighting()
 {
-    int d = 0;
     highlight.fill(false);
     for (int i = 0; i < S_ARRAY_SIZE - 1; i++) {
-        d = array.indexOf(array[i],i + 1);
+        int d = array.indexOf(array[i],i + 1);
         if (d != -1) {
             highlight[d] = true;
             highlight[i] = true;

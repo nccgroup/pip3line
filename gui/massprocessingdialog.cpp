@@ -88,6 +88,8 @@ MassProcessingDialog::MassProcessingDialog(GuiHelper *helper, TransformsGui *ntG
 
 MassProcessingDialog::~MassProcessingDialog()
 {
+    logger = NULL;
+    guiHelper = NULL;
     delete ui;
     cleaningMem();
 }

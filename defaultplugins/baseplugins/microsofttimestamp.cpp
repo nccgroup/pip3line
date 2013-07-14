@@ -44,22 +44,22 @@ void MicrosoftTimestamp::transform(const QByteArray &input, QByteArray &output)
 
     output.clear();
     QDateTime timestamp;
-    quint64 val1;
     quint64 val2;
     if (wayValue == INBOUND) {
         bool ok;
 
         val2 = input.toULongLong(&ok);
-        quint64 rest = 0;
+
         if (ok) {
 
-            val1 = val2 / (10000);
-            rest = val2 % 10000;
+            quint64 val1 = val2 / (10000);
+            quint64 rest = val2 % 10000;
             timestamp.setTimeSpec(Qt::UTC);
             timestamp.setDate(QDate(1601,1,1));
             timestamp = timestamp.addMSecs(val1 > LONG_MAX ? LONG_MAX : (qint64) val1);
             output = timestamp.toString(dateFormat).toUtf8();
             output.append("ms ").append(QByteArray::number(rest)).append(" ns UTC");
+
         } else {
             emit error(tr("Invalid number"),id);
         }

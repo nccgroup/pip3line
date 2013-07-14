@@ -10,7 +10,7 @@
 #
 
 EAPI=5
-PYTHON_COMPAT=( python{2_7,3_2} )
+
 inherit cmake-utils 
 
 DESCRIPTION="Pip3line Raw bytes manipulation and transformation and more"

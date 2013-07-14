@@ -29,6 +29,7 @@ class XorWidget : public QWidget
     private slots:
         void onFromHexChange(bool val);
         void onKeyChange();
+        void onTypeChange(int index);
     private:
         Ui::XorWidget *ui;
         Xor *transform;

@@ -11,6 +11,7 @@ Released under AGPL see LICENSE for more information
 #include "hexwidget.h"
 #include "ui_hexwidget.h"
 #include <transformabstract.h>
+#include <QDebug>
 
 HexWidget::HexWidget(QWidget *parent) :
     QWidget(parent)
@@ -66,9 +67,9 @@ void HexWidget::onHexChanged()
 {
     QByteArray input = QByteArray::fromHex(ui->hexLineEdit->text().toUtf8());
     QString data;
-    char c = '\00';
+
     if (!input.isEmpty()) {
-        c = input.at(0);
+        char c = input.at(0);
         if (TransformAbstract::isPrintable((qint32)c)) {
             data = QString::fromUtf8(&c, 1);
         } else {
@@ -83,7 +84,8 @@ void HexWidget::onHexChanged()
                     data = tr("\\%1").arg(ui->hexLineEdit->text());
             }
         }
+
+        emit charChanged(c);
     }
     ui->label->setText(data);
-    emit charChanged(c);
 }

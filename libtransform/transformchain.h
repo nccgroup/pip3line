@@ -20,6 +20,8 @@ class LIBTRANSFORMSHARED_EXPORT TransformChain : public QList<TransformAbstract 
 {
     public:
         explicit TransformChain();
+        TransformChain(TransformChain const &other);
+        TransformChain& operator = (TransformChain const &other);
         ~TransformChain();
         void setName(const QString &name);
         QString getName() const;
@@ -30,6 +32,7 @@ class LIBTRANSFORMSHARED_EXPORT TransformChain : public QList<TransformAbstract 
         void setFormat(OutputFormat val);
         OutputFormat getFormat() const;
     private:
+
         QString name;
         QString description;
         QString help;

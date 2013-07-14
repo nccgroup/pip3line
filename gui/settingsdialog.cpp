@@ -68,6 +68,7 @@ SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
     connect(ui->hexWidget, SIGNAL(charChanged(char)), this, SLOT(onServerSeparatorChanged(char)));
     connect(ui->importExportListWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(onDoubleClickImportExportFuncs(QListWidgetItem*)));
     connect(ui->addImportExportPushButton, SIGNAL(clicked()), this, SLOT(onAddImportExportFuncs()));
+    connect(ui->offsetBaseComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(onOffsetBaseChanged(QString)));
 }
 
 SettingsDialog::~SettingsDialog()
@@ -189,6 +190,25 @@ void SettingsDialog::updateImportExportFuncs()
         } else {
             qFatal("Cannot allocate memory for DeleteableListItem Import/Export X{");
         }
+    }
+}
+
+void SettingsDialog::updateMisc()
+{
+    int offsetbase = helper->getDefaultOffsetBase();
+    switch (offsetbase) {
+        case 8:
+            ui->offsetBaseComboBox->setCurrentIndex(0);
+            break;
+        case 10:
+            ui->offsetBaseComboBox->setCurrentIndex(1);
+            break;
+        case 16:
+            ui->offsetBaseComboBox->setCurrentIndex(2);
+            break;
+        default: // this should obviously not happen ...
+            helper->setDefaultOffsetBase(16);
+            ui->offsetBaseComboBox->setCurrentIndex(2);
     }
 }
 
@@ -324,5 +344,17 @@ void SettingsDialog::onServerSeparatorChanged(char c)
 void SettingsDialog::onServerPipeNameChanged(QString name)
 {
     helper->setDefaultServerPipeName(name);
+}
+
+void SettingsDialog::onOffsetBaseChanged(QString val)
+{
+    bool ok = false;
+    int intval = val.toInt(&ok);
+
+    if (!ok) {
+        helper->getLogger()->logError("Invalid integer value for offset base in settings T_T");
+    } else {
+        helper->setDefaultOffsetBase(intval);
+    }
 }
 

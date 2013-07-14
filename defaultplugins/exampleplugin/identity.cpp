@@ -47,7 +47,7 @@ void Identity::transform(const QByteArray &input, QByteArray &output) {
     output = input;
 }
 
-// Optional methods
+// Mandatory methods, they are used to clone Transform objects within the gui
 
 QHash<QString, QString> Identity::getConfiguration()
 {
@@ -56,6 +56,8 @@ QHash<QString, QString> Identity::getConfiguration()
     // You can use the predefined tag names from
     // xmlxommons.h
     // but that's optional
+    // the properties names (keys of the hash table) must match this regexp : "^[a-zA-Z_][-a-zA-Z0-9_\\.]{1,100}$"
+    // otherwise the property is ignored
 
     return properties;
 }
@@ -68,13 +70,15 @@ bool Identity::setConfiguration(QHash<QString, QString> propertiesList)
     return TransformAbstract::setConfiguration(propertiesList);
 }
 
+// optional
 QWidget *Identity::requestGui(QWidget *parent)
 {
     //Ideally this should be something like:
      return new QWidget(parent);
+    // where QWidget is replaced with your own configuration widget linked with the transform object
 
-     // you don't need to delete this object yourself, either the upperlayer gui or the
-     // abstract destructor will take care of it
-     // you also don't need to worry about duplicate as the Abstract object is taking care of it
+    // you don't need to delete this object yourself, either the upperlayer gui or the
+    // abstract destructor will take care of it
+    // you also don't need to worry about duplicate as the Abstract object is taking care of it
 }
 

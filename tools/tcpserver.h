@@ -29,6 +29,7 @@ class TcpSocketProcessor : public StreamProcessor
     signals:
         void finished(TcpSocketProcessor *);
     private :
+        Q_DISABLE_COPY(TcpSocketProcessor)
         explicit TcpSocketProcessor(TransformMgmt * tFactory,int socketDescr, QObject * parent = 0);
         static const QString TCP_SOCKET;
         int socketDescriptor;
@@ -42,6 +43,7 @@ class InternalTcpServer : public QTcpServer
     signals:
         void newClient(int socketDescriptor);
     private:
+        Q_DISABLE_COPY(InternalTcpServer)
         explicit InternalTcpServer(QObject *parent = 0);
         void incomingConnection(int socketDescriptor);
 };
@@ -63,7 +65,7 @@ class TcpServer : public ServerAbstract
         void processorFinished(TcpSocketProcessor *);
         void processingNewClient(int socketDescriptor);
     private:
-
+        Q_DISABLE_COPY(TcpServer)
         QMutex confLocker;
         InternalTcpServer *tcpServer;
         QString IP;

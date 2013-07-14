@@ -19,13 +19,13 @@ Released under AGPL see LICENSE for more information
 #include <QNetworkReply>
 #include <QSslError>
 #include <QUrl>
-#include "byteitemmodel.h"
+#include "sources/bytesourceabstract.h"
 
 class DownloadManager : public QObject
 {
         Q_OBJECT
     public:
-        explicit DownloadManager(QUrl &url,QNetworkAccessManager * networkManager, ByteItemModel *destModel = 0, QObject *parent = 0);
+        explicit DownloadManager(QUrl &url,QNetworkAccessManager * networkManager, ByteSourceAbstract *destModel = NULL, QObject *parent = 0);
         ~DownloadManager();
         bool launch();
         QByteArray getData();
@@ -37,13 +37,14 @@ class DownloadManager : public QObject
         void requestFinished();
         void networkSSLError(QList<QSslError> sslError);
     private:
+        Q_DISABLE_COPY(DownloadManager)
         static const QString ID;
 
         QNetworkAccessManager * networkManager;
         QMutex dataMutex;
         QNetworkReply * reply;
 
-        ByteItemModel *model;
+        ByteSourceAbstract *model;
         QByteArray data;
         QUrl resource;
 };

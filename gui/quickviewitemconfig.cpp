@@ -51,6 +51,7 @@ QuickViewItemConfig::~QuickViewItemConfig()
     delete currentTransform;
 
     delete infoDialog;
+    guiHelper = NULL;
     delete ui;
 
 }

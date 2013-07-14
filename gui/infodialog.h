@@ -28,6 +28,7 @@ class InfoDialog : public QDialog
         TransformAbstract * getTransform();
         
     private:
+        Q_DISABLE_COPY(InfoDialog)
         Ui::InfoDialog *ui;
         TransformAbstract * transform;
 };

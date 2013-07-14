@@ -21,7 +21,7 @@ const int Ntlmssp::OSFooterSize = 8;
 
 Ntlmssp::Ntlmssp()
 {
-    doBase64 = true;
+    doBase64 = false;
     oemString = false;
     unicodeCodec = QTextCodec::codecForName("UTF-16");
     NTMLSSP_TYPE.insert(1,"NTLMSSP_NEGOCIATE");
@@ -60,7 +60,7 @@ Ntlmssp::Ntlmssp()
     FLAGS_VAL.insert(0x40000000,"Negotiate Key Exchange");
     FLAGS_VAL.insert(0x80000000,"Negotiate 56");
 
-    TARGET_INFO.insert(0x0000,"End");
+    TARGET_INFO.insert(0x0000,"End of Target info");
     TARGET_INFO.insert(0x0001,"Server Name");
     TARGET_INFO.insert(0x0002,"Domain Name");
     TARGET_INFO.insert(0x0003,"Fully-qualified DNS host name");
@@ -99,11 +99,16 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
     QByteArray initial;
     quint16 length = 0;
     quint16 maxLength = 0;
-
+    bool effectivelyBase64 = doBase64;
 
 
     quint32 offset;
-    if (doBase64) {
+    if (input.startsWith("TlRMTVNTUA") && !effectivelyBase64 ) {
+        emit warning(tr("Input seems to be base64 encoded, enabling base64 decoding"),id);
+        effectivelyBase64 = true;
+    }
+
+    if (effectivelyBase64) {
         initial = QByteArray::fromBase64(input);
     } else {
         initial = input;
@@ -140,7 +145,7 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
     if (NTMLSSP_TYPE.contains(type)) {
         output.append("Message TYPE: ").append(NTMLSSP_TYPE.value(type)).append("\n");
     } else {
-        emit error(tr("Unkown NTLMSSP message"),id);
+        emit error(tr("Unkown NTLMSSP message (8-11)"),id);
         output.append("NTLMSSP TYPE: Unkown ").append(QByteArray::number(type)).append("\n");
         return;
     }
@@ -150,15 +155,18 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
         quint32 flags = 0;
 
         if (!readFlags(buf,&flags)) {
-            emit error(tr("Invalid flags (20-23)"),id);
+            emit error(tr("Invalid flags (12-15)"),id);
             return;
         }
 
         output.append("Flags:\n").append(extractFlags(flags)).append("\n");
 
-        temp = buf.read(SecurityBufferSize);
-        if (temp.size() != SecurityBufferSize)
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
+            emit error(tr("Invalid Worksation Domain buffer (16-23)"),id);
             return;
+        }
+        temp = initial.mid(offset,length);
+
         str = QString::fromUtf8(temp);
 
         if (str.isEmpty())
@@ -166,9 +174,12 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
         else
             output.append("Calling Worksation Domain: ").append(str).append("\n");
 
-        temp = buf.read(SecurityBufferSize);
-        if (temp.size() != SecurityBufferSize)
+
+        if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
+            emit error(tr("Invalid Worksation Name buffer (24-31)"),id);
             return;
+        }
+        temp = initial.mid(offset,length);
 
         str = QString::fromUtf8(temp);
         if (str.isEmpty())
@@ -252,6 +263,7 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
             emit error(tr("Invalid NTLM (20-27)"),id);
             return;
         }
+
         QByteArray ntlm = initial.mid(offset,length);
 
         if (!readSecurityBuffer(buf, &length, &maxLength, &offset, sizeLimit)) {
@@ -283,8 +295,13 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
             emit error(tr("Invalid flags (20-23)"),id);
             return;
         }
+        output.append("NTLM/NTLMv2: ");
+        if (ntlm.isEmpty()) {
+            output.append("Empty\n");
+        } else {
+            output.append(extractNTLM(ntlm)).append("\n");
+        }
 
-        output.append("NTLM/NTLMv2: ").append(extractNTLM(ntlm)).append("\n");
         output.append("TARGET NAME: ").append(getString(targetName)).append("\n");
         output.append("USER NAME: ").append(getString(userName)).append("\n");
         output.append("Workstation NAME: ").append(getString(workstationName)).append("\n");
@@ -296,8 +313,8 @@ void Ntlmssp::transform(const QByteArray &input, QByteArray &output)
     }
         break;
     default: {
-        output.append("Unmanaged type: ").append(QByteArray::number(type)).append("\n");
-    }
+            output.append("Unmanaged type: ").append(QByteArray::number(type)).append("\n");
+        }
     }
 }
 
@@ -318,7 +335,7 @@ QWidget *Ntlmssp::requestGui(QWidget * parent)
 QString Ntlmssp::help() const
 {
     QString help;
-    help.append("<p>NTLMP SSP parser</p><p>Parse a NTLMP SSP message following Microsoft document [MS-NLMP].pdf</p>");
+    help.append("<p>NTLMP SSP parser</p><p>Parse a NTLMP SSP message following Microsoft document [MS-NLMP].pdf</p><p>Beware, if the NEGOTIATE and CHALLENGES messages should be parsed fine, REPONSES messages parsing is still a bit flaky</p>");
     return help;
 }
 
@@ -406,7 +423,11 @@ QByteArray Ntlmssp::extractTargetInfo(QByteArray &data)
         }
         memcpy(&length, temp.data(),2);
         if (typeString == 0) { // end
-            str.append("  ").append(TARGET_INFO.value(typeString)).append(": ").append(buf.readAll().toHex());
+            QByteArray remaining = buf.readAll().toHex();
+            str.append("  ").append(TARGET_INFO.value(typeString));
+            if (!remaining.isEmpty()) {
+               str.append(": ").append(remaining);
+            }
             return str;
         }
         if (length >= buf.size()) {
@@ -494,7 +515,7 @@ QByteArray Ntlmssp::extractNTLM(QByteArray &data)
 
     QByteArray temp = buf.read(16);
     if (temp.size() != 16) {
-        emit error(tr("HMAC is truncated"),id);
+        emit error(tr("HMAC is truncated (0-16)"),id);
         return str;
     }
 
@@ -502,7 +523,7 @@ QByteArray Ntlmssp::extractNTLM(QByteArray &data)
 
     temp = buf.read(4);
     if (temp.size() != 4) {
-        emit error(tr("Header is truncated"),id);
+        emit error(tr("Header is truncated (17-20)"),id);
         return str;
     }
     temp = reverseBytes(temp);
@@ -510,29 +531,32 @@ QByteArray Ntlmssp::extractNTLM(QByteArray &data)
 
     temp = buf.read(4);
     if (temp.size() != 4) {
-        emit error(tr("Reserved is truncated"),id);
+        emit error(tr("Reserved is truncated (21-24)"),id);
         return str;
     }
     temp = reverseBytes(temp);
     str.append("  Reserved: ").append(temp.toHex()).append("\n");
 
     temp = buf.read(8);
+    if (temp.isEmpty()) { // this happens with certain type of message
+        return str;
+    }
     if (temp.size() != 8) {
-        emit error(tr("Timestamp is truncated"),id);
+        emit error(tr("Timestamp is truncated (25-32)"),id);
         return str;
     }
     str.append("  Timestamp: ").append(toTimeStamp(temp)).append("\n");
 
     temp = buf.read(8);
     if (temp.size() != 8) {
-        emit error(tr("Client Challenge is truncated"),id);
+        emit error(tr("Client Challenge is truncated (33-40)"),id);
         return str;
     }
     str.append("  Client Challenge: ").append(temp.toHex()).append("\n");
 
     temp = buf.read(4);
     if (temp.size() != 4) {
-        emit error(tr("Unknown is truncated"),id);
+        emit error(tr("Unknown is truncated (41-44)"),id);
         return str;
     }
     str.append("  Unknown: ").append(temp.toHex()).append("\n");
@@ -588,7 +612,7 @@ QByteArray Ntlmssp::toTimeStamp(const QByteArray &data)
     quint64 val1;
     quint64 timeStamp = 0;
     quint64 rest = 0;
-#ifdef MSVC
+#ifdef Q_CC_MSVC
     memcpy_s(&timeStamp,sizeof(quint64), data.data(),sizeof(quint64));
 #else
     memcpy(&timeStamp, data.data(),sizeof(quint64));

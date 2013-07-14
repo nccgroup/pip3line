@@ -19,17 +19,31 @@ Released under AGPL see LICENSE for more information
 #include <transformmgmt.h>
 #include <transformabstract.h>
 #include <QNetworkAccessManager>
-#include "byteitemmodel.h"
-#include "bytetableview.h"
 #include "infodialog.h"
-#include "ui_tabname.h"
 #include <QMutex>
 #include <QTime>
 #include <QUrl>
+#include <QLineEdit>
+#include "views/textview.h"
+#include "sources/bytesourceabstract.h"
 #include "downloadmanager.h"
 #include "guihelper.h"
 #include "loggerwidget.h"
-#include "rendertextview.h"
+#include "views/hexview.h"
+
+#include <QValidator>
+
+class OffsetValidator : public QValidator
+{
+        Q_OBJECT
+    public:
+        explicit OffsetValidator(QObject *parent = 0);
+        State validate(QString & input, int & pos) const;
+
+};
+
+class HexView;
+class TextView;
 
 namespace Ui {
 class TransformWidget;
@@ -46,6 +60,8 @@ class TransformWidget : public QWidget
         TransformAbstract *getTransform();
         void forceUpdating();
         bool setTransform(TransformAbstract *transf);
+        ByteSourceAbstract * getBytes() const;
+
     signals:
         void updated();
         void transfoRequest(TransformWidget *);
@@ -55,92 +71,67 @@ class TransformWidget : public QWidget
         void warning(const QString, const QString);
         void status(const QString, const QString);
         void deletionRequest(TransformWidget *);
+        void tryNewName(QString name);
     public slots:
-        void input(QByteArray);
+        void input(QByteArray inputdata);
         void updatingFrom();
         void logWarning(const QString message, const QString source = QString());
         void logError(const QString message, const QString source = QString());
         void logStatus(const QString message, const QString source = QString());
-        void clearMessages();
         void reset();
+        void fromLocalFile(QString fileName);
     private slots:
-        void updateImportExportMenus();
-        void updateSendToMenu();
-        void updateMarkMenu();
         void refreshOutput();
+        void onFileLoadRequest();
         void processingFinished(QByteArray output, Messages messages);
         void buildSelectionArea();
         void downloadFinished(DownloadManager *downloadManager);
-        void updateView(ByteItemModel::UpdateSource source);
-        void updateStats();
-        void onSelectionChanged();
+        void updateView(quintptr source);
         void onInvalidText();
-        void dragEnterEvent ( QDragEnterEvent * event );
-        void dropEvent(QDropEvent *event);
-        void onTransformConfError(const QString mess, const QString source = QString());
         void onTransformSelected(QString name);
-        void onRightClick(QPoint pos);
         void updatingFromTransform();
-        void onCopy(QAction * action);
-        void onImport(QAction * action);
-        void onReplace(QAction * action);
-        void onInsertAfter(QAction * action);
-        void onInsertBefore(QAction * action);
         void onHistoryBackward();
         void onHistoryForward();
         void on_encodeRadioButton_toggled(bool checked);
         void on_decodeRadioButton_toggled(bool checked);
-        void on_actionImport_From_File_triggered();
-        void on_actionSave_to_file_triggered();
         void on_deleteButton_clicked();
-        void on_actionDelete_selected_bytes_triggered();
-        void addNullBytes(char byteSample = '\00', int pos = 0, int count = 1);
         void on_infoPushButton_clicked();
-        void on_actionSelect_all_triggered();
-        void on_actionKeep_only_Selected_triggered();
-        void onMenuSendToTriggered(QAction *);
-        void onMenuMarkTriggered(QAction *action);
         void on_clearMarkingsPushButton_clicked();
-        void on_actionClear_marking_triggered();
         void on_clearDataPushButton_clicked();
-        void on_actionNew_byte_array_triggered();
+        void onGoToOffset(bool select = false);
+        void onSearch(int modifiers);
 
     private:
+        Q_DISABLE_COPY(TransformWidget)
         static const int MAX_DIRECTION_TEXT;
         static const QString NEW_BYTE_ACTION;
         void integrateTransform();
-        QByteArray getSelectedBytes();
-        void buildContextMenus();
         void configureViewArea();
         void clearCurrentTransform();
         void addMessage(const QString &message, QColor color);
         void setDownload(QUrl url);
         void configureDirectionBox();
+        bool eventFilter(QObject *obj, QEvent *event);
+        void dragEnterEvent ( QDragEnterEvent * event );
+        void dropEvent(QDropEvent *event);
         bool firstView;
         QNetworkAccessManager *manager;
         Ui::TransformWidget *ui;
-        QMenu * plainTextContextMenu;
-        QMenu * globalContextMenu;
-        QMenu * sendToMenu;
-        QMenu * markMenu;
-        QMenu * copyMenu;
-        QMenu * importMenu;
-        QMenu * replaceMenu;
-        QMenu * insertAfterMenu;
-        QMenu * insertBeforeMenu;
-        QHash<QAction *, TransformsGui *> sendToActions;
+
         TransformAbstract * currentTransform;
         TransformMgmt *transformFactory;
-        ByteItemModel * dataModel;
-        ByteTableView * hexTableView;
+
         InfoDialog * infoDialog;
-        Ui::TabName nameUi;
-        QDialog * nameDialog;
+
         GuiHelper * guiHelper;
         LoggerWidget *logger;
-        QByteArray inputData;
         QByteArray outputData;
-        QMutex processingMutex;
+
+        ByteSourceAbstract *byteSource;
+        HexView *hexView;
+        TextView *textView;
+        QWidget *settingsTab;
 };
+
 
 #endif // TRANSFORMWIDGET_H

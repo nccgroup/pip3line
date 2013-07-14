@@ -12,7 +12,7 @@ TEMPLATE = lib
 CONFIG += plugin release no_keywords
 
 # Comment this out if you want to compile the 2.7 version
-CONFIG += CONF_PYTHON_3
+#CONFIG += CONF_PYTHON_3
 
 
 CONF_PYTHON_3 {

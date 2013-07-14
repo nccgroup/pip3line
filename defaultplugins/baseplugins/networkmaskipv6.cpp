@@ -55,9 +55,10 @@ void NetworkMaskIPv6::transform(const QByteArray &input, QByteArray &output)
         }
     } else {
         QString val = QString::fromUtf8(input);
-        int netmask = 0;
         if (ip.setAddress(val)) {
+
             if (ip.protocol() == QAbstractSocket::IPv6Protocol) {
+                int netmask = 0;
                 ipVal = ip.toIPv6Address();
                 int i = 0;
                 for (i = 0; i < 16; i++) {

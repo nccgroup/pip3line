@@ -36,6 +36,7 @@ class ScreenIODevice : public QIODevice
         void processPacket(QString packet);
 
     private:
+        Q_DISABLE_COPY(ScreenIODevice)
         qint64 writeData(const char * src, qint64 maxSize);
         qint64 readData(char * dest, qint64 maxSize);
         QPlainTextEdit * widget;

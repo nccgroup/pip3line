@@ -42,6 +42,7 @@ private slots:
         void hashGuess();
 
     private:
+        Q_DISABLE_COPY(AnalyseDialog)
         QString potentialHashes(int length);
         QList<QByteArray> getInput();
         Ui::AnalyseDialog *ui;

@@ -35,6 +35,13 @@ using namespace Pip3lineConst;
 MainWindow::MainWindow(bool debug, QWidget *parent) :
     QMainWindow(parent)
 {
+    analyseDialog = NULL;
+    regexphelpDialog = NULL;
+    settingsDialog = NULL;
+    trayIcon = NULL;
+    quickView = NULL;
+    trayIconLabel = NULL;
+
     ui = new(std::nothrow) Ui::MainWindow();
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::MainWindow X{");
@@ -44,69 +51,47 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 
     ui->setupUi(this);
 
-    if (debug)
-        ui->actionDebug_dialog->setVisible(true);
-    else
-        ui->actionDebug_dialog->setVisible(false);
-
-    connect(ui->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
-
     logger = new(std::nothrow) LoggerWidget();
     if (logger == NULL) {
         qFatal("Cannot allocate memory for LoggerWidget X{");
     }
 
-    transformFactory = new(std::nothrow) TransformMgmt();
-    if (transformFactory == NULL) {
-        qFatal("Cannot allocate memory for the Transform Factory X{");
-    }
-    connect(transformFactory,SIGNAL(error(QString, QString)),logger,SLOT(logError(QString,QString)));
-    connect(transformFactory,SIGNAL(warning(QString,QString)),logger,SLOT(logWarning(QString,QString)));
-    connect(transformFactory,SIGNAL(status(QString,QString)),logger,SLOT(logStatus(QString,QString)));
-
-    transformFactory->initialize(QCoreApplication::applicationDirPath());
-//    networkProxy.setType(QNetworkProxy::HttpProxy);
-//    networkProxy.setHostName("127.0.0.1");
-//    networkProxy.setPort(8080);
-//    networkManager.setProxy(networkProxy);
+    initializeLibTransform();
 
     guiHelper = new(std::nothrow) GuiHelper(transformFactory,&networkManager, logger);
     if (guiHelper == NULL) {
         qFatal("Cannot allocate memory for GuiHelper X{");
     }
 
+    setStyleSheet("QWidget {} ");
+
+
+    buildToolBar();
+
+    if (debug)
+        ui->actionDebug_dialog->setVisible(true);
+    else
+        ui->actionDebug_dialog->setVisible(false);
+
+//    networkProxy.setType(QNetworkProxy::HttpProxy);
+//    networkProxy.setHostName("127.0.0.1");
+//    networkProxy.setPort(8080);
+//    networkManager.setProxy(networkProxy);
+
+
+
+
+
     mainTabs = new(std::nothrow) MainTabs(guiHelper, this);
     if (mainTabs == NULL) {
         qFatal("Cannot allocate memory for MainTabs X{");
     }
     ui->centralWidget->layout()->addWidget(mainTabs);
-    analyseDialog = NULL;
-    regexphelpDialog = NULL;
-    settingsDialog = NULL;
-    trayIcon = NULL;
-    quickView = NULL;
 
     quickViewWasVisible = false;
     settingsWasVisible = false;
 
-    QComboBox * filterComboBox = new(std::nothrow) QComboBox();
-    if (filterComboBox == NULL) {
-        qFatal("Cannot allocate memory for filterComboBox X{");
-    }
-
-    filterComboBox->installEventFilter(guiHelper);
-    guiHelper->buildFilterComboBox(filterComboBox);
-    ui->mainToolBar->addWidget(filterComboBox);
-
-    trayIconLabel = NULL;
     createTrayIcon();
-
-    connect(ui->actionHelp_with_RegExp, SIGNAL(triggered()), this, SLOT(onHelpWithRegExp()));
-    connect(ui->actionAbout_Pip3line, SIGNAL(triggered()), this, SLOT(onAboutPip3line()));
-    connect(ui->actionAbout_Qt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
-    connect(ui->actionPip3line_settings, SIGNAL(triggered()), this, SLOT(onSettingsDialogOpen()));
-    connect(ui->actionMagic, SIGNAL(triggered()), this, SLOT(onQuickView()));
-    connect(ui->actionDebug_dialog, SIGNAL(triggered()), this, SLOT(onDebug()));
 
     settings = transformFactory->getSettingsObj();
     if (settings->value(SETTINGS_AUTO_UPDATE, true).toBool()) {
@@ -119,8 +104,7 @@ MainWindow::~MainWindow()
     delete mainTabs;
     delete quickView;
     delete trayIconMenu;
-
-    // delete logger // no need for that, already done by the main tab
+    logger = NULL; // no need to delete, already done by the main tab gui
     delete analyseDialog;
     delete regexphelpDialog;
     delete trayIcon;
@@ -131,6 +115,59 @@ MainWindow::~MainWindow()
 
     delete ui;
 
+}
+
+void MainWindow::buildToolBar()
+{
+//    QPushButton * newPushButton = new(std::nothrow) QPushButton("New",this);
+//    if (newPushButton == NULL) {
+//        qFatal("Cannot allocate memory for newPushButton X{");
+//    }
+
+//   // newPushButton->setMenu();
+
+//    ui->mainToolBar->insertWidget(ui->actionNew_Tab,newPushButton);
+
+
+ 
+    QComboBox * filterComboBox = new(std::nothrow) QComboBox();
+    if (filterComboBox == NULL) {
+        qFatal("Cannot allocate memory for filterComboBox X{");
+    }
+
+    filterComboBox->setFrame(false);
+
+    filterComboBox->installEventFilter(guiHelper);
+    guiHelper->buildFilterComboBox(filterComboBox);
+    ui->mainToolBar->addWidget(filterComboBox);
+
+    connect(ui->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
+
+    connect(ui->actionHelp_with_RegExp, SIGNAL(triggered()), this, SLOT(onHelpWithRegExp()));
+    connect(ui->actionAbout_Pip3line, SIGNAL(triggered()), this, SLOT(onAboutPip3line()));
+    connect(ui->actionAbout_Qt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
+    connect(ui->actionPip3line_settings, SIGNAL(triggered()), this, SLOT(onSettingsDialogOpen()));
+    connect(ui->actionMagic, SIGNAL(triggered()), this, SLOT(onQuickView()));
+    connect(ui->actionDebug_dialog, SIGNAL(triggered()), this, SLOT(onDebug()));
+
+}
+
+void MainWindow::initializeLibTransform()
+{
+    transformFactory = new(std::nothrow) TransformMgmt();
+    if (transformFactory == NULL) {
+        qFatal("Cannot allocate memory for the Transform Factory X{");
+    }
+    connect(transformFactory,SIGNAL(error(QString, QString)),logger,SLOT(logError(QString,QString)));
+    connect(transformFactory,SIGNAL(warning(QString,QString)),logger,SLOT(logWarning(QString,QString)));
+    connect(transformFactory,SIGNAL(status(QString,QString)),logger,SLOT(logStatus(QString,QString)));
+
+    transformFactory->initialize(QCoreApplication::applicationDirPath());
+}
+
+void MainWindow::loadFile(QString fileName)
+{
+    mainTabs->loadFile(fileName);
 }
 
 void MainWindow::onAnalyse()
@@ -319,7 +356,7 @@ void MainWindow::updateTrayIcon()
         }
         trayIconLabel->setDisabled(true);
         trayIconMenu->addAction(trayIconLabel);
-        QAction * action = new(std::nothrow) QAction(GuiHelper::ACTION_UTF8_STRING, trayIconMenu);
+        QAction * action = new(std::nothrow) QAction(GuiHelper::UTF8_STRING_ACTION, trayIconMenu);
         if (action == NULL) {
             qFatal("Cannot allocate memory for QAction in mainwindow 1 X{");
             return;
@@ -388,7 +425,7 @@ void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
         }
         break;
     default:
-        ;
+        qWarning() << tr("Unmanaged Sytem tray activation reason: %1").arg(reason);
     }
 }
 
@@ -397,7 +434,7 @@ void MainWindow::onImport(QAction *action)
     if (action != ui->actionExit) {
         QClipboard *clipboard = QApplication::clipboard();
         QString input = clipboard->text();
-        if (action->text() == GuiHelper::ACTION_UTF8_STRING) {
+        if (action->text() == GuiHelper::UTF8_STRING_ACTION) {
             mainTabs->newTabTransform(input.toUtf8());
         } else {
             TransformAbstract *ta  = guiHelper->getImportExportFunction(action->text());

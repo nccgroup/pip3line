@@ -89,6 +89,7 @@ class LIBTRANSFORMSHARED_EXPORT TransformMgmt : public QObject
         bool loadTransforms(bool verbose = false);
         void OnTransformDelete();
     private:
+        Q_DISABLE_COPY(TransformMgmt)
         static const QRegExp TAG_NAME_REGEXP;
         static const int MAX_NESTING;
         static const QString LOG_ID;

@@ -33,6 +33,7 @@ class LIBTRANSFORMSHARED_EXPORT DeleteableListItem : public QWidget
     private slots:
         void onDelete();
     private:
+        Q_DISABLE_COPY(DeleteableListItem)
         Ui::DeleteableListItem *ui;
 };
 

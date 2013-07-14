@@ -9,6 +9,7 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "pythontransform.h"
+#include <QHashIterator>
 #include <QDebug>
 
 #ifdef BUILD_PYTHON_3
@@ -18,13 +19,17 @@ const QString PythonTransform::id = "Python 2.7 script";
 #endif
 const char * PythonTransform::MAIN_FUNCTION_NAME = "pip3line_transform";
 const char * PythonTransform::ISTWOWAY_ATTR_NAME = "Pip3line_is_two_ways";
+const char * PythonTransform::INBOUND_ATTR_NAME = "Pip3line_INBOUND";
+const char * PythonTransform::PARAMS_ATTR_NAME = "Pip3line_params";
+const char * PythonTransform::PARAMS_NAMES_ATTR_NAME = "Pip3line_params_names";
 
 PythonTransform::PythonTransform(ModulesManagement * mmanagement, const QString &name) :
     ScriptTransformAbstract(mmanagement, name)
 {
     pModule = NULL;
     twoWays = false;
-    loadModule();
+    if (!moduleName.isEmpty())
+        loadModule();
 }
 
 PythonTransform::~PythonTransform()
@@ -53,9 +58,60 @@ void PythonTransform::transform(const QByteArray &input, QByteArray &output)
         if (twoWays)
             pyInbound = (wayValue == INBOUND ? Py_True : Py_False );
 
-        if (PyModule_AddObject(pModule, "Pip3line_INBOUND", pyInbound) == -1) {
+        if (PyModule_AddObject(pModule, INBOUND_ATTR_NAME, pyInbound) == -1) {
             Q_EMIT pythonError();
             logError(tr("Could not set the direction value properly"),id);
+        }
+
+        if (!parameters.isEmpty()) {
+            PyObject *paramsdict = PyDict_New();
+            if (!checkPyObject( paramsdict)) {
+                logError("Error while creating the Python parameter dict", id);
+                return;
+            }
+            QHashIterator<QByteArray, QByteArray> i(parameters);
+            while (i.hasNext()) {
+                i.next();
+                PyObject* paramKey = PyUnicode_FromStringAndSize(i.key(),i.key().size());
+                if (!checkPyObject( paramsdict)) {
+                    logError("Error while creating Python parameter key", id);
+                    Py_XDECREF(paramsdict);
+                    return;
+                }
+
+                PyObject* paramValue = PyUnicode_FromStringAndSize(i.value(),i.value().size());
+                if (!checkPyObject( paramValue)) {
+                    logError("Error while creating Python parameter value", id);
+                    Py_XDECREF(paramsdict);
+                    Py_XDECREF(paramKey);
+                    return;
+                }
+
+                if (PyDict_SetItem(paramsdict,paramKey,paramValue) == -1) {
+                    Q_EMIT pythonError();
+                    logError("Error while setting Python parameter pair", id);
+                    Py_XDECREF(paramsdict);
+                    Py_XDECREF(paramKey);
+                    Py_XDECREF(paramValue);
+                    return;
+                }
+
+                // Cleaning the values (references not stolen)
+                Py_XDECREF(paramKey);
+                Py_XDECREF(paramValue);
+            }
+
+            if (PyModule_AddObject(pModule,PARAMS_ATTR_NAME , paramsdict) == -1) { // stolen paramsdict reference
+                Q_EMIT pythonError();
+                logError(tr("Could not set the Pip3line_params value properly"),id);
+            }
+
+
+        } else {
+            if (PyModule_AddObject(pModule,PARAMS_ATTR_NAME , Py_None) == -1) {
+                Q_EMIT pythonError();
+                logError(tr("Could not set the Pip3line_params None value properly"),id);
+            }
         }
 
         PyObject * pFunc = PyObject_GetAttrString(pModule, MAIN_FUNCTION_NAME);
@@ -132,8 +188,11 @@ bool PythonTransform::setModuleFile(const QString &fileName)
         Q_EMIT error(tr("Not allowed to change the module for auto loaded modules"),id);
         return false;
     }
-    if (fileName == moduleFileName)
+    qDebug()  << "Setting module filename";
+    if (fileName == moduleFileName) {
+        qDebug() << "nothing to be done here, filename already set";
         return true; // nothing to be done here
+    }
 
     QString val = moduleManagement->addModule(fileName, type);
     if (!val.isEmpty()) {
@@ -141,11 +200,14 @@ bool PythonTransform::setModuleFile(const QString &fileName)
         pModule = NULL;
         moduleName = val;
         moduleFileName = fileName;
-        loadModule();
-        Q_EMIT confUpdated();
+        if  (!loadModule()) {
+           Q_EMIT error(tr("Error while loading module"),id);
+        }
+        qDebug() << "Module appeared to have been laoded successfully";
+        //Q_EMIT confUpdated();
         return true;
     }
-
+    qDebug() << "Module appeared to have failed";
     return false;
 }
 
@@ -163,51 +225,104 @@ bool PythonTransform::loadModule()
 {
     bool oldtwoWays = twoWays;
 
-    if (!checkPyObject(pModule)) {
-        PyObject *pName;
-        pName = PyUnicode_FromString(moduleName.toUtf8().data());
+    qDebug() << "loading module";
+    if (pModule == NULL) {
+        if (moduleName.isEmpty()) {
+            Q_EMIT error(tr("Empty module name, nothing to load..."),id);
+            return false;
+        }
+        qDebug() << "loading module for the first time " << moduleName;
+        PyObject *pName = PyUnicode_FromString(moduleName.toUtf8().data());
         pModule = PyImport_Import(pName);
         Py_XDECREF(pName);
         if (!checkPyObject(pModule)) {
+            qDebug() << "First time load failed";
             Q_EMIT error(tr("Module \"%1\" could not be loaded. check stderr for more details").arg(moduleName),id);
             pModule = NULL;
             return false;
         }
+    } else {
+        PyObject *oldModule = pModule;
+        pModule = PyImport_ReloadModule(oldModule);
+        Py_XDECREF(oldModule); // cleaning the old module because the reference is different now
     }
-
-    PyObject *oldModule = pModule;
-    pModule = PyImport_ReloadModule(oldModule);
-    Py_XDECREF(oldModule); // cleaning the old module because the reference is different now
-
     twoWays = false; // setting default
     if (checkPyObject(pModule)) {
-        PyObject * pyTwoWay = NULL;
+
+        // checking if the two ways attribute is there
         PyObject * twoWayAttr = PyUnicode_FromString(ISTWOWAY_ATTR_NAME); // New ref
         if (checkPyObject(twoWayAttr)) {
+            PyObject * pyTwoWay = NULL;
             int ret = PyObject_HasAttr(pModule,twoWayAttr);
             if (ret == 1) {
-                qDebug() << "has attribute";
                 pyTwoWay = PyObject_GetAttr(pModule,twoWayAttr); // New ref
                 twoWays = checkPyObject(pyTwoWay) && pyTwoWay == Py_True;
             } else {
-                qDebug() << "does not have attribute";
+                qDebug() << id << " does not have attribute";
             }
 
             Py_XDECREF(pyTwoWay);
             Py_XDECREF(twoWayAttr);
 
-            if (oldtwoWays != twoWays)
-                Q_EMIT confUpdated();
-
-            return true;
         } else {
             PyErr_Clear();
         }
+
+        bool parametersChanged = false;
+        // checking if some default parameters names were defined
+        PyObject * paramsNamesAttr = PyUnicode_FromString(PARAMS_NAMES_ATTR_NAME); // New ref
+        if (checkPyObject(paramsNamesAttr)) {
+            PyObject * pyNamesList = NULL;
+            int ret = PyObject_HasAttr(pModule,paramsNamesAttr);
+            if (ret == 1) {
+                pyNamesList = PyObject_GetAttr(pModule,paramsNamesAttr); // New ref
+                if (checkPyObject(pyNamesList) && PyList_Check(pyNamesList)) {
+                    Py_ssize_t listSize = PyList_Size(pyNamesList);
+                    if (listSize > 0) {
+                        for (int i = 0; i < listSize; i++) {
+                            PyObject *pyName = PyList_GetItem(pyNamesList, i);
+                            if (checkPyObject(pyName) &&
+ #ifdef BUILD_PYTHON_3
+                                    PyUnicode_Check(pyName)) {
+
+                                PyObject * nameutf8 = PyUnicode_AsUTF8String(pyName);
+                                if (nameutf8 == NULL) {
+                                    logError("Error while encoding a parameter to UTF-8",id);
+                                    continue;
+                                }
+                                QByteArray val(PyBytes_AsString(nameutf8), PyBytes_Size(nameutf8));
+#else
+                                    PyString_Check(pyName)) {
+                                QByteArray val(PyString_AsString(pyName), PyString_Size(pyName));
+#endif
+                                if (!parameters.contains(val)) {
+                                    parameters.insert(val, QByteArray());
+                                    parametersChanged = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                qDebug() << id << " does not have attribute";
+            }
+
+            Py_XDECREF(pyNamesList);
+            Py_XDECREF(paramsNamesAttr);
+
+
+        } else {
+            PyErr_Clear();
+        }
+
+        if (oldtwoWays != twoWays || parametersChanged)
+            Q_EMIT confUpdated();
     }
     else {
         pModule = NULL;
+        return false;
     }
-    return false;
+    return true;
 }
 
 bool PythonTransform::checkPyObject(PyObject *obj)

@@ -13,7 +13,6 @@ Released under AGPL see LICENSE for more information
 
 #include <QWidget>
 #include <transformabstract.h>
-#include <QMutex>
 #include <commonstrings.h>
 #include "guihelper.h"
 #include "quickviewitemconfig.h"
@@ -32,20 +31,16 @@ class QuickViewItem : public QWidget
         explicit QuickViewItem(GuiHelper * guiHelper, QWidget *parent = 0, const QString &guiConfig = QString());
         ~QuickViewItem();
         bool configure();
-        void processMessages();
         QString getXmlConf();
         void processData(const QByteArray &data);
         bool isConfigured();
     private slots:
-        void internalProcess();
-        void renderData(const QByteArray &data);
-        void logError(const QString &mess, const QString &);
-        void logWarning(const QString &mess, const QString &);
+        void processingFinished(QByteArray output, Messages messages);
         void mouseDoubleClickEvent (QMouseEvent *event);
     signals:
         void askForDeletion(QuickViewItem *);
-        void updateData(QByteArray data);
     private:
+        Q_DISABLE_COPY(QuickViewItem)
         bool setXmlConf(const QString &conf);
         static const QString LOGID;
         Ui::QuickViewItem *ui;
@@ -56,8 +51,6 @@ class QuickViewItem : public QWidget
         bool noError;
         QByteArray currentData;
         OutputFormat format;
-        QMutex dataMutex;
-        QMutex messMutex;
 };
 
 #endif // QUICKVIEWITEM_H

@@ -29,6 +29,8 @@ class Identity : public TransformAbstract
         QHash<QString, QString> getConfiguration();
         bool setConfiguration(QHash<QString, QString> propertiesList);
         QWidget * requestGui(QWidget * parent);
+    private:
+        Q_DISABLE_COPY(Identity) // just to avoid stupidity
 };
 
 #endif // IDENTITY_H

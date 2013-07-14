@@ -28,7 +28,7 @@ CentralProcessor::~CentralProcessor()
         QHashIterator<TransformRequest * , quintptr> i(children);
          while (i.hasNext()) {
              i.next();
-             bool eop = ((TransformRequest *) i.key())->wait(100);
+             bool eop = (static_cast<TransformRequest *>(i.key()))->wait(100);
              if (!eop)
                  qWarning("[CentralProcessor] children still running ... now ignoring T_T");
          }
@@ -102,7 +102,7 @@ void CentralProcessor::stop()
 
 void CentralProcessor::onChildThreadDestroyed()
 {
-    TransformRequest * tr = (TransformRequest *) sender();
+    TransformRequest * tr = static_cast<TransformRequest *>(sender());
     quintptr source = tr->getptid();
     QMutexLocker lock(&globalMutex);
 

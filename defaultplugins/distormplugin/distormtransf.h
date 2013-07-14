@@ -38,6 +38,7 @@ class DistormTransf : public TransformAbstract
 
         QString help() const;
     private:
+        Q_DISABLE_COPY(DistormTransf)
         static const QString XMLASMTYPE;
         static const QString XMLMAXINSTRUCTION;
         quint64 codeOffset;

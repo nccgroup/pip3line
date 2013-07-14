@@ -37,6 +37,7 @@ class MessageDialog : public QDialog
         void clearMessages();
 
     private:
+        Q_DISABLE_COPY(MessageDialog)
         void addMessage(const QString &message, QColor color);
         QMutex lock;
         Ui::MessageDialog *ui;

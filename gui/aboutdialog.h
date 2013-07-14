@@ -26,6 +26,7 @@ class AboutDialog : public QDialog
         ~AboutDialog();
         
     private:
+        Q_DISABLE_COPY(AboutDialog)
         Ui::AboutDialog *ui;
 };
 

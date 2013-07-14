@@ -26,6 +26,7 @@ class RegExpHelpDialog : public QDialog
         ~RegExpHelpDialog();
         
     private:
+        Q_DISABLE_COPY(RegExpHelpDialog)
         Ui::RegExpHelpDialog *ui;
 };
 

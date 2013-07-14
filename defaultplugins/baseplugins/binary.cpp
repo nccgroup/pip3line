@@ -37,7 +37,7 @@ void Binary::transform(const QByteArray &input, QByteArray &output) {
         return;
 
     QByteArray temp;
-    bool ok;
+
 
     if (wayValue == TransformAbstract::INBOUND) {
         for (int i = 0; i < input.size(); i++) {
@@ -58,6 +58,7 @@ void Binary::transform(const QByteArray &input, QByteArray &output) {
             output.chop(1);
         }
     } else {
+        bool ok = false;
         for (int i = 0; i < input.size(); i++) {
             if (BINARYCHAR.contains(input.at(i))) {
                 temp.append(input.at(i));
@@ -72,7 +73,6 @@ void Binary::transform(const QByteArray &input, QByteArray &output) {
         int length = (temp.size() / 8) * 8;
         int rest = temp.size() % 8;
 
-        bool ok;
         bool errors = false;
         for (int i = 0; i < length; i += 8) {
             char ch = char(temp.mid(i,8).toUShort(&ok,2));

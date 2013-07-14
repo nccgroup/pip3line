@@ -41,9 +41,12 @@ class PythonTransform : public ScriptTransformAbstract
     Q_SIGNALS:
         void pythonError();
     private:
-
+        Q_DISABLE_COPY(PythonTransform)
         static const char * MAIN_FUNCTION_NAME;
         static const char * ISTWOWAY_ATTR_NAME;
+        static const char * INBOUND_ATTR_NAME;
+        static const char * PARAMS_ATTR_NAME;
+        static const char * PARAMS_NAMES_ATTR_NAME;
         bool loadModule();
         bool checkPyObject(PyObject * obj);
         PyObject * pModule;

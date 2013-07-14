@@ -16,6 +16,8 @@ ServerAbstract::ServerAbstract(TransformMgmt *tFactory)
     transformFactory = tFactory;
     output = NULL;
     separator = Processor::DEFAULT_SEPARATOR;
+    encode = false;
+    decode = false;
 }
 
 void ServerAbstract::setOutput(QIODevice *out)

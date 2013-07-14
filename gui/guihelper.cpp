@@ -10,17 +10,27 @@ Released under AGPL see LICENSE for more information
 
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QApplication>
 #include <QMutexLocker>
 #include <QDebug>
+#include <QClipboard>
+#include <QFileDialog>
+#include <QMessageBox>
 #include "guihelper.h"
+#include "newbytedialog.h"
+
 using namespace Pip3lineConst;
 
 const QString GuiHelper::SETTINGS_QUICKVIEWS = "QuickView";
 const QString GuiHelper::SETTINGS_FILTER_BLACKLIST = "FilterBlacklist";
 const QString GuiHelper::SETTINGS_MARKINGS_COLORS = "MarkingsColors";
 const QString GuiHelper::SETTINGS_EXPORT_IMPORT_FUNC = "ExportImportFunctions";
-const QString GuiHelper::ACTION_UTF8_STRING = "UTF-8";
+const QString GuiHelper::SETTINGS_OFFSET_BASE = "OffsetBase";
+const QString GuiHelper::UTF8_STRING_ACTION = "UTF-8";
 const QString GuiHelper::LOGID = "GuiHelper";
+const QString GuiHelper::NEW_BYTE_ACTION = "New Byte(s)";
+const QString GuiHelper::SEND_TO_NEW_TAB_ACTION = "New tab";
+const int GuiHelper::DEFAULT_OFFSET_BASE = 16;
 
 GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nmanager, LoggerWidget *nlogger)
 {
@@ -30,18 +40,24 @@ GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nm
     settings = transformFactory->getSettingsObj();
     bool ok = false;
     defaultServerPort = settings->value(SETTINGS_SERVER_PORT,DEFAULT_PORT).toInt(&ok);
-    if (defaultServerPort < 1)
+    if (!ok || defaultServerPort < 1)
         defaultServerPort = DEFAULT_PORT;
 
-    int temp = settings->value(SETTINGS_SERVER_SEPARATOR,DEFAULT_BLOCK_SEPARATOR).toInt(&ok);
-    if (!ok || temp < 0x00 || temp > 0xFF)
+    QByteArray temp = settings->value(SETTINGS_SERVER_SEPARATOR,QByteArray()).toByteArray();
+    temp = QByteArray::fromHex(temp);
+    if (temp.isEmpty())
         defaultServerSeparator = DEFAULT_BLOCK_SEPARATOR;
     else
-        defaultServerSeparator = (char) temp;
+        defaultServerSeparator = temp.at(0);
 
     defaultServerDecode = settings->value(SETTINGS_SERVER_DECODE,false).toBool();
     defaultServerEncode = settings->value(SETTINGS_SERVER_ENCODE, false).toBool();
     defaultServerPipeName = settings->value(SETTINGS_SERVER_PIPE_NAME, DEFAULT_PIPE_MASS).toString();
+
+    offsetDefaultBase = settings->value(SETTINGS_OFFSET_BASE, DEFAULT_OFFSET_BASE).toInt(&ok);
+    if (!ok || (offsetDefaultBase != 8 && offsetDefaultBase != 10 && offsetDefaultBase != 16)) {
+        offsetDefaultBase = DEFAULT_OFFSET_BASE;
+    }
 
     QStringList blacklist = settings->value(SETTINGS_FILTER_BLACKLIST, QStringList()).toStringList();
     typesBlacklist = blacklist.toSet();
@@ -72,6 +88,7 @@ GuiHelper::~GuiHelper()
     saveImportExportFunctions();
     deleteImportExportFuncs();
     delete settings;
+    logger = NULL;
 }
 
 LoggerWidget *GuiHelper::getLogger()
@@ -126,7 +143,7 @@ QList<TransformsGui *> GuiHelper::getTabs()
 
 void GuiHelper::onTabDeleted()
 {
-    TransformsGui * tg = (TransformsGui *)sender();
+    TransformsGui * tg = static_cast<TransformsGui *>(sender());
     if (!tabs.remove(tg)) {
         logger->logError(tr("Deleted Tab not found"), LOGID);
     } else {
@@ -145,11 +162,11 @@ void GuiHelper::updateSortedTabs()
     }
 }
 
-NameDialog *GuiHelper::getNameDialog(QWidget *parent,const QString &defaultvalue, const QString &title)
+TextInputDialog *GuiHelper::getNameDialog(QWidget *parent,const QString &defaultvalue, const QString &title)
 {
-    NameDialog *nameDialog; // yes this has to be cleaned at the upper layer.
+    TextInputDialog *nameDialog; // yes this has to be cleaned at the upper layer.
 
-    nameDialog = new(std::nothrow) NameDialog(parent);
+    nameDialog = new(std::nothrow) TextInputDialog(parent);
     if (nameDialog != NULL) {
 
         nameDialog->setModal(true);
@@ -157,9 +174,9 @@ NameDialog *GuiHelper::getNameDialog(QWidget *parent,const QString &defaultvalue
             nameDialog->setWindowTitle(tr("Name"));
         else
             nameDialog->setWindowTitle(title);
-        nameDialog->setDefaultValue(defaultvalue);
+        nameDialog->setText(defaultvalue);
     } else {
-        qFatal("Could not instanciate nameDialog X{");
+        qFatal("Could not instanciate textInputDialog X{");
     }
 
     return nameDialog;
@@ -364,7 +381,9 @@ void GuiHelper::saveImportExportFunctions()
 
 QStringList GuiHelper::getImportExportFunctions()
 {
-    return importExportFunctions.keys();
+    QStringList list = importExportFunctions.keys();
+    qSort(list);
+    return list;
 }
 
 TransformAbstract *GuiHelper::getImportExportFunction(const QString &name)
@@ -462,6 +481,7 @@ void GuiHelper::saveMarkingsColor()
 void GuiHelper::setDefaultServerPort(int port)
 {
     defaultServerPort = port;
+    settings->setValue(SETTINGS_SERVER_PORT, defaultServerPort);
 }
 
 int GuiHelper::getDefaultPort() const
@@ -472,6 +492,7 @@ int GuiHelper::getDefaultPort() const
 void GuiHelper::setDefaultServerPipeName(const QString &local)
 {
     defaultServerPipeName = local;
+    settings->setValue(SETTINGS_SERVER_PIPE_NAME, defaultServerPipeName);
 }
 
 QString GuiHelper::getDefaultServerPipeName() const
@@ -482,6 +503,7 @@ QString GuiHelper::getDefaultServerPipeName() const
 void GuiHelper::setDefaultServerDecode(bool val)
 {
     defaultServerDecode = val;
+    settings->setValue(SETTINGS_SERVER_DECODE, defaultServerDecode);
 }
 
 bool GuiHelper::getDefaultServerDecode() const
@@ -491,7 +513,10 @@ bool GuiHelper::getDefaultServerDecode() const
 
 void GuiHelper::setDefaultServerEncode(bool val)
 {
-    defaultServerEncode = val;
+    if (defaultServerEncode != val) {
+        defaultServerEncode = val;
+        settings->setValue(SETTINGS_SERVER_ENCODE, defaultServerEncode);
+    }
 }
 
 bool GuiHelper::getDefaultServerEncode() const
@@ -501,12 +526,28 @@ bool GuiHelper::getDefaultServerEncode() const
 
 void GuiHelper::setDefaultServerSeparator(char sep)
 {
-    defaultServerSeparator = sep;
+    if (defaultServerSeparator != sep) {
+        defaultServerSeparator = sep;
+
+    }
 }
 
 char GuiHelper::getDefaultServerSeparator() const
 {
     return defaultServerSeparator;
+}
+
+int GuiHelper::getDefaultOffsetBase() const
+{
+    return offsetDefaultBase;
+}
+
+void GuiHelper::setDefaultOffsetBase(int val)
+{
+    if (offsetDefaultBase != val && (offsetDefaultBase == 8 || offsetDefaultBase == 10 || offsetDefaultBase == 16)) {
+        offsetDefaultBase = val;
+        settings->setValue(SETTINGS_OFFSET_BASE,  offsetDefaultBase);
+    }
 }
 
 bool GuiHelper::eventFilter(QObject *o, QEvent *e)
@@ -520,31 +561,117 @@ bool GuiHelper::eventFilter(QObject *o, QEvent *e)
     return false;
 }
 
+void GuiHelper::updateCopyContextMenu(QMenu *copyMenu)
+{
+    QAction * action = NULL;
+    copyMenu->clear();
+
+    action = new(std::nothrow) QAction(GuiHelper::UTF8_STRING_ACTION, copyMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus UTF8 X{");
+        return;
+    }
+    copyMenu->addAction(action);
+
+    QStringList list = getImportExportFunctions();
+
+    for (int i = 0; i < list.size(); i++) {
+        action = new(std::nothrow) QAction(list.at(i), copyMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateImportExportMenus copyMenu X{");
+            return;
+        }
+        copyMenu->addAction(action);
+    }
+}
+
+void GuiHelper::updateLoadContextMenu(QMenu *loadMenu)
+{
+    QAction * action = NULL;
+    loadMenu->clear();
+    action = new(std::nothrow) QAction(GuiHelper::UTF8_STRING_ACTION, loadMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for action updateImportExportMenus loadMenu UTF8 X{");
+        return;
+    }
+    loadMenu->addAction(action);
+
+    QStringList list = getImportExportFunctions();
+
+    for (int i = 0; i < list.size(); i++) {
+        action = new(std::nothrow) QAction(list.at(i), loadMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action updateImportExportMenus loadMenu user's X{");
+            return;
+        }
+        loadMenu->addAction(action);
+    }
+}
+
+void GuiHelper::loadAction(QString action, ByteSourceAbstract *byteSource)
+{
+    QClipboard *clipboard = QApplication::clipboard();
+    QString input = clipboard->text();
+    if (action == NEW_BYTE_ACTION) {
+        NewByteDialog *dialog = new(std::nothrow) NewByteDialog();
+        if (dialog == NULL) {
+            qFatal("Cannot allocate memory for action NewByteDialog X{");
+            return;
+        }
+        dialog->setModal(true);
+        int ret = dialog->exec();
+        if (ret == QDialog::Accepted) {
+            byteSource->setData(QByteArray(dialog->byteCount(),dialog->getChar()));
+        }
+        delete dialog;
+
+    } else if (action == GuiHelper::UTF8_STRING_ACTION) {
+        byteSource->setData(input.toUtf8());
+    } else {
+        TransformAbstract *ta  = getImportExportFunction(action);
+        if (ta != NULL) {
+            ta->setWay(TransformAbstract::OUTBOUND);
+            byteSource->setData(ta->transform(input.toUtf8()));
+        }
+    }
+}
+
+void GuiHelper::copyAction(QString action, QByteArray value)
+{
+    QClipboard *clipboard = QApplication::clipboard();
+    if (action == GuiHelper::UTF8_STRING_ACTION) {
+        clipboard->setText(QString::fromUtf8(value));
+    } else {
+        TransformAbstract *ta  = getImportExportFunction(action);
+        if (ta != NULL) {
+            ta->setWay(TransformAbstract::INBOUND);
+            clipboard->setText(ta->transform(value));
+        }
+    }
+}
+
+void GuiHelper::saveToFileAction(QByteArray value, QWidget *parent)
+{
+    QString fileName = QFileDialog::getSaveFileName(parent,tr("Choose a file to save to"));
+    if (!fileName.isEmpty()) {
+
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly)) {
+            QString mess = tr("Failed to open the file for writing:\n %1").arg(file.errorString());
+            logger->logError(mess);
+            QMessageBox::critical(parent,tr("Error"), mess,QMessageBox::Ok);
+            return;
+        }
+        file.write(value);
+        file.close();
+    }
+}
+
 const QString GuiHelper::getXMLfromRes(const QString &res)
 {
     QFile file(res);
     file.open(QIODevice::ReadOnly);
     return QString::fromUtf8(file.readAll());
-}
-
-NameDialog::NameDialog(QWidget *parent) : QDialog(parent)
-{
-    tabNameUI.setupUi(this);
-}
-
-NameDialog::~NameDialog()
-{
-}
-
-void NameDialog::setDefaultValue(const QString &value)
-{
-    tabNameUI.nameLineEdit->setText(value);
-    tabNameUI.nameLineEdit->selectAll();
-}
-
-QString NameDialog::getName() const
-{
-    return tabNameUI.nameLineEdit->text();
 }
 
 

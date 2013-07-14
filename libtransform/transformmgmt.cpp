@@ -51,7 +51,7 @@ TransformMgmt::~TransformMgmt()
         qDebug() << "No TransformAbstract instances left :D";
     } else {
         QTextStream cout(stderr);
-        qWarning("TransformAbstract instances still present T_T (Memory leak)");
+        cout << "TransformAbstract instances still present T_T (Memory leak)";
         QSetIterator<TransformAbstract *> i(transformInstances);
          while (i.hasNext())
              cout << " => " << i.next() << endl;
@@ -283,9 +283,8 @@ void TransformMgmt::unloadPlugins()
     foreach (Pip3lineCallback * val, callbackList)
          delete val;
 
-    QPluginLoader *loader = NULL;
     while (!pluginLibs.isEmpty()) {
-        loader = pluginLibs.takeLast();
+        QPluginLoader * loader = pluginLibs.takeLast();
         loader->unload();
         delete loader;
     }

@@ -15,6 +15,24 @@ TransformChain::TransformChain()
     preferredFormat = TEXTFORMAT;
 }
 
+TransformChain::TransformChain(const TransformChain &other) : QList<TransformAbstract *>(other)
+{
+    name = other.name;
+    description = other.description;
+    help = other.help;
+    preferredFormat = other.preferredFormat;
+}
+
+TransformChain &TransformChain::operator =(const TransformChain &other)
+{
+    QList<TransformAbstract *>::operator =(other);
+    name = other.name;
+    description = other.description;
+    help = other.help;
+    preferredFormat = other.preferredFormat;
+    return *this;
+}
+
 TransformChain::~TransformChain()
 {
 }

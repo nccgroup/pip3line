@@ -29,6 +29,7 @@ class NewByteDialog : public QDialog
         void closeEvent(QCloseEvent *event);
         
     private:
+        Q_DISABLE_COPY(NewByteDialog)
         Ui::NewByteDialog *ui;
 };
 

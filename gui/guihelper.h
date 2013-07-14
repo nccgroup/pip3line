@@ -19,36 +19,35 @@ Released under AGPL see LICENSE for more information
 #include <QHash>
 #include <QDialog>
 #include <QComboBox>
+#include <QString>
 #include <QMultiHash>
 #include <QSettings>
 #include <QColor>
 #include <QSet>
 #include <QMultiMap>
 #include <QMutex>
+#include <QMenu>
+#include "sources/bytesourceabstract.h"
 #include <transformabstract.h>
 #include "transformsgui.h"
+#include "textinputdialog.h"
 #include "../tools/centralprocessor.h"
-#include "ui_tabname.h"
+
+namespace GuiStyles {
+    static const QString LineEditError = "QLineEdit { background-color: #FFB1B2; }";
+    static const QString ComboBoxError = "QComboBox { color : red; }";
+    static const QString LineEditWarning = "";
+    static const QString LineEditMessage = "";
+}
 
 class TransformsGui;
-
-class NameDialog : public QDialog
-{
-    Q_OBJECT
-    public:
-        explicit NameDialog(QWidget *parent = 0);
-        ~NameDialog();
-        void setDefaultValue(const QString &value);
-        QString getName() const;
-    private:
-        Ui::TabName tabNameUI;
-};
 
 class GuiHelper : public QObject
 {
         Q_OBJECT
     public:
-        static const QString ACTION_UTF8_STRING;
+        static const QString UTF8_STRING_ACTION;
+        static const QString SEND_TO_NEW_TAB_ACTION;
         explicit GuiHelper( TransformMgmt *transformFactory, QNetworkAccessManager *networkManager, LoggerWidget *logger);
         ~GuiHelper();
         LoggerWidget *getLogger();
@@ -64,7 +63,7 @@ class GuiHelper : public QObject
         void removeTab(TransformsGui * tab);
         QList<TransformsGui *> getTabs();
 
-        NameDialog *getNameDialog(QWidget *parent, const QString &defaultvalue, const QString &title = QString());
+        TextInputDialog *getNameDialog(QWidget *parent, const QString &defaultvalue, const QString &title = QString());
         void buildTransformComboBox(QComboBox *box, const QString &defaultSelected = QString(), bool applyFilter = false);
         void buildFilterComboBox(QComboBox *box);
 
@@ -85,6 +84,12 @@ class GuiHelper : public QObject
         void addImportExportFunctions(const QString &name, TransformAbstract *ta);
         void removeImportExportFunctions(const QString &name);
 
+        void updateCopyContextMenu(QMenu *copyMenu);
+        void updateLoadContextMenu(QMenu *loadMenu);
+        void loadAction(QString action, ByteSourceAbstract * byteSource);
+        void copyAction(QString action, QByteArray value);
+        void saveToFileAction(QByteArray value, QWidget *parent = 0);
+
         void setDefaultServerPort(int port);
         int getDefaultPort() const;
         void setDefaultServerPipeName(const QString &local);
@@ -96,7 +101,12 @@ class GuiHelper : public QObject
         void setDefaultServerSeparator(char sep);
         char getDefaultServerSeparator() const;
 
-        bool eventFilter(QObject *o, QEvent *e);
+        int getDefaultOffsetBase() const;
+        void setDefaultOffsetBase(int val);
+
+
+
+    public slots:
 
     signals:
         void newSelection(QByteArray selection);
@@ -109,11 +119,16 @@ class GuiHelper : public QObject
         void onFilterChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
         void onTabDeleted();
     private:
+        Q_DISABLE_COPY(GuiHelper)
         static const QString SETTINGS_QUICKVIEWS;
         static const QString SETTINGS_FILTER_BLACKLIST;
         static const QString SETTINGS_MARKINGS_COLORS;
         static const QString SETTINGS_EXPORT_IMPORT_FUNC;
+        static const QString SETTINGS_OFFSET_BASE;
         static const QString LOGID;
+        static const QString NEW_BYTE_ACTION;
+        static const int DEFAULT_OFFSET_BASE;
+        bool eventFilter(QObject *o, QEvent *e);
         inline void updateSortedTabs();
         void loadImportExportFunctions();
         void saveImportExportFunctions();
@@ -136,6 +151,7 @@ class GuiHelper : public QObject
         QHash<QString, QColor> markingColors;
         QHash<QString , TransformAbstract *> importExportFunctions;
         CentralProcessor centralTransProc;
+        int offsetDefaultBase;
 };
 
 #endif // GUIHELPER_H

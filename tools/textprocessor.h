@@ -21,6 +21,8 @@ class TextProcessor: public Processor
         void run();
     protected:
         TextProcessor() {}
+    private:
+        Q_DISABLE_COPY(TextProcessor)
 };
 
 #endif // TEXTPROCESSOR_H

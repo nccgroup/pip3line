@@ -42,8 +42,9 @@ void NetworkMaskIPv4::transform(const QByteArray &input, QByteArray &output)
         }
     } else {
         QString val = QString::fromUtf8(input);
-        int netmask = 0;
+
         if (ip.setAddress(val)) {
+            int netmask = 0;
             if (ip.protocol() == QAbstractSocket::IPv4Protocol) {
                 quint32 num = ip.toIPv4Address();
                 int zeros = 0;

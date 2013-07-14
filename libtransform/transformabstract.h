@@ -35,7 +35,9 @@ class LIBTRANSFORMSHARED_EXPORT TransformAbstract : public QObject
         virtual QString description() const = 0;
         virtual void transform(const QByteArray &input, QByteArray &output) = 0;
 
-        // optional configuration methods
+        // mandatory configuration methods used for cloning objects within the gui
+        // if your transforms have internal properties, you need to advertise and
+        // load them here
         virtual QHash<QString, QString> getConfiguration();
         virtual bool setConfiguration(QHash<QString, QString> propertiesList);
 
@@ -80,6 +82,7 @@ class LIBTRANSFORMSHARED_EXPORT TransformAbstract : public QObject
     private Q_SLOTS:
         void onGuiDelete();
     private:
+        Q_DISABLE_COPY(TransformAbstract)
         static const QByteArray HEXCHAR;
         QWidget *confGui; // this is the configuration widget, if needed. if the pointer is null, the gui will just ignore the setting tab.
 };

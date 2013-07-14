@@ -9,35 +9,32 @@
   *
   * Released under AGPL see LICENSE for more information
 </comment>
- <class>TabName</class>
- <widget class="QDialog" name="TabName">
+ <class>textInputDialog</class>
+ <widget class="QDialog" name="textInputDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>187</width>
+    <width>183</width>
     <height>67</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Name</string>
-  </property>
-  <property name="modal">
-   <bool>true</bool>
+   <string>Dialog</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QWidget" name="widget" native="true">
-     <layout class="QFormLayout" name="formLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="nameLabel">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLabel" name="inputLabel">
         <property name="text">
-         <string>Name:</string>
+         <string>Name</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="nameLineEdit"/>
+      <item>
+       <widget class="QLineEdit" name="inputLineEdit"/>
       </item>
      </layout>
     </widget>
@@ -59,7 +56,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>TabName</receiver>
+   <receiver>textInputDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -75,7 +72,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>TabName</receiver>
+   <receiver>textInputDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

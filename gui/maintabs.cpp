@@ -9,6 +9,7 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "maintabs.h"
+#include "textinputdialog.h"
 #include <QMouseEvent>
 
 const QString MainTabs::ID = "MainTabs";
@@ -47,6 +48,9 @@ MainTabs::~MainTabs()
      delete i.key();
     }
     tabList.clear();
+    logger = NULL;
+    guiHelper = NULL;
+    tabBarRef = NULL;
 }
 
 bool MainTabs::eventFilter(QObject *receiver, QEvent *event)
@@ -70,11 +74,12 @@ bool MainTabs::eventFilter(QObject *receiver, QEvent *event)
 void MainTabs::askForRenaming(int index)
 {
     if (index != indexOf(logger)) {
-        NameDialog * dia = guiHelper->getNameDialog(this, tabBarRef->tabText(index));
+        TextInputDialog * dia = guiHelper->getNameDialog(this, tabBarRef->tabText(index));
         if (dia != NULL) {
             int res = dia->exec();
-            if (res == QDialog::Accepted && !dia->getName().isEmpty()) {
-                ((TransformsGui *)widget(index))->setName(dia->getName());
+            QString newName = dia->getInputText();
+            if (res == QDialog::Accepted && !newName.isEmpty()) {
+                static_cast<TransformsGui *>(widget(index))->setName(newName);
             }
 
             delete dia;
@@ -82,7 +87,20 @@ void MainTabs::askForRenaming(int index)
     }
 }
 
-void MainTabs::newTabTransform(const QByteArray &initialValue, const QString &conf)
+void MainTabs::loadFile(QString fileName)
+{
+    int index = 0;
+    if (count() - (indexOf(logger) == -1? 0 : 1) == 0) {
+        index = newTabTransform();
+    }
+
+    if (index != -1) {
+        TransformsGui * tg = static_cast<TransformsGui *>(widget(index));
+        tg->loadFromFile(fileName);
+    }
+}
+
+int MainTabs::newTabTransform(const QByteArray &initialValue, const QString &conf)
 {
     int nextInsert = count() - ((indexOf(logger) == -1)? 0 : 1);
     TransformsGui *newTab = new(std::nothrow) TransformsGui(guiHelper, this);
@@ -103,15 +121,18 @@ void MainTabs::newTabTransform(const QByteArray &initialValue, const QString &co
         setCurrentIndex(nextInsert);
         guiHelper->addTab(newTab);
         tabCount++;
+        return nextInsert;
     } else {
         qFatal("Cannot allocate memory for newTab X{");
     }
+
+    return -1;
 }
 
 void MainTabs::onDeleteTab(int index)
 {
     if (index != indexOf(logger)) {
-        TransformsGui *tgui = (TransformsGui *)widget(index);
+        TransformsGui *tgui = static_cast<TransformsGui *>(widget(index));
         // index is set by Qt, no need to verify
 
         removeTab(index);
@@ -226,7 +247,7 @@ void MainTabs::receivedBringToFront(TransformsGui *tab)
 
 void MainTabs::onFloatingWindowsReject()
 {
-    FloatingDialog *fd = (FloatingDialog *) sender();
+    FloatingDialog *fd = static_cast<FloatingDialog *>(sender());
     if (fd != NULL) {
         TransformsGui *tab = activeWindows.key(fd,0);
         if (tab != NULL) {

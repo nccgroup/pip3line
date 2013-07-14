@@ -8,15 +8,11 @@ https://github.com/nccgroup/pip3line
 Released under AGPL see LICENSE for more information
 **/
 
-#ifndef RUBYPLUGIN_GLOBAL_H
-#define RUBYPLUGIN_GLOBAL_H
+#ifndef CROSSPLATFORM_H
+#define CROSSPLATFORM_H
 
-#include <QtCore/qglobal.h>
-
-#if defined(RUBYPLUGIN_LIBRARY)
-#  define RUBYPLUGINSHARED_EXPORT Q_DECL_EXPORT
-#else
-#  define RUBYPLUGINSHARED_EXPORT Q_DECL_IMPORT
+#ifdef Q_OS_WIN
+#define LONG_LONG_MAX _I64_MAX
 #endif
 
-#endif // RUBYPLUGIN_GLOBAL_H
+#endif // CROSSPLATFORM_H

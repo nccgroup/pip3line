@@ -13,6 +13,8 @@ Released under AGPL see LICENSE for more information
 
 #include "transformabstract.h"
 #include <QString>
+#include <QByteArray>
+#include <QHash>
 #include "modulesmanagement.h"
 #include "libtransform_global.h"
 
@@ -20,7 +22,7 @@ class LIBTRANSFORMSHARED_EXPORT ScriptTransformAbstract : public TransformAbstra
 {
         Q_OBJECT
     public:
-        explicit ScriptTransformAbstract(ModulesManagement * mmanagement, const QString &name = QString());
+        explicit ScriptTransformAbstract(ModulesManagement * mmanagement, const QString &modulename = QString());
         virtual ~ScriptTransformAbstract();
         QString name() const;
         QHash<QString, QString> getConfiguration();
@@ -31,14 +33,19 @@ class LIBTRANSFORMSHARED_EXPORT ScriptTransformAbstract : public TransformAbstra
         void setType(ModulesManagement::ModuleType type);
         ModulesManagement::ModuleType getType() const;
         QString getScriptDescr() const;
+        QHash<QByteArray, QByteArray> getParameters() const;
+        void setParameters(QHash<QByteArray, QByteArray> newParams);
     protected:
+        Q_DISABLE_COPY(ScriptTransformAbstract)
         QWidget * requestGui(QWidget * parent);
         static const QString PROP_SCRIPT;
         static const QString PROP_MODULE_NAME;
+        static const QString PROP_MODULE_PARAMS;
         QString moduleName;
         QString moduleFileName;
         ModulesManagement * moduleManagement;
         ModulesManagement::ModuleType type;
+        QHash<QByteArray, QByteArray> parameters;
 };
 
 #endif // SCRIPTTRANSFORMABSTRACT_H

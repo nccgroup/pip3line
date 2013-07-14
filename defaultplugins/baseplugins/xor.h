@@ -19,6 +19,7 @@ class Xor : public TransformAbstract
     
     public:
         static const QByteArray HEXCHAR;
+        enum Type {Basic = 0, PREVIOUSINPUT = 1, PREVIOUSOUTPUT = 2};
         explicit Xor();
         ~Xor();
         QString name() const;
@@ -31,14 +32,17 @@ class Xor : public TransformAbstract
         static const QString id;
         QString help() const;
 
-        QByteArray getKey();
+        QByteArray getKey() const;
         void setKey(QByteArray val);
-        bool isFromHex();
+        bool isFromHex() const;
         void setFromHex(bool val);
+        void setType(Xor::Type val);
+        Xor::Type getType() const;
     private:
-
+        static const QString XMLXORALGORITHM;
         QByteArray key;
         bool hexDecode;
+        Xor::Type xortype;
 };
 
 #endif // XOR_H

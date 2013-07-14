@@ -28,6 +28,7 @@ class LIBTRANSFORMSHARED_EXPORT ComposedTransform : public TransformAbstract
         QString help() const;
         static const QString id;
    private:
+        Q_DISABLE_COPY(ComposedTransform)
         TransformChain chain;
         bool twoWaysFlag;
         QList<TransformAbstract::Way> defaultWays;

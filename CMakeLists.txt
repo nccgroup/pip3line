@@ -36,25 +36,36 @@ project( pip3lineall )
 cmake_minimum_required( VERSION 2.8 )
 set ( CMAKE_BUILD_TYPE Release )
 
-add_definitions(-DQT_NO_WARNING_OUTPUT -DQT_NO_DEBUG_OUTPUT)
+add_definitions(-DQT_NO_DEBUG_OUTPUT)
 
 if (MSVC)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /GS /DYNAMICBASE")
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP /GS /DYNAMICBASE")
 	message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 	message(STATUS "CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
-endif()
+endif(MSVC)
 
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-set (LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+
+if (WIN32)
+	set (LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+endif(WIN32)
 
 include_directories ( ${PROJECT_SOURCE_DIR}/libtransform )
 
-link_directories (
-	${PROJECT_SOURCE_DIR}/lib
-	${PROJECT_SOURCE_DIR}/bin
-        ${PROJECT_SOURCE_DIR}/bin/plugins
-	)
+if (WIN32)
+	link_directories (
+		${project_source_dir}/lib
+		${project_source_dir}/bin
+        	${project_source_dir}/bin/plugins
+		)
+else()
+	link_directories (
+		${project_source_dir}/bin
+        	${project_source_dir}/bin/plugins
+		)
+endif()
+
 if (ALL)
 	message ( STATUS  "Selecting all packages")
 	SET (WITH_LIB ON)

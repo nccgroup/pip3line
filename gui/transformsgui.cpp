@@ -14,6 +14,7 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QStandardItemModel>
 #include <QStandardItem>
+#include "textinputdialog.h"
 #include "ui_transformsgui.h"
 
 TransformsGui::TransformsGui(GuiHelper *nguiHelper, QWidget *parent) :
@@ -60,6 +61,8 @@ TransformsGui::~TransformsGui()
         delete transformWidgetList.takeLast();
     }
 
+    logger = NULL;
+    guiHelper = NULL;
     delete ui;
 }
 
@@ -183,6 +186,29 @@ void TransformsGui::bringFront()
     emit askBringFront(this);
 }
 
+void TransformsGui::loadFromFile(QString fileName)
+{
+    if (transformWidgetList.size() > 0) {
+        TransformWidget * tw = transformWidgetList.at(0);
+        tw->fromLocalFile(fileName);
+    }
+}
+
+int TransformsGui::getBlockCount() const
+{
+    return transformWidgetList.size();
+}
+
+ByteSourceAbstract *TransformsGui::getBytesFrom(int blockIndex)
+{
+    if (blockIndex < 1 || blockIndex > transformWidgetList.size()) {
+        logger->logError("[TransformsGui::getBytesFrom] index out-of-bounds");
+        return NULL;
+    }
+
+    return transformWidgetList.at(blockIndex - 1)->getBytes();
+}
+
 void TransformsGui::processNewTransformation(TransformWidget *transformWidget)
 {
     int pos;
@@ -267,6 +293,7 @@ void TransformsGui::addWidget(TransformWidget *transformWidget)
     connect(transformWidget,SIGNAL(transfoRequest(TransformWidget*)),this,SLOT(processNewTransformation(TransformWidget*)));
     connect(transformWidget,SIGNAL(deletionRequest(TransformWidget*)), this, SLOT(processDeletionRequest(TransformWidget*)));
     connect(transformWidget, SIGNAL(transformChanged()), this, SLOT(onTransformChanged()));
+    connect(transformWidget, SIGNAL(tryNewName(QString)), this, SLOT(onNameChangeRequest(QString)));
 }
 
 void TransformsGui::onSaveState()
@@ -338,11 +365,11 @@ void TransformsGui::onSaveToMemory()
         QMessageBox::critical(this,tr("Error"),tr("No transformation selected, nothing to register!"),QMessageBox::Ok);
     } else {
 
-        NameDialog * dia = guiHelper->getNameDialog(this, name);
+        TextInputDialog * dia = guiHelper->getNameDialog(this, name);
         if (dia != NULL) {
             int ret = dia->exec();
-            if (ret == QDialog::Accepted && !dia->getName().isEmpty()) {
-                QString newName = dia->getName();
+            if (ret == QDialog::Accepted) {
+                QString newName = dia->getInputText();
                 if (newName.isEmpty())
                     newName = name;
                 setName(newName);
@@ -378,7 +405,7 @@ void TransformsGui::buildSavedCombo()
     ui->savedComboBox->clear();
     int row = 0;
     // first inactive element
-    ui->savedComboBox->addItem(QString());
+    ui->savedComboBox->addItem(QString("User's chains"));
     QStandardItem * item = qobject_cast<QStandardItemModel *>(ui->savedComboBox->model())->item( row );
     item->setEnabled( false );
     item->setTextAlignment(Qt::AlignCenter);
@@ -419,5 +446,14 @@ void TransformsGui::onSwitchWindowTab()
 void TransformsGui::onTransformChanged()
 {
     emit chainChanged(getCurrentChainConf());
+}
+
+void TransformsGui::onNameChangeRequest(QString name)
+{
+    QObject * obj = sender();
+
+    if (obj == firstTransformWidget  && !name.isEmpty()) {
+        setName(name);
+    }
 }
 

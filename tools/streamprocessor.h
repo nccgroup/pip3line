@@ -25,6 +25,8 @@ class StreamProcessor : public Processor
         void stop();
     protected:
         QSemaphore runSem;
+    private:
+        Q_DISABLE_COPY(StreamProcessor)
         
 };
 

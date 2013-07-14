@@ -33,7 +33,6 @@ QuickViewItem::QuickViewItem(GuiHelper *nguiHelper, QWidget *parent, const QStri
     }
     ui->setupUi(this);
     connect(ui->removePushButton, SIGNAL(clicked()), this, SLOT(deleteLater()));
-    connect(this, SIGNAL(updateData(QByteArray)), this, SLOT(renderData(QByteArray)));
 
     if (!xmlconfig.isEmpty())
         setXmlConf(xmlconfig);
@@ -42,45 +41,62 @@ QuickViewItem::QuickViewItem(GuiHelper *nguiHelper, QWidget *parent, const QStri
 QuickViewItem::~QuickViewItem()
 {
     delete currentTransform;
+    guiHelper = NULL;
     delete ui;
 }
 
-void QuickViewItem::renderData(const QByteArray &displayData)
+void QuickViewItem::processingFinished(QByteArray output, Messages messages)
 {
-    if (currentTransform != NULL) {
-        processMessages();
-        if (format == TEXTFORMAT)
-            ui->outputLineEdit->setText(QString::fromUtf8(displayData));
-        else
-            ui->outputLineEdit->setText(QString::fromUtf8(displayData.toHex()));
-    } else {
-        ui->outputLineEdit->setText(tr("No Transform configured"));
+    toolTipMess.clear();
+
+    if (format == TEXTFORMAT)
+        ui->outputLineEdit->setText(QString::fromUtf8(output));
+    else
+        ui->outputLineEdit->setText(QString::fromUtf8(output.toHex()));
+
+    LOGLEVEL level = LSTATUS;
+    for (int i = 0; i < messages.size() ; i++) {
+        toolTipMess.append(messages.at(i).message);
+        if (messages.at(i).level > level) {
+            level = messages.at(i).level;
+        }
+    }
+
+    ui->outputLineEdit->setToolTip(toolTipMess);
+
+    switch (level) {
+        case (LERROR):
+            ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid red } QLineEdit QWidget { color: black;}");
+            break;
+        case (LWARNING):
+            ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid orange } QLineEdit QWidget { color: black;}");
+            break;
+        case (LSTATUS):
+        default:
+            ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid gray } QLineEdit QWidget { color: black;}");
     }
 }
 
 void QuickViewItem::processData(const QByteArray &data)
 {
-    dataMutex.lock();
     currentData = data;
-    dataMutex.unlock();
-    QTimer::singleShot(0,this,SLOT(internalProcess()));
+    if (currentTransform != NULL) {
+        TransformRequest *tr = new TransformRequest(
+                    currentTransform,
+                    data,
+                    (quintptr) this,
+                    false
+                                   );
+
+        connect(tr,SIGNAL(finishedProcessing(QByteArray,Messages)), this, SLOT(processingFinished(QByteArray,Messages)));
+        guiHelper->processTransform(tr);
+    }
+
 }
 
 bool QuickViewItem::isConfigured()
 {
     return currentTransform != NULL;
-}
-
-void QuickViewItem::internalProcess()
-{
-    dataMutex.lock();
-    if (currentTransform != NULL) {
-        emit updateData(currentTransform->transform(currentData));
-    }
-    else {
-        currentData.clear();
-    }
-    dataMutex.unlock();
 }
 
 bool QuickViewItem::configure()
@@ -93,54 +109,14 @@ bool QuickViewItem::configure()
     if (ret == QDialog::Accepted) {
         delete currentTransform;
         currentTransform = guiConfig->getTransform();
-        ui->nameLabel->setText(guiConfig->getName());
         if (currentTransform != 0) {
-            connect(currentTransform, SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)), Qt::UniqueConnection);
-            connect(currentTransform, SIGNAL(warning(QString,QString)), this, SLOT(logWarning(QString,QString)), Qt::UniqueConnection);
+            ui->nameLabel->setText(guiConfig->getName());
             format = guiConfig->getFormat();
             QTimer::singleShot(0,this,SLOT(internalProcess()));
             return true;
         }
-
     }
     return false;
-}
-
-void QuickViewItem::processMessages()
-{
-    messMutex.lock();
-    if (toolTipMess.isEmpty())
-        ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid gray } QLineEdit QWidget { color: black;}");
-    else if (noError)
-        ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid orange } QLineEdit QWidget { color: black;}");
-    else
-        ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid red } QLineEdit QWidget { color: black;}");
-
-    ui->outputLineEdit->setToolTip(toolTipMess);
-    toolTipMess.clear();
-    noError = true;
-    messMutex.unlock();
-}
-
-void QuickViewItem::logError(const QString &mess, const QString &)
-{
-    messMutex.lock();
-    if (noError) {
-        noError = false;
-    }
-    if (!toolTipMess.isEmpty())
-        toolTipMess.append("\n");
-    toolTipMess.append(tr("Error:")).append(mess);
-    messMutex.unlock();
-}
-
-void QuickViewItem::logWarning(const QString &mess, const QString &)
-{
-    messMutex.lock();
-    if (!toolTipMess.isEmpty())
-        toolTipMess.append("\n");
-    toolTipMess.append(tr("Warning:")).append(mess);
-    messMutex.unlock();
 }
 
 void QuickViewItem::mouseDoubleClickEvent(QMouseEvent * event)
@@ -185,8 +161,6 @@ bool QuickViewItem::setXmlConf(const QString &conf)
     }
     else {
         currentTransform = talist.takeFirst();
-        connect(currentTransform, SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)));
-        connect(currentTransform, SIGNAL(warning(QString,QString)), this, SLOT(logWarning(QString,QString)));
         if (talist.size() > 0) {
             guiHelper->getLogger()->logError(tr("Configuration loaded multiple transform, clearing the remaining ones."), LOGID);
             while (!talist.isEmpty()) {

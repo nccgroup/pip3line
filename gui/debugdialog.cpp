@@ -39,7 +39,11 @@ void DebugDialog::on_loadPushButton_clicked()
         addrString = addrString.mid(2);
 
     bool ok;
-    quint64 addr = addrString.toUInt(&ok, 16);
+    quint64 addr = addrString.toULongLong(&ok, 16);
+    if (!ok) {
+        qWarning() << "Debugger: Invalid address entered";
+        return;
+    }
 
     QObject *obj = (QObject *) addr;
     const QMetaObject *superClassObj = obj->metaObject()->superClass();

@@ -41,7 +41,6 @@ QString DistormTransf::description() const
 void DistormTransf::transform(const QByteArray &input, QByteArray &output)
 {
     QByteArray offset;
-    int offsetSize;
     _DecodeType dt = Decode32Bits;
     int maxOffsetSize = sizeof(_OffsetType);
     switch (asmType) {
@@ -75,7 +74,7 @@ void DistormTransf::transform(const QByteArray &input, QByteArray &output)
             output.append("0x");
             offset = QByteArray::number((qulonglong)instruction.offset,16);
 
-            offsetSize = offset.size();
+            int offsetSize = offset.size();
             for (int j = 0; j < maxOffsetSize - offsetSize; j++) {
                 offset.prepend('0');
             }

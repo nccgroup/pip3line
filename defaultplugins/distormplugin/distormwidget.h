@@ -31,6 +31,7 @@ class DistormWidget : public QWidget
         void onOffset(QString val);
         void onType(int val);
     private:
+        Q_DISABLE_COPY(DistormWidget)
         static const QStringList asmTypeStrings;
         Ui::DistormWidget *ui;
         DistormTransf * transform;

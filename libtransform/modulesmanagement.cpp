@@ -20,6 +20,7 @@ ModulesManagement::ModulesManagement(const QString &nlangName, const QString &ex
 {
     gui = NULL;
     langName = nlangName;
+    qDebug() << langName;
     callback = ncallback;
     baseModulesDirName = baseDir;
     moduleExtension = extension;
@@ -42,7 +43,7 @@ ModulesManagement::ModulesManagement(const QString &nlangName, const QString &ex
         filters << QString(moduleExtension).prepend("*");
         mDir.setNameFilters(filters);
         foreach (QString fileName, mDir.entryList(QDir::Files)) {
-            callback->logStatus(tr("Loading module file %1 from %2").arg(fileName).arg(mDir.absolutePath()));
+            callback->logStatus(tr("[ModulesManagement::init] Loading module file %1 from %2").arg(fileName).arg(mDir.absolutePath()));
             addModule(mDir.absolutePath().append(QDir::separator()).append(fileName), AUTO);
         }
     }
@@ -87,25 +88,26 @@ QStringList ModulesManagement::getRegisteredModule()
 
 bool ModulesManagement::setType(const QString &name, ModulesManagement::ModuleType type)
 {
-
+    qDebug() << "[ModulesManagement::setType] " << name << type;
     if (modulesList.contains(name)) {
         if (type == AUTO) {
-            callback->logError(tr("setType - Cannot change the type to AUTO for %1 -_-").arg(name));
+            callback->logError(tr("[ModulesManagement::setType] - Cannot change the type to AUTO for %1 -_-").arg(name));
             return false;
         }
         ModuleType previous = modulesList.value(name).type;
         if (previous == type) // if there is no change, just return
             return true;
         else if (previous == AUTO) {
-            callback->logError(tr("setType - Cannot change the type of %1. Module loaded from default location -_-").arg(name));
+            callback->logError(tr("[ModulesManagement::setType] - Cannot change the type of %1. Module loaded from default location -_-").arg(name));
             return false;
         }
         ModuleProperties prop =  modulesList.value(name);
         prop.type = type;
         modulesList.insert(name, prop);
         savePersistentModules();
+        callback->notifyNewTransform(); // need to renew the list in every remaining case
     } else {
-        callback->logError(tr("setType - No module named \"%1\"").arg(name));
+        callback->logError(tr("[ModulesManagement::setType] - No module named \"%1\"").arg(name));
         return false;
     }
 
@@ -117,7 +119,7 @@ void ModulesManagement::removeModule(const QString &name)
     if (modulesList.contains(name)) {
         ModuleType moduleType = modulesList.value(name).type;
         if (moduleType == AUTO) {
-            callback->logError(tr("removeModule - Cannot remove module \"%1\", this module was loaded from default a location.").arg(name));
+            callback->logError(tr("[ModulesManagement::removeModule] - Cannot remove module \"%1\", this module was loaded from default a location.").arg(name));
             return;
         }
         modulesList.remove(name);
@@ -127,7 +129,7 @@ void ModulesManagement::removeModule(const QString &name)
         }
         emit modulesUpdated();
     } else {
-        callback->logWarning(tr("removeModule - No module \"%1\"").arg(name));
+        callback->logWarning(tr("[ModulesManagement::removeModule] - No module \"%1\"").arg(name));
     }
 }
 
@@ -136,7 +138,7 @@ ModulesManagement::ModuleType ModulesManagement::getModuleType(const QString &na
     if (modulesList.contains(name)) {
         return modulesList.value(name).type;
     } else {
-        callback->logError(tr("getModuleType - No module \"%1\"").arg(name));
+        callback->logError(tr("[ModulesManagement::getModuleType] - No module \"%1\"").arg(name));
     }
     return TRANSIENT;
 }
@@ -147,7 +149,7 @@ QString ModulesManagement::getModuleFileName(const QString &name)
     if (modulesList.contains(name)) {
         fileName = modulesList.value(name).fileName;
     } else {
-        callback->logError(tr("getModuleFileName - No module \"%1\"").arg(name));
+        callback->logError(tr("[ModulesManagement::getModuleFileName] - No module \"%1\"").arg(name));
     }
     return fileName;
 }
@@ -193,13 +195,14 @@ QWidget *ModulesManagement::getGui(QWidget *parent)
 
 QString ModulesManagement::addModule(QString fileName, ModulesManagement::ModuleType type)
 {
+    qDebug() << "[ModulesManagement::addModule]" << fileName;
     QString moduleName;
     QFileInfo file(fileName);
     if (file.exists()) {
         moduleName = file.fileName();
         moduleName.chop(moduleExtension.size());
         if (modulesList.contains(moduleName)) {
-            callback->logWarning(tr("A module named \"%1\" was already loaded, skipping.").arg(moduleName));
+            callback->logWarning(tr("[ModulesManagement::addModule] A module named \"%1\" was already loaded, skipping.").arg(moduleName));
         } else {
             QString path = file.absolutePath();
             if (!modulesPaths.contains(path)) {
@@ -212,14 +215,17 @@ QString ModulesManagement::addModule(QString fileName, ModulesManagement::Module
             prop.fileName = fileName;
             prop.type = type;
             modulesList.insert(moduleName,prop);
+            qDebug() << "[ModulesManagement::addModule]" << modulesList.keys();
             if (type == PERSISTENT)
                 savePersistentModules();
             emit modulesUpdated();
             callback->notifyNewTransform();
         }
     } else {
-        callback->logError(tr("File %1 does not exist").arg(fileName));
+        callback->logError(tr("[ModulesManagement::addModule] File %1 does not exist").arg(fileName));
     }
+
+    qDebug() << "[ModulesManagement::addModule] Returning";
     return moduleName;
 }
 

@@ -37,7 +37,6 @@ QString NumberToChar::description() const
 
 void NumberToChar::transform(const QByteArray &input, QByteArray &output)
 {
-    int val;
     bool ok;
     if (wayValue == TransformAbstract::INBOUND) {
         QByteArray num;
@@ -46,6 +45,7 @@ void NumberToChar::transform(const QByteArray &input, QByteArray &output)
                 num.append(input.at(i));
             }
             else {
+                int val;
                 val = num.toInt(&ok);
                 if (ok && !(val <  SCHAR_MIN || val > SCHAR_MAX )) {
                     output.append((char)val);

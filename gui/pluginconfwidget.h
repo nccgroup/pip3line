@@ -27,6 +27,7 @@ class PluginConfWidget : public QWidget
         explicit PluginConfWidget(TransformFactoryPluginInterface * plugin, QWidget *parent = 0);
         ~PluginConfWidget();
     private:
+        Q_DISABLE_COPY(PluginConfWidget)
         Ui::PluginConfWidget *ui;
         TransformFactoryPluginInterface * plugin;
 };
