@@ -95,6 +95,11 @@ HexView::~HexView()
     guiHelper = NULL;
 }
 
+ByteItemModel *HexView::getModel()
+{
+    return static_cast<ByteItemModel *>(hexTableView->model());
+}
+
 void HexView::updateStats()
 {
     // updating various stats
@@ -422,7 +427,6 @@ void HexView::onMarkMenu(QAction *action)
                 if (!name.isEmpty())
                     guiHelper->addNewMarkingColor(name,choosenColor);
                 hexTableView->markSelected(choosenColor, name);
-                emit markingStatus(dataModel->hasMarking());
             }
         }
 
@@ -431,7 +435,6 @@ void HexView::onMarkMenu(QAction *action)
         QHash<QString, QColor> colors = guiHelper->getMarkingsColor();
         if (colors.contains(name)) {
             hexTableView->markSelected(colors.value(name), name);
-            emit markingStatus(dataModel->hasMarking());
         } else {
             qCritical("Unknown marking color T_T");
         }
@@ -445,7 +448,7 @@ void HexView::onSelectFromSizeMenu(QAction *action)
         return;
     }
 
-    if (val > (byteSource->size() - 1 - hexTableView->getHigherSelected()) ) {
+    if (val > (quint64)(byteSource->size() - hexTableView->getHigherSelected()) ) {
         QString mess = tr("This size value would select out-of-bound");
         logger->logError(mess);
         QMessageBox::warning(this, tr("Value too large"), mess, QMessageBox::Ok);
@@ -462,7 +465,7 @@ void HexView::onGotoFromOffsetMenu(QAction *action)
         return;
     }
 
-    if (val > (byteSource->size() - 1 - hexTableView->getHigherSelected())) {
+    if (val > (quint64)(byteSource->size() - hexTableView->getHigherSelected())) {
         QString mess = tr("This offset value would go out-of-bound");
         logger->logError(mess);
         QMessageBox::warning(this, tr("Value too large"), mess, QMessageBox::Ok);
@@ -519,14 +522,12 @@ void HexView::onClearSelectionMarkings()
 {
     if (hexTableView->hasSelection()) {
         hexTableView->clearMarkOnSelected();
-        emit markingStatus(dataModel->hasMarking());
     }
 }
 
 void HexView::onClearAllMArkings()
 {
     dataModel->clearAllMarkings();
-    emit markingStatus(false);
 }
 
 bool HexView::goTo(qint64 offset, bool absolute, bool select)

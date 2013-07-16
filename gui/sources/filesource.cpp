@@ -1,3 +1,13 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
 #include "filesource.h"
 
 const QString FileSource::LOGID = "FileSource";
@@ -67,6 +77,14 @@ QByteArray FileSource::extract(qint64 offset, int length)
         delete [] buf;
     }
     return ret;
+}
+
+char FileSource::extract(qint64 offset)
+{
+    QByteArray ret = extract(offset, 1);
+    if (ret.isEmpty()) // error
+        return '\00';
+    return ret.at(0);
 }
 
 void FileSource::replace(qint64 offset, int length, QByteArray repData, quintptr source)

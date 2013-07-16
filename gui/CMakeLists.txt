@@ -68,6 +68,7 @@ set ( pip3line_HDRS
 	hexwidget.h
 	debugdialog.h
 	textinputdialog.h
+	comparisondialog.h
 	../tools/processor.h
 	../tools/pipeserver.h
 	../tools/streamprocessor.h
@@ -116,6 +117,7 @@ set ( pip3line_SRCS
 	hexwidget.cpp
 	debugdialog.cpp
 	textinputdialog.cpp
+	comparisondialog.cpp
 	../tools/processor.cpp
 	../tools/binaryprocessor.cpp
 	../tools/textprocessor.cpp
@@ -156,6 +158,7 @@ set ( pip3line_UIS
 	newbytedialog.ui
 	hexwidget.ui
 	debugdialog.ui
+	comparisondialog.ui
 	views/hexview.ui
 	textinputdialog.ui
 	views/textview.ui

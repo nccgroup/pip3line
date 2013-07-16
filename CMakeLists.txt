@@ -15,9 +15,14 @@ message( STATUS "Git information --" )
 execute_process(COMMAND git branch
 	OUTPUT_VARIABLE GIT_BRANCH)
 
-STRING(REGEX REPLACE "(\r?\n)+$" "" GIT_BRANCH "${GIT_BRANCH}")
-message(STATUS "Git branches: \n ${GIT_BRANCH}")
+STRING(REGEX REPLACE "^\\* ([a-zA-Z0-9]+).*" "\\1" GIT_BRANCH "${GIT_BRANCH}")
 
+if (GIT_BRANCH STREQUAL "")
+	SET(GIT_BRANCH "Unknown")
+endif()
+add_definitions(-DGIT_BRANCH=\"${GIT_BRANCH}\")
+
+message(STATUS "Git branch: ${GIT_BRANCH}")
 
 execute_process(COMMAND git rev-parse HEAD
 	OUTPUT_VARIABLE GIT_COMMIT)
@@ -26,8 +31,8 @@ STRING(REGEX REPLACE "(\r?\n)+$" "" GIT_COMMIT "${GIT_COMMIT}")
 if (GIT_COMMIT STREQUAL "")
 	SET(GIT_COMMIT "Unknown")
 endif()
-
 add_definitions(-DGIT_COMMIT=\"${GIT_COMMIT}\")
+
 message(STATUS "Building using git commit: ${GIT_COMMIT}")
 
 message( STATUS "General Configuration --" )

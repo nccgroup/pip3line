@@ -30,6 +30,7 @@ Released under AGPL see LICENSE for more information
 #include "guihelper.h"
 #include "loggerwidget.h"
 #include "views/hexview.h"
+#include "views/byteitemmodel.h"
 
 #include <QValidator>
 
@@ -60,7 +61,7 @@ class TransformWidget : public QWidget
         TransformAbstract *getTransform();
         void forceUpdating();
         bool setTransform(TransformAbstract *transf);
-        ByteSourceAbstract * getBytes() const;
+        ByteItemModel * getBytesModel();
 
     signals:
         void updated();

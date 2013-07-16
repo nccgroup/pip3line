@@ -32,6 +32,7 @@ class ByteSourceAbstract : public QObject
         virtual QByteArray getRawData();
         virtual qint64 size();
         virtual QByteArray extract(qint64 offset, int length) = 0;
+        virtual char extract(qint64 offset) = 0;
         virtual void replace(qint64 offset, int length, QByteArray repData, quintptr source = INVALID_SOURCE);
         virtual void insert(qint64 offset, QByteArray repData, quintptr source = INVALID_SOURCE);
         virtual void remove(quint64 offset, qint64 length, quintptr source = INVALID_SOURCE);

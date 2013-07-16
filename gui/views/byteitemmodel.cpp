@@ -259,7 +259,7 @@ qint64 ByteItemModel::position(const QModelIndex &index) const
 void ByteItemModel::mark(qint64 start, qint64 end, const QColor &ncolor, QString toolTip)
 {
     qint64 size = byteSource->size();
-    if (start >= 0 && end > 0 && end < size && start < size) {
+    if (start >= 0 && end >= 0 && end < size && start < size) {
         qint64 temp = start;
         start = qMin(start,end);
         end = qMax(temp, end);
@@ -267,8 +267,9 @@ void ByteItemModel::mark(qint64 start, qint64 end, const QColor &ncolor, QString
             Markings ma;
             ma.color = ncolor;
             ma.text = toolTip;
-
+            beginResetModel();
             marked.insert(i, ma);
+            endResetModel();
         }
     }
 }
@@ -276,19 +277,23 @@ void ByteItemModel::mark(qint64 start, qint64 end, const QColor &ncolor, QString
 void ByteItemModel::clearMarking(qint64 start, qint64 end)
 {
     qint64 size = byteSource->size();
-    if (start >= 0 && end > 0 && end < size && start < size) {
+    if (start >= 0 && end >= 0 && end < size && start < size) {
         qint64 temp = start;
         start = qMin(start,end);
         end = qMax(temp, end);
+        beginResetModel();
         for (qint64 i = start; i <= end; i++) {
             marked.remove(i);
         }
+        endResetModel();
     }
 }
 
 void ByteItemModel::clearAllMarkings()
 {
+    beginResetModel();
     marked.clear();
+    endResetModel();
 }
 
 bool ByteItemModel::hasMarking() const

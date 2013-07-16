@@ -28,6 +28,7 @@ Released under AGPL see LICENSE for more information
 #include "guihelper.h"
 #include "maintabs.h"
 #include "quickviewdialog.h"
+#include "comparisondialog.h"
 
 namespace Ui {
 class MainWindow;
@@ -54,6 +55,7 @@ class MainWindow : public QMainWindow
         void onImport(QAction* action);
         void onDataFromURL();
         void onQuickView();
+        void onCompare();
         void on_actionLogs_triggered();
         void updateTrayIcon();
         void onDebug();
@@ -79,6 +81,7 @@ class MainWindow : public QMainWindow
         QAction *trayIconLabel;
         QSettings *settings;
         QuickViewDialog * quickView;
+        ComparisonDialog *comparison;
         bool quickViewWasVisible;
         bool settingsWasVisible;
         QNetworkProxy networkProxy;

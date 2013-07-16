@@ -404,6 +404,7 @@ void TextView::updateText(quintptr source)
         ui->plainTextEdit->blockSignals(false);
         ui->plainTextEdit->setEnabled(false);
         ui->statsLabel->setText(QString(""));
+        ui->codecsComboBox->setStyleSheet("");
         emit invalidText();
     } else {
         if (byteSource->size() != 0) {

@@ -199,14 +199,14 @@ int TransformsGui::getBlockCount() const
     return transformWidgetList.size();
 }
 
-ByteSourceAbstract *TransformsGui::getBytesFrom(int blockIndex)
+ByteItemModel *TransformsGui::getBytesModelFrom(int blockIndex)
 {
-    if (blockIndex < 1 || blockIndex > transformWidgetList.size()) {
+    if (blockIndex < 0 || blockIndex >= transformWidgetList.size()) {
         logger->logError("[TransformsGui::getBytesFrom] index out-of-bounds");
         return NULL;
     }
 
-    return transformWidgetList.at(blockIndex - 1)->getBytes();
+    return transformWidgetList.at(blockIndex)->getBytesModel();
 }
 
 void TransformsGui::processNewTransformation(TransformWidget *transformWidget)

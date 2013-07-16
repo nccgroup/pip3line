@@ -40,6 +40,7 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     settingsDialog = NULL;
     trayIcon = NULL;
     quickView = NULL;
+    comparison = NULL;
     trayIconLabel = NULL;
 
     ui = new(std::nothrow) Ui::MainWindow();
@@ -101,8 +102,9 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    delete mainTabs;
     delete quickView;
+    delete comparison;// these two first to avoid weird bugs
+    delete mainTabs;
     delete trayIconMenu;
     logger = NULL; // no need to delete, already done by the main tab gui
     delete analyseDialog;
@@ -149,6 +151,7 @@ void MainWindow::buildToolBar()
     connect(ui->actionPip3line_settings, SIGNAL(triggered()), this, SLOT(onSettingsDialogOpen()));
     connect(ui->actionMagic, SIGNAL(triggered()), this, SLOT(onQuickView()));
     connect(ui->actionDebug_dialog, SIGNAL(triggered()), this, SLOT(onDebug()));
+    connect(ui->actionCompare, SIGNAL(triggered()), this, SLOT(onCompare()));
 
 }
 
@@ -477,6 +480,20 @@ void MainWindow::onQuickView()
 
     quickView->show();
     quickView->raise();
+}
+
+void MainWindow::onCompare()
+{
+    if (comparison == NULL) {
+        comparison= new(std::nothrow) ComparisonDialog(guiHelper, this);
+        if (comparison == NULL) {
+            qFatal("Cannot allocate memory for ComparisonDialog X{");
+            return;
+        }
+    }
+
+    comparison->show();
+    comparison->raise();
 }
 
 void MainWindow::on_actionLogs_triggered()

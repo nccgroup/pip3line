@@ -148,6 +148,7 @@ TransformWidget::~TransformWidget()
     guiHelper = NULL;
 
     delete ui;
+
 }
 
 void TransformWidget::configureViewArea() {
@@ -164,8 +165,6 @@ void TransformWidget::configureViewArea() {
     ui->tabWidget->addTab(textView,"Text");
     ui->tabWidget->addTab(hexView,"Hexadecimal");
 
-
-    ui->clearMarkingsPushButton->setEnabled(false);
     connect(ui->clearMarkingsPushButton, SIGNAL(clicked()), hexView, SLOT(onClearAllMArkings()));
 
     OffsetValidator *val = new OffsetValidator(ui->gotoLineEdit);
@@ -374,9 +373,9 @@ bool TransformWidget::setTransform(TransformAbstract * transf)  {
     return false;
 }
 
-ByteSourceAbstract *TransformWidget::getBytes() const
+ByteItemModel *TransformWidget::getBytesModel()
 {
-    return byteSource;
+    return hexView->getModel();
 }
 
 void TransformWidget::forceUpdating()

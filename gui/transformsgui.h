@@ -19,6 +19,7 @@ Released under AGPL see LICENSE for more information
 #include "guihelper.h"
 #include "transformchain.h"
 #include "sources/bytesourceabstract.h"
+#include "views/byteitemmodel.h"
 
 namespace Ui {
 class TransformsGui;
@@ -42,7 +43,7 @@ class TransformsGui : public QWidget
         void bringFront();
         void loadFromFile(QString fileName);
         int getBlockCount() const;
-        ByteSourceAbstract * getBytesFrom(int blockIndex);
+        ByteItemModel * getBytesModelFrom(int blockIndex);
 
     signals:
         void nameChanged(TransformsGui *tab);

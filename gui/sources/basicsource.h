@@ -23,6 +23,7 @@ class BasicSource : public ByteSourceAbstract
         QByteArray getRawData();
         qint64 size();
         QByteArray extract(qint64 offset, int length);
+        char extract(qint64 offset);
         void replace(qint64 offset, int length, QByteArray repData, quintptr source = INVALID_SOURCE);
         void insert(qint64 offset, QByteArray repData, quintptr source = INVALID_SOURCE);
         void remove(quint64 offset, qint64 length, quintptr source = INVALID_SOURCE);

@@ -57,6 +57,7 @@
      <string>&amp;Tools</string>
     </property>
     <addaction name="action_Analyse"/>
+    <addaction name="actionCompare"/>
     <addaction name="separator"/>
     <addaction name="actionPip3line_settings"/>
    </widget>
@@ -89,6 +90,7 @@
    <addaction name="action_Analyse"/>
    <addaction name="actionMagic"/>
    <addaction name="actionLogs"/>
+   <addaction name="actionCompare"/>
    <addaction name="separator"/>
   </widget>
   <action name="actionExit">
@@ -169,6 +171,18 @@
   <action name="actionDebug_dialog">
    <property name="text">
     <string>Debug dialog</string>
+   </property>
+  </action>
+  <action name="actionCompare">
+   <property name="icon">
+    <iconset resource="gui_res.qrc">
+     <normaloff>:/Images/icons/object-flip-horizontal.png</normaloff>:/Images/icons/object-flip-horizontal.png</iconset>
+   </property>
+   <property name="text">
+    <string>Compare</string>
+   </property>
+   <property name="toolTip">
+    <string>Compare two bytes input</string>
    </property>
   </action>
  </widget>

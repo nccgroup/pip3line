@@ -33,8 +33,8 @@ class HexView : public QWidget
     public:
         explicit HexView(ByteSourceAbstract *dataModel,GuiHelper *guiHelper, QWidget *parent = 0);
         ~HexView();
+        ByteItemModel *getModel();
     signals:
-        void markingStatus(bool hasMarking);
         void askForFileLoad();
     public slots:
         void onClearAllMArkings();

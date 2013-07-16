@@ -27,7 +27,8 @@ AboutDialog::AboutDialog(QWidget *parent) :
     QString info;
 
     info.append(tr("<p>Compiled with <b>Qt %1</b> (currently running with Qt %2)</p>").arg(QT_VERSION_STR).arg(qVersion()));
-    info.append(tr("<p>Git commit: %1</p>").arg(GIT_COMMIT));
+    info.append(tr("<p>Git branch: %1<br/>").arg(GIT_BRANCH));
+    info.append(tr("Git commit: %1</p>").arg(GIT_COMMIT));
     info.append(tr("<p>Style(s) available on this platform: <ul>"));
     QStringList stylelist = QStyleFactory::keys();
     for (int i = 0; i < stylelist.size(); i++) {

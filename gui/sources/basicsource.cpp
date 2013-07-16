@@ -61,6 +61,15 @@ QByteArray BasicSource::extract(qint64 offset, int length)
     return rawData.mid(offset,length);
 }
 
+char BasicSource::extract(qint64 offset)
+{
+    offset = qAbs(offset);
+    if (!validateOffsetAndSize(offset, 1)) {
+        return '\00';
+    }
+    return rawData.at(offset);
+}
+
 void BasicSource::replace(qint64 offset, int length, QByteArray repData, quintptr source)
 {
     if (validateOffsetAndSize(offset, length)) {

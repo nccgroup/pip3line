@@ -67,7 +67,8 @@ SOURCES += main.cpp\
     textinputdialog.cpp \
     views/textview.cpp \
     sources/filesource.cpp \
-    views/doubleviewwidget.cpp
+    views/doubleviewwidget.cpp \
+    comparisondialog.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -112,7 +113,8 @@ HEADERS  += mainwindow.h \
     views/textview.h \
     sources/filesource.h \
     crossplatform.h \
-    views/doubleviewwidget.h
+    views/doubleviewwidget.h \
+    comparisondialog.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \
@@ -137,7 +139,8 @@ FORMS    += mainwindow.ui \
     views/hexview.ui \
     textinputdialog.ui \
     views/textview.ui \
-    views/doubleviewwidget.ui
+    views/doubleviewwidget.ui \
+    comparisondialog.ui
 
 OTHER_FILES += icons/pip3line.png \
     win.rc
