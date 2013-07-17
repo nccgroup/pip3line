@@ -448,8 +448,8 @@ void HexView::onSelectFromSizeMenu(QAction *action)
         return;
     }
 
-    if (val > (quint64)(byteSource->size() - hexTableView->getHigherSelected()) ) {
-        QString mess = tr("This size value would select out-of-bound");
+    if (val >= (quint64)(byteSource->size() - hexTableView->getHigherSelected()) ) {
+        QString mess = tr("This size value would select out-of-bound (maybe the selected value is a signed int)");
         logger->logError(mess);
         QMessageBox::warning(this, tr("Value too large"), mess, QMessageBox::Ok);
     } else {
@@ -465,8 +465,8 @@ void HexView::onGotoFromOffsetMenu(QAction *action)
         return;
     }
 
-    if (val > (quint64)(byteSource->size() - hexTableView->getHigherSelected())) {
-        QString mess = tr("This offset value would go out-of-bound");
+    if (val >= (quint64)(byteSource->size() - hexTableView->getHigherSelected())) {
+        QString mess = tr("This offset value would go out-of-bound (maybe the selected value is a signed int)");
         logger->logError(mess);
         QMessageBox::warning(this, tr("Value too large"), mess, QMessageBox::Ok);
     } else {
@@ -479,7 +479,7 @@ quint64 HexView::normalizeSelectedInt(bool bigEndian)
     QByteArray bytesdata = hexTableView->getSelectedBytes();
     quint64 size = bytesdata.size(); // converting int to quint64, no drama here
     if (size > 8) {
-        QString mess = tr("Too many bytes selected for an int (max 64 bits / 8 bytes");
+        QString mess = tr("Too many bytes selected for an uint 64 (max 64 bits / 8 bytes");
         logger->logError(mess);
         QMessageBox::warning(this, tr("Too many bytes"), mess, QMessageBox::Ok);
         return 0;
