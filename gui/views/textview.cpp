@@ -389,7 +389,7 @@ void TextView::updateText(quintptr source)
         ui->codecsComboBox->setStyleSheet("");
         emit invalidText();
     } else {
-        if (byteSource->size() != 0) {
+        if (byteSource->size() > 0) {
             if (currentCodec != NULL) { //safeguard
                 QTextDecoder *decoder = currentCodec->makeDecoder(QTextCodec::ConvertInvalidToNull | QTextCodec::IgnoreHeader);
                 QString textf = decoder->toUnicode(byteSource->getRawData().constData(),byteSource->size());

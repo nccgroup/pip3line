@@ -646,7 +646,10 @@ int ByteTableView::getHigherSelected() const
 {
     QPersistentModelIndex ref = currentSelectionModel->endIndex;
     if (!ref.isValid()) {
-        return currentModel->size() -1;
+        if (currentModel->size() > 0)
+            return currentModel->size() - 1;
+        else
+            return ByteItemModel::INVALID_POSITION;
     }
 
     if (ref < currentSelectionModel->startIndex )
@@ -687,6 +690,9 @@ bool ByteTableView::hasSelection()
 
 bool ByteTableView::goTo(qint64 offset, bool absolute, bool select)
 {
+    if (currentModel->getSource()->size() <= 0) // safeguard
+        return false;
+
     qint64 startingOffset = 0;
     if (!absolute) {
         startingOffset = getCurrentPos();

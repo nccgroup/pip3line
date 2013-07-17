@@ -56,9 +56,12 @@ int ByteItemModel::size()
     qint64 lsize = byteSource->size();
     if (lsize > INT_MAX) {
         qCritical("Hitting int limit in size()");
-
         lsize = INT_MAX;
+    } else if (lsize < 0) {
+        qWarning() << tr("Bytes source size is negative [x%1]").arg((quintptr)byteSource);
+        lsize = 0;
     }
+
     return lsize;
 }
 
@@ -81,6 +84,8 @@ int ByteItemModel::rowCount(const QModelIndex & parent) const
     if (rowCountVal > INT_MAX) {
         qCritical("Hitting int limit in rowCount()");
         rowCountVal = INT_MAX;
+    } else if (rowCountVal < 0) {
+        rowCountVal = 0;
     }
     return rowCountVal;
 }
@@ -145,7 +150,7 @@ QVariant ByteItemModel::headerData(int section, Qt::Orientation orientation, int
 
 Qt::ItemFlags ByteItemModel::flags(const QModelIndex &index) const
 {
-    if (!index.isValid())
+    if (!index.isValid() || byteSource->size() <= 0)
         return Qt::ItemIsEnabled;
 
     if (index.column() >= hexColumncount)
@@ -166,6 +171,9 @@ bool ByteItemModel::setData(const QModelIndex &index, const QVariant &value, int
 
         qint64 pos = hexColumncount * index.row() + index.column();
         qint64 size = byteSource->size();
+        if (size <= 0)
+            return false;
+
         if (pos > size) {
             qint64 temp = pos - size;
             if (temp > INT_MAX) {
@@ -194,7 +202,7 @@ void ByteItemModel::setHexColumnCount(int val)
 
 QModelIndex ByteItemModel::createIndex(qint64 pos)
 {
-    if (pos >= size()) {
+    if ( pos < 0 || pos >= byteSource->size()) {
         return QAbstractTableModel::createIndex(-1, -1);
     }
     qint64 row = pos / hexColumncount;

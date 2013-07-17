@@ -106,12 +106,14 @@ void HexView::updateStats()
     QString ret("Size: ");
     int size = byteSource->size();
 
-    // Updating Hex info
-    ret.append(QString::number(size)).append("|x").append(QString::number(size,16)).append(" bytes");
-    if (size >= 1000 && size < 1000000)
-        ret.append(QString(" (%1").arg((double)size/(double)1000,0,'f',2)).append(" KiB)");
-    else if (size >= 1000000 && size < 1000000000)
-        ret.append(QString(" (%1").arg((double)size/(double)1000000,0,'f',2)).append(" MiB)");
+    if (size > 0) {
+        // Updating Hex info
+        ret.append(QString::number(size)).append("|x").append(QString::number(size,16)).append(" bytes");
+        if (size >= 1000 && size < 1000000)
+            ret.append(QString(" (%1").arg((double)size/(double)1000,0,'f',2)).append(" KiB)");
+        else if (size >= 1000000 && size < 1000000000)
+            ret.append(QString(" (%1").arg((double)size/(double)1000000,0,'f',2)).append(" MiB)");
+    }
 
     int scount = hexTableView->getSelectedBytesCount();
     if ( scount != 0) {
@@ -156,7 +158,7 @@ void HexView::onRightClick(QPoint pos)
         ui->clearMarkingsAction->setEnabled(dataModel->hasMarking());
     }
 
-    if (byteSource->size() == 0) {
+    if (byteSource->size() <= 0) {
         ui->selectAllAction->setEnabled(false);
     } else {
         ui->selectAllAction->setEnabled(true);
@@ -448,7 +450,8 @@ void HexView::onSelectFromSizeMenu(QAction *action)
         return;
     }
 
-    if (val >= (quint64)(byteSource->size() - hexTableView->getHigherSelected()) ) {
+    qint64 inter = byteSource->size() - hexTableView->getHigherSelected();
+    if (val >= (quint64)(inter < 0 ? 0 : inter) ) {
         QString mess = tr("This size value would select out-of-bound (maybe the selected value is a signed int)");
         logger->logError(mess);
         QMessageBox::warning(this, tr("Value too large"), mess, QMessageBox::Ok);
@@ -465,7 +468,8 @@ void HexView::onGotoFromOffsetMenu(QAction *action)
         return;
     }
 
-    if (val >= (quint64)(byteSource->size() - hexTableView->getHigherSelected())) {
+    qint64 inter = byteSource->size() - hexTableView->getHigherSelected();
+    if (val >= (quint64)(inter < 0 ? 0 : inter)) {
         QString mess = tr("This offset value would go out-of-bound (maybe the selected value is a signed int)");
         logger->logError(mess);
         QMessageBox::warning(this, tr("Value too large"), mess, QMessageBox::Ok);
