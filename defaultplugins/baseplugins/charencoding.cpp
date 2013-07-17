@@ -12,6 +12,8 @@ Released under AGPL see LICENSE for more information
 #include "confgui/charencodingwidget.h"
 #include <QTextStream>
 #include <QTextCodec>
+#include <QTextEncoder>
+#include <QTextDecoder>
 #include <QtAlgorithms>
 
 const QString CharEncoding::id = "Char encoding";
@@ -101,9 +103,17 @@ void CharEncoding::transform(const QByteArray &input, QByteArray &output) {
 
     if (wayValue == TransformAbstract::INBOUND) {
         QString init = QString::fromUtf8(input);
-        output = codec->fromUnicode(init);
+        QTextEncoder *encoder = codec->makeEncoder(QTextCodec::ConvertInvalidToNull);
+        output = encoder->fromUnicode(init);
+        if (encoder->hasFailure()) {
+            emit error(tr("Errors were encountered while encoding"),id);
+        }
     } else {
-        output = codec->toUnicode(input).toUtf8();
+        QTextDecoder *decoder = codec->makeDecoder(QTextCodec::ConvertInvalidToNull);
+        output = decoder->toUnicode(input).toUtf8();
+        if (decoder->hasFailure()) {
+            emit error(tr("Errors were encountered while decoding"),id);
+        }
     }
 }
 

@@ -10,9 +10,12 @@ Released under AGPL see LICENSE for more information
 
 #include "randomcase.h"
 #include "confgui/randomcasewidget.h"
+#include <QTime>
+#include <QDebug>
 
 RandomCase::RandomCase()
 {
+
 }
 
 const QString RandomCase::id = "Random Case";
@@ -45,10 +48,12 @@ void RandomCase::reRandomize()
 
 void RandomCase::transform(const QByteArray &input, QByteArray &output) {
     output.clear();
+    qsrand(QTime::currentTime().msec()); // non cryptographic quality, boo
     QByteArray temp;
     for (int i = 0; i < input.size(); i++) {
         temp.append(input.at(i));
-        output.append((qrand() % 2 == 0) ? temp.toUpper() : temp.toLower());
+        int rval = qrand();
+        output.append((rval % 2 == 0) ? temp.toUpper() : temp.toLower());
         temp.clear();
     }
 }

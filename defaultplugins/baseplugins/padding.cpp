@@ -10,6 +10,8 @@ Released under AGPL see LICENSE for more information
 
 #include "padding.h"
 #include "confgui/paddingwidget.h"
+#include <QTime>
+#include <QDebug>
 
 const QString Padding::id = "Padding";
 
@@ -113,14 +115,16 @@ int Padding::getBlocksize()
 void Padding::setPadChar(char val)
 {
     padChar = val;
-    choosenVariant = CUSTOM;
     emit confUpdated();
 }
 
 void Padding::setVariant(Padding::PaddingVariant val)
 {
-    choosenVariant = val;
-    emit confUpdated();
+    if (choosenVariant != val) {
+        choosenVariant = val;
+        emit confUpdated();
+        qDebug() << "setting " << choosenVariant;
+    }
 }
 
 bool Padding::setBlockSize(int val)
@@ -141,6 +145,7 @@ void Padding::transform(const QByteArray &input, QByteArray &output) {
     if (paddingLength < 1)
         return;
 
+            qDebug() << "transform " << choosenVariant;
     switch (choosenVariant) {
         case ZERO:
             for (int i = 0; i < paddingLength; i++)
@@ -152,6 +157,7 @@ void Padding::transform(const QByteArray &input, QByteArray &output) {
             output.append((char)paddingLength);
             break;
         case ISO:
+            qsrand(QTime::currentTime().msec()); // non cryptographic quality, boo
             for (int i = 0; i < paddingLength; i++)
                 output.append((char)(qrand()) % 255);
             break;

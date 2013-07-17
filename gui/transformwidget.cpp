@@ -629,11 +629,6 @@ void TransformWidget::on_infoPushButton_clicked()
     infoDialog->setVisible(true);
 }
 
-void TransformWidget::on_clearMarkingsPushButton_clicked()
-{
-    ui->clearMarkingsPushButton->setEnabled(false);
-}
-
 void TransformWidget::on_clearDataPushButton_clicked()
 {
     byteSource->clear();

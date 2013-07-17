@@ -97,7 +97,6 @@ class TransformWidget : public QWidget
         void on_decodeRadioButton_toggled(bool checked);
         void on_deleteButton_clicked();
         void on_infoPushButton_clicked();
-        void on_clearMarkingsPushButton_clicked();
         void on_clearDataPushButton_clicked();
         void onGoToOffset(bool select = false);
         void onSearch(int modifiers);

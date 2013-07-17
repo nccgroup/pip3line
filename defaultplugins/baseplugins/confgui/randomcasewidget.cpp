@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "randomcasewidget.h"
 #include "ui_randomcasewidget.h"
+#include <QDebug>
 
 RandomCaseWidget::RandomCaseWidget(RandomCase *ntransform, QWidget *parent) :
     QWidget(parent)

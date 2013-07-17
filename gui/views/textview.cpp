@@ -194,7 +194,13 @@ void TextView::onRightClick(QPoint pos)
     sendToMenu->setEnabled(hasTextSelection);
     copyMenu->setEnabled(hasTextSelection);
     keepOnlySelectedAction->setEnabled(hasTextSelection);
-    saveToFileAction->setEnabled(!ui->plainTextEdit->toPlainText().isEmpty());
+    if (ui->plainTextEdit->toPlainText().isEmpty()) {
+        saveToFileAction->setEnabled(false);
+        selectAllAction->setEnabled(false);
+    } else {
+        saveToFileAction->setEnabled(true);
+        selectAllAction->setEnabled(true);
+    }
     globalContextMenu->exec(this->mapToGlobal(pos));
 }
 

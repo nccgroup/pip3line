@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "paddingwidget.h"
 #include "ui_paddingwidget.h"
+#include <QDebug>
 
 PaddingWidget::PaddingWidget(Padding *ntransform, QWidget *parent) :
     QWidget(parent)

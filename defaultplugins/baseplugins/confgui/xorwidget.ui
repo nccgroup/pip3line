@@ -58,8 +58,14 @@
       <string>Xor algorithm</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_4">
-      <item>
+      <item alignment="Qt::AlignHCenter">
        <widget class="QComboBox" name="typeComboBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <item>
          <property name="text">
           <string>Classic</string>

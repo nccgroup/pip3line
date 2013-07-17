@@ -148,6 +148,8 @@ void HexView::onRightClick(QPoint pos)
         markMenu->setEnabled(false);
         ui->clearMarkingsAction->setEnabled(false);
         replaceMenu->setEnabled(false);
+        selectFromSizeMenu->setEnabled(false);
+        gotoFromOffsetMenu->setEnabled(false);
     } else {
         copyMenu->setEnabled(true);
         ui->deleteSelectionAction->setEnabled(true);
@@ -155,13 +157,17 @@ void HexView::onRightClick(QPoint pos)
         sendToMenu->setEnabled(true);
         markMenu->setEnabled(true);
         replaceMenu->setEnabled(true);
+        selectFromSizeMenu->setEnabled(true);
+        gotoFromOffsetMenu->setEnabled(true);
         ui->clearMarkingsAction->setEnabled(dataModel->hasMarking());
     }
 
     if (byteSource->size() <= 0) {
         ui->selectAllAction->setEnabled(false);
+        ui->saveToFileAction->setEnabled(false);
     } else {
         ui->selectAllAction->setEnabled(true);
+        ui->saveToFileAction->setEnabled(true);
     }
 
     globalContextMenu->exec(this->mapToGlobal(pos));
