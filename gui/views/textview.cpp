@@ -17,8 +17,10 @@ Released under AGPL see LICENSE for more information
 #include <QFileDialog>
 #include <QTextCodec>
 #include <QMessageBox>
-
+#include <QTextDocumentFragment>
 #include <QTimer>
+#include <QTextEncoder>
+#include <QTextDecoder>
 
 RenderTextView::RenderTextView(QObject *parent) :
     QThread(parent)
@@ -109,8 +111,6 @@ TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidg
     selectAllAction = NULL;
     keepOnlySelectedAction = NULL;
     currentCodec = NULL;
-    encoder = NULL;
-    decoder = NULL;
     ui->setupUi(this);
 
     //qDebug() << "Created" << this;
@@ -164,8 +164,6 @@ TextView::~TextView()
     delete selectAllAction;
     delete keepOnlySelectedAction;
     delete globalContextMenu;
-    delete encoder;
-    delete decoder;
     delete ui;
     logger = NULL;
     guiHelper = NULL;
@@ -207,15 +205,13 @@ void TextView::onLoad(QAction * action)
 
 void TextView::onCopy(QAction *action)
 {
-    guiHelper->copyAction(action->text(), encoder->fromUnicode(ui->plainTextEdit->textCursor().selectedText()));
-    checkForEncodingError();
+    guiHelper->copyAction(action->text(), encode(ui->plainTextEdit->textCursor().selection().toPlainText()));
 }
 
 void TextView::onSaveToFile()
 {
     if (ui->plainTextEdit->textCursor().hasSelection()) {
-        guiHelper->saveToFileAction(encoder->fromUnicode(ui->plainTextEdit->textCursor().selectedText()),this);
-        checkForEncodingError();
+        guiHelper->saveToFileAction(encode(ui->plainTextEdit->textCursor().selection().toPlainText()),this);
     }
     else
         guiHelper->saveToFileAction(byteSource->getRawData(),this);
@@ -228,19 +224,19 @@ void TextView::onLoadFile()
 
 void TextView::onSendToTab(QAction * action)
 {
+    QByteArray dataToSend = encode(ui->plainTextEdit->textCursor().selection().toPlainText());
+
     if (action == sendToNewTabAction) {
-        guiHelper->sendToNewTab(encoder->fromUnicode(ui->plainTextEdit->textCursor().selectedText()));
+        guiHelper->sendToNewTab(dataToSend);
     } else {
         if (sendToTabMapping.contains(action)) {
             TransformsGui * tg = sendToTabMapping.value(action);
-            tg->setData(encoder->fromUnicode(ui->plainTextEdit->textCursor().selectedText()));
+            tg->setData(dataToSend);
             tg->bringFront();
         } else {
             logger->logError(tr("Tab not found for sending"));
         }
     }
-
-    checkForEncodingError();
 }
 
 void TextView::onSelectAll()
@@ -250,21 +246,18 @@ void TextView::onSelectAll()
 
 void TextView::onKeepOnlySelection()
 {
-    QString newText = ui->plainTextEdit->textCursor().selectedText();
+    QString newText = ui->plainTextEdit->textCursor().selection().toPlainText();
     ui->plainTextEdit->clear();
     ui->plainTextEdit->appendPlainText(newText);
 }
 
 void TextView::onCodecChange(QString codecName)
 {
-    currentCodec = QTextCodec::codecForName(codecName.toUtf8());
-    if (currentCodec == NULL) {
+    QTextCodec *codec = QTextCodec::codecForName(codecName.toUtf8());
+    if (codec == NULL) {
        logger->logError(tr("Cannot found the text codec: %1. Ignoring request.").arg(codecName),LOGID);
     } else {
-        delete encoder;
-        delete decoder;
-        encoder = currentCodec->makeEncoder(QTextCodec::ConvertInvalidToNull | QTextCodec::IgnoreHeader);
-        decoder = currentCodec->makeDecoder(QTextCodec::ConvertInvalidToNull | QTextCodec::IgnoreHeader);
+        currentCodec = codec;
         updateText(0);
     }
 }
@@ -375,20 +368,9 @@ void TextView::buildContextMenu()
 
 }
 
-void TextView::checkForEncodingError()
-{
-    if (encoder->hasFailure()) {
-        logger->logError(tr("Some error(s) occured during the encoding process [%1]").arg(QString::fromUtf8(currentCodec->name())),LOGID);
-        ui->codecsComboBox->setStyleSheet(GuiStyles::ComboBoxError);
-    } else {
-        ui->codecsComboBox->setStyleSheet("");
-    }
-}
-
 void TextView::onTextChanged()
 {
-    byteSource->setData(encoder->fromUnicode(ui->plainTextEdit->toPlainText()),(quintptr) this);
-    checkForEncodingError();
+    byteSource->setData(encode(ui->plainTextEdit->toPlainText()),(quintptr) this);
     updateStats();
 }
 
@@ -408,14 +390,20 @@ void TextView::updateText(quintptr source)
         emit invalidText();
     } else {
         if (byteSource->size() != 0) {
-            QString textf = decoder->toUnicode(byteSource->getRawData().constData(),byteSource->size());
-            if (decoder->hasFailure()) {
-                logger->logError(tr("TextView: invalid text decoding [%1]").arg(QString::fromUtf8(currentCodec->name())));
-                ui->codecsComboBox->setStyleSheet(GuiStyles::ComboBoxError);
+            if (currentCodec != NULL) { //safeguard
+                QTextDecoder *decoder = currentCodec->makeDecoder(QTextCodec::ConvertInvalidToNull | QTextCodec::IgnoreHeader);
+                QString textf = decoder->toUnicode(byteSource->getRawData().constData(),byteSource->size());
+                if (decoder->hasFailure()) {
+                    logger->logError(tr("invalid text decoding [%1]").arg(QString::fromUtf8(currentCodec->name())),LOGID);
+                    ui->codecsComboBox->setStyleSheet(GuiStyles::ComboBoxError);
+                } else {
+                    ui->codecsComboBox->setStyleSheet("");
+                }
+                delete decoder;
+                renderThread->setDataForRendering(textf);
             } else {
-                ui->codecsComboBox->setStyleSheet("");
+                logger->logError(tr(":updatedText() currentCodec is NULL T_T"),LOGID);
             }
-            renderThread->setDataForRendering(textf);
         } else {
             ui->plainTextEdit->blockSignals(false);
             ui->plainTextEdit->setEnabled(true);
@@ -453,8 +441,8 @@ void TextView::updateStats()
         if (cursor.hasSelection()){
             size = cursor.selectionEnd() - cursor.selectionStart();
             // that should not be here but that's just easier as updateStats is
-            // alled everytime the selection change anyway
-            guiHelper->sendNewSelection(cursor.selectedText().toUtf8());
+            // called everytime the selection change anyway
+            guiHelper->sendNewSelection(encode(cursor.selection().toPlainText()));
         }
         // updating text info
         QString ret = "Size: ";
@@ -501,5 +489,25 @@ bool TextView::eventFilter(QObject *obj, QEvent *event)
 
     return QWidget::eventFilter(obj, event);
 
+}
+
+QByteArray TextView::encode(QString text)
+{
+    QByteArray ret;
+    if (currentCodec != NULL) { // safeguard
+        QTextEncoder *encoder = currentCodec->makeEncoder(QTextCodec::ConvertInvalidToNull | QTextCodec::IgnoreHeader);
+
+        ret = encoder->fromUnicode(text);
+        if (encoder->hasFailure()) {
+            logger->logError(tr("Some error(s) occured during the encoding process [%1]").arg(QString::fromUtf8(currentCodec->name())),LOGID);
+            ui->codecsComboBox->setStyleSheet(GuiStyles::ComboBoxError);
+        } else {
+            ui->codecsComboBox->setStyleSheet("");
+        }
+        delete encoder;
+    }  else {
+        logger->logError(tr(":encode() currentCodec is NULL T_T"),LOGID);
+    }
+    return ret;
 }
 

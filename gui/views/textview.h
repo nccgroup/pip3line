@@ -15,8 +15,6 @@ Released under AGPL see LICENSE for more information
 #include <QMenu>
 #include <QAction>
 #include <QHash>
-#include <QTextEncoder>
-#include <QTextDecoder>
 #include "../transformsgui.h"
 #include "../sources/bytesourceabstract.h"
 #include "../guihelper.h"
@@ -93,6 +91,7 @@ class TextView : public QWidget
         void buildContextMenu();
         void checkForEncodingError();
         bool eventFilter(QObject *obj, QEvent *event);
+        QByteArray encode(QString text);
         static const int MAX_TEXT_VIEW;
         static const QString DEFAULT_CODEC;
         static const QString LOGID;
@@ -112,8 +111,6 @@ class TextView : public QWidget
         GuiHelper *guiHelper;
         LoggerWidget *logger;
 
-        QTextEncoder *encoder;
-        QTextDecoder *decoder;
         QTextCodec *currentCodec;
 };
 
