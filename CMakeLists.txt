@@ -15,7 +15,8 @@ message( STATUS "Git information --" )
 execute_process(COMMAND git branch
 	OUTPUT_VARIABLE GIT_BRANCH)
 
-STRING(REGEX REPLACE "^\\* ([a-zA-Z0-9]+).*" "\\1" GIT_BRANCH "${GIT_BRANCH}")
+STRING(REGEX REPLACE ".*\\* ([a-zA-Z0-9]+)\n.*" "\\1" GIT_BRANCH "${GIT_BRANCH}")
+STRING(REGEX REPLACE "\n" "" GIT_BRANCH "${GIT_BRANCH}")
 
 if (GIT_BRANCH STREQUAL "")
 	SET(GIT_BRANCH "Unknown")
