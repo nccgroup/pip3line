@@ -15,7 +15,7 @@ Released under AGPL see LICENSE for more information
 
 #ifdef Q_OS_LINUX
 #ifdef BUILD_PYTHON_3
-#include <python3.2/Python.h>
+#include <python3.3/Python.h>
 #else
 #include <python2.7/Python.h>
 #endif // BUILD_PYTHON_X
@@ -38,6 +38,8 @@ class PythonTransform : public ScriptTransformAbstract
         bool setModuleFile(const QString &fileName);
         QString inboundString() const;
         QString outboundString() const;
+    private Q_SLOTS:
+        bool reloadModule();
     Q_SIGNALS:
         void pythonError();
     private:
@@ -48,7 +50,7 @@ class PythonTransform : public ScriptTransformAbstract
         static const char * PARAMS_ATTR_NAME;
         static const char * PARAMS_NAMES_ATTR_NAME;
         bool loadModule();
-        bool checkPyObject(PyObject * obj);
+        bool checkPyError();
         PyObject * pModule;
         bool twoWays;
 };

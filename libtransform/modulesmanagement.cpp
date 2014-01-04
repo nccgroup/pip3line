@@ -9,8 +9,11 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "modulesmanagement.h"
+#include "modulesmanagementwidget.h"
+#include "pip3linecallback.h"
 #include <QFileInfo>
 #include <QDebug>
+#include <QWidget>
 #include <QDir>
 #include <QHashIterator>
 
@@ -57,6 +60,8 @@ ModulesManagement::ModulesManagement(const QString &nlangName, const QString &ex
     for (int i = 0; i < list.size(); i++) {
         addModule(list.at(i),PERSISTENT);
     }
+
+    savePersistentModules(); // to remove any erronous module from the persistent storage
 }
 
 ModulesManagement::~ModulesManagement()

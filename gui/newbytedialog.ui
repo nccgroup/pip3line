@@ -69,7 +69,7 @@
   <customwidget>
    <class>HexWidget</class>
    <extends>QWidget</extends>
-   <header>hexwidget.h</header>
+   <header>shared/hexwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

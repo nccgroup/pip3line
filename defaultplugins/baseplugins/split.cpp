@@ -19,6 +19,8 @@ Split::Split()
     separator = ':';
     group = 0;
     allGroup = false;
+    trimBlank = true;
+    processLineByLine = true;
 }
 
 Split::~Split()
@@ -38,25 +40,39 @@ QString Split::description() const
 void Split::transform(const QByteArray &input, QByteArray &output)
 {
     output.clear();
-    QTextStream soutput(&output);
+    QList<QByteArray> lines;
+    QByteArray temp;
+    if (processLineByLine) {
+        lines = input.split('\n');
+    } else
+        lines.append(input);
 
-    QList<QByteArray> list = input.split(separator);
-
-    if (list.size() > 1 && allGroup) {
-        for (int i = 0; i < list.size() - 1 ; i++) {
-            if (!list.at(i).isEmpty())
-                soutput << list.at(i) << endl;
+    for (int j = 0; j < lines.size(); j++) {
+        QList<QByteArray> list = lines.at(j).split(separator);
+        if (list.size() > 1) {
+            if (allGroup) {
+                for (int i = 0; i < list.size() - 1 ; i++) {
+                    if (!list.at(i).isEmpty()) {
+                        temp = list.at(i);
+                        appendingToOutput(output,temp);
+                    }
+                }
+                temp = list.at(list.size() - 1);
+                appendingToOutput(output,temp);
+            } else {
+                if (group > list.size() - 1) {
+                    emit error(tr("Only %1 group(s) found, cannot return group number %2").arg(list.size()).arg(group),id);
+                } else {
+                    temp = list.at(group);
+                    appendingToOutput(output,temp);
+                }
+            }
+        } else if (list.size() == 1){
+            temp = list.at(0);
+            appendingToOutput(output,temp);
         }
-            soutput << list.at(list.size() - 1);
-    } else if (list.size() > 1) {
-        if (group > list.size() - 1) {
-            emit error(tr("Only %1 group(s) found, cannot return group number %2").arg(list.size()).arg(group),id);
-        } else {
-            soutput << list.at(group);
-        }
-    } else {
-        emit warning("No separator found",id);
     }
+    output.chop(1);
 }
 
 bool Split::isTwoWays()
@@ -70,6 +86,8 @@ QHash<QString, QString> Split::getConfiguration()
     properties.insert(XMLSEPARATOR,saveChar(separator));
     properties.insert(XMLGROUP,QString::number((int)group));
     properties.insert(XMLEVERYTHING,QString::number(allGroup ? 1 : 0));
+    properties.insert(XMLPROCESSLINEBYLINE,QString::number(processLineByLine ? 1 : 0));
+    properties.insert(XMLCLEAN,QString::number(trimBlank ? 1 : 0));
 
     return properties;
 }
@@ -104,6 +122,22 @@ bool Split::setConfiguration(QHash<QString, QString> propertiesList)
         setTakeAllGroup(val == 1);
     }
 
+    val = propertiesList.value(XMLPROCESSLINEBYLINE).toInt(&ok);
+    if (!ok || (val != 0 && val != 1)) {
+        res = false;
+        emit error(tr("Invalid value for %1").arg(XMLPROCESSLINEBYLINE),id);
+    } else {
+        setProcessLineByLine(val == 1);
+    }
+
+    val = propertiesList.value(XMLCLEAN).toInt(&ok);
+    if (!ok || (val != 0 && val != 1)) {
+        res = false;
+        emit error(tr("Invalid value for %1").arg(XMLCLEAN),id);
+    } else {
+        setTrimBlank(val == 1);
+    }
+
     return res;
 }
 
@@ -123,19 +157,29 @@ QString Split::help() const
     return help;
 }
 
-char Split::getSeparator()
+char Split::getSeparator() const
 {
     return separator;
 }
 
-int Split::getSelectedGroup()
+int Split::getSelectedGroup() const
 {
     return group;
 }
 
-bool Split::doWeTakeAllGroup()
+bool Split::doWeTakeAllGroup() const
 {
     return allGroup;
+}
+
+bool Split::isTrimmingBlank() const
+{
+    return trimBlank;
+}
+
+bool Split::isProcessingLineByLine() const
+{
+    return processLineByLine;
 }
 
 void Split::setSeparator(char val)
@@ -163,6 +207,33 @@ void Split::setTakeAllGroup(bool val)
     if (allGroup != val) {
         allGroup = val;
         emit confUpdated();
+    }
+}
+
+void Split::setTrimBlank(bool val)
+{
+    if (trimBlank != val) {
+        trimBlank = val;
+        emit confUpdated();
+    }
+}
+
+void Split::setProcessLineByLine(bool val)
+{
+    if (processLineByLine != val) {
+        processLineByLine = val;
+        emit confUpdated();
+    }
+}
+
+void Split::appendingToOutput(QByteArray &out, QByteArray &val)
+{
+    if (trimBlank)
+        val = val.trimmed();
+
+    if (!val.isEmpty()) {
+        out.append(val);
+        out.append('\n');
     }
 }
 

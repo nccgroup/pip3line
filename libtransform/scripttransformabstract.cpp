@@ -22,6 +22,7 @@ ScriptTransformAbstract::ScriptTransformAbstract(ModulesManagement *mmanagement,
 {
     type = ModulesManagement::TRANSIENT;
     moduleManagement = mmanagement;
+    autoReload = true;
 
     if (!modulename.isEmpty()) {
         moduleName = modulename;
@@ -57,6 +58,7 @@ QHash<QString, QString> ScriptTransformAbstract::getConfiguration()
     }
     properties.insert(PROP_MODULE_PARAMS, QString::fromUtf8(serialized));
     properties.insert(PROP_SCRIPT, QString::fromUtf8(moduleFileName.toUtf8().toBase64()));
+    properties.insert(XMLAUTORELOAD, QString::number(autoReload ?  1 : 0));
 
     return properties;
 }
@@ -102,6 +104,15 @@ bool ScriptTransformAbstract::setConfiguration(QHash<QString, QString> propertie
                 }
             }
         }
+    }
+
+    bool ok = false;
+    int val = propertiesList.value(XMLAUTORELOAD).toInt(&ok);
+    if (!ok || (val != 0 && val != 1)) {
+        res = false;
+        emit error(tr("Invalid value for %1").arg(XMLAUTORELOAD),moduleManagement->getLangName());
+    } else {
+        setAutoReload(val == 1);
     }
 
     return res;
@@ -161,5 +172,17 @@ void ScriptTransformAbstract::setParameters(QHash<QByteArray, QByteArray> newPar
 {
     parameters = newParams;
     emit confUpdated();
+}
+
+void ScriptTransformAbstract::setAutoReload(bool val)
+{
+        autoReload = val;
+    if (autoReload)
+        reloadModule();
+}
+
+bool ScriptTransformAbstract::isAutoReload() const
+{
+    return autoReload;
 }
 

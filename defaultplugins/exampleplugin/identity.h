@@ -14,7 +14,9 @@ Released under AGPL see LICENSE for more information
 #include <transformabstract.h>
 
 // Example Transform class which will return the input as the output
-// nothing really exiting, more detailed comments in the cpp file.
+// nothing really exciting, more detailed comments in the cpp file.
+
+class QWidget;
 
 class Identity : public TransformAbstract
 {

@@ -16,12 +16,16 @@ Released under AGPL see LICENSE for more information
 const QString DistormTransf::id = "Distorm";
 const QString DistormTransf::XMLASMTYPE = "AsmType";
 const QString DistormTransf::XMLMAXINSTRUCTION = "MaxInstruction";
+const QString DistormTransf::XMLSHOWOFFSET = "ShowOffset";
+const QString DistormTransf::XMLSHOWOPCODES = "ShowOpcodes";
 
 DistormTransf::DistormTransf()
 {
     codeOffset = 0;
     asmType = A32Bits;
     maxInstruction = 200;
+    showoffset = false;
+    showopcodes = false;
 }
 
 DistormTransf::~DistormTransf()
@@ -40,7 +44,7 @@ QString DistormTransf::description() const
 
 void DistormTransf::transform(const QByteArray &input, QByteArray &output)
 {
-    QByteArray offset;
+    QByteArray temp;
     _DecodeType dt = Decode32Bits;
     int maxOffsetSize = sizeof(_OffsetType);
     switch (asmType) {
@@ -62,24 +66,42 @@ void DistormTransf::transform(const QByteArray &input, QByteArray &output)
     unsigned int decodedInstruction = 0;
 
     _DecodedInst * resultInstr = new _DecodedInst[maxInstruction];
+#ifdef SUPPORT_64BIT_OFFSET
     _DecodeResult result = distorm_decode64((_OffsetType)codeOffset, (const unsigned char*)input.constData(), input.size(), dt, resultInstr, maxInstruction, &decodedInstruction);
+#else
+    _DecodeResult result = distorm_decode32((_OffsetType)codeOffset, (const unsigned char*)input.constData(), input.size(), dt, resultInstr, maxInstruction, &decodedInstruction);
+#endif
     if (result == DECRES_SUCCESS || result == DECRES_MEMORYERR) {
         if (result == DECRES_MEMORYERR) {
             emit error(tr("Result instruction array not big enough (%1)").arg(maxInstruction), id);
         }
 
+
+        int entrySize = 0;
         for (uint i = 0; i < decodedInstruction; i++) {
             _DecodedInst instruction = resultInstr[i];
 
-            output.append("0x");
-            offset = QByteArray::number((qulonglong)instruction.offset,16);
-
-            int offsetSize = offset.size();
-            for (int j = 0; j < maxOffsetSize - offsetSize; j++) {
-                offset.prepend('0');
+            if (showoffset) {
+                output.append("0x");
+                temp = QByteArray::number((qulonglong)instruction.offset,16);
+                entrySize = temp.size();
+                for (int j = 0; j < maxOffsetSize - entrySize; j++) {
+                    temp.prepend('0');
+                }
+                output.append(temp);
+                output.append(' ');
             }
-            output.append(offset);
-            output.append(' ');
+
+            if (showopcodes) {
+                temp = QByteArray((char *)instruction.instructionHex.p,instruction.instructionHex.length);
+                entrySize = temp.size();
+                for (int j = 0; j < maxOffsetSize + 2 - entrySize; j++) {
+                    temp.append(' ');
+                }
+                output.append(temp);
+                output.append(' ');
+            }
+
             output.append((char *)instruction.mnemonic.p,instruction.mnemonic.length);
             output.append(' ');
             output.append((char *)instruction.operands.p,instruction.operands.length);
@@ -106,6 +128,8 @@ QHash<QString, QString> DistormTransf::getConfiguration()
     properties.insert(XMLOFFSET,QString::number(codeOffset));
     properties.insert(XMLASMTYPE, QString::number(asmType));
     properties.insert(XMLMAXINSTRUCTION,QString::number(maxInstruction));
+    properties.insert(XMLSHOWOFFSET,QString::number(showoffset ? 1 : 0));
+    properties.insert(XMLSHOWOPCODES,QString::number(showopcodes ? 1 : 0));
     return properties;
 }
 
@@ -138,6 +162,22 @@ bool DistormTransf::setConfiguration(QHash<QString, QString> propertiesList)
         emit error(tr("Invalid value for %1").arg(XMLMAXINSTRUCTION),id);
     } else {
         setMaxInstruction(val2);
+    }
+
+    val1 = propertiesList.value(XMLSHOWOFFSET).toInt(&ok);
+    if (!ok || (val1 != 0 && val1 != 1)) {
+        res = false;
+        emit error(tr("Invalid value for %1").arg(XMLSHOWOFFSET),id);
+    } else {
+        setShowOffset(val1 == 1);
+    }
+
+    val1 = propertiesList.value(XMLSHOWOPCODES).toInt(&ok);
+    if (!ok || (val1 != 0 && val1 != 1)) {
+        res = false;
+        emit error(tr("Invalid value for %1").arg(XMLSHOWOPCODES),id);
+    } else {
+        setShowOpcodes(val1 == 1);
     }
 
     return res;
@@ -191,5 +231,31 @@ void DistormTransf::setMaxInstruction(uint val)
 uint DistormTransf::getMaxInstruction() const
 {
     return maxInstruction;
+}
+
+void DistormTransf::setShowOffset(bool val)
+{
+    if (showoffset != val) {
+        showoffset = val;
+        emit confUpdated();
+    }
+}
+
+bool DistormTransf::getShowOffset() const
+{
+    return showoffset;
+}
+
+void DistormTransf::setShowOpcodes(bool val)
+{
+    if (showopcodes != val) {
+        showopcodes = val;
+        emit confUpdated();
+    }
+}
+
+bool DistormTransf::getShowOpcodes() const
+{
+    return showopcodes;
 }
 

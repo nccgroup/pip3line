@@ -13,37 +13,48 @@ Released under AGPL see LICENSE for more information
 
 #include "bytesourceabstract.h"
 
+class BasicSearch : public SearchAbstract {
+    Q_OBJECT
+    public:
+        BasicSearch(QByteArray *data, QObject *parent = 0);
+        ~BasicSearch();
+    private:
+        void internalStart();
+        QByteArray *sdata;
+};
+
 class BasicSource : public ByteSourceAbstract
 {
         Q_OBJECT
     public:
         BasicSource(QObject *parent = 0);
         ~BasicSource();
+        QString description();
+        QString name();
         void setData(QByteArray data, quintptr source = INVALID_SOURCE);
         QByteArray getRawData();
-        qint64 size();
-        QByteArray extract(qint64 offset, int length);
-        char extract(qint64 offset);
-        void replace(qint64 offset, int length, QByteArray repData, quintptr source = INVALID_SOURCE);
-        void insert(qint64 offset, QByteArray repData, quintptr source = INVALID_SOURCE);
-        void remove(quint64 offset, qint64 length, quintptr source = INVALID_SOURCE);
+        quint64 size();
+        QByteArray extract(quint64 offset, int length);
+        char extract(quint64 offset);
+        void replace(quint64 offset, int length, QByteArray repData, quintptr source = INVALID_SOURCE);
+        void insert(quint64 offset, QByteArray repData, quintptr source = INVALID_SOURCE);
+        void remove(quint64 offset, int length, quintptr source = INVALID_SOURCE);
         void clear(quintptr source = INVALID_SOURCE);
-        bool contains(char c);
-        bool historyForward();
-        bool historyBackward();
+        int getViewOffset(quint64 realoffset);
+
+        int preferredTabType();
+        bool isOffsetValid(quint64 offset);
 
         bool isReadableText();
 
-        qint64 indexOf(QByteArray item, qint64 offset = 0);
     private:
         Q_DISABLE_COPY(BasicSource)
         static const QByteArray TEXT;
         static const QString LOGID;
-        bool validateOffsetAndSize(qint64 offset, int length);
-        void addToHistory(QByteArray &newData);
+        bool validateOffsetAndSize(quint64 offset, int length);
+        SearchAbstract *requestSearchObject(QObject *parent = 0);
         QByteArray rawData;
-        QList<QByteArray> history;
-        int currentHistoryPointer;
+        BasicSearch *bsearchObj;
 };
 
 #endif // BASICSOURCE_H

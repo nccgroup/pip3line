@@ -13,13 +13,15 @@ Released under AGPL see LICENSE for more information
 
 #include <QObject>
 #include <QThread>
-#include <QIODevice>
 #include <QTextStream>
 #include <QList>
-#include <transformmgmt.h>
+#include <QMutex>
 #include <transformchain.h>
 #include <transformabstract.h>
-#include <QMutex>
+#include "processingstats.h"
+
+class TransformMgmt;
+class QIODevice;
 
 class Processor : public QThread
 {
@@ -31,16 +33,18 @@ class Processor : public QThread
         bool configureFromFile(const QString &fileName);
         bool configureFromName(const QString &name, TransformAbstract::Way way = TransformAbstract::INBOUND);
         bool setTransformsChain(TransformChain tlist); // will dispose of the list itself
-        bool setTransformsChain(const QString &xmlConf);
+
         void setOutputMutex(QMutex * mutex);
         void setOutput(QIODevice * nout);
         void setInput(QIODevice * nin);
         void clearOutputMutex();
         void setSeparator(char c);
-        long getStatsOut();
+        ProcessingStats getStats();
         void setEncoding(bool flag);
         void setDecoding(bool flag);
         virtual void stop() {}
+    public slots:
+        bool setTransformsChain(const QString &xmlConf);
     signals:
         void error(const QString, const QString);
         void status(const QString, const QString);
@@ -56,7 +60,7 @@ class Processor : public QThread
         QIODevice *out;
         QIODevice *in;
         char separator;
-        long ocount;
+        ProcessingStats stats;
     private:
         Q_DISABLE_COPY(Processor)
         inline void clearChain();
@@ -65,6 +69,7 @@ class Processor : public QThread
         QMutex statsLock;
         bool encode;
         bool decode;
+
 };
 
 #endif // PROCESSOR_H

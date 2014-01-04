@@ -13,8 +13,9 @@ Released under AGPL see LICENSE for more information
 
 #include "exampleplugin_global.h"
 #include <transformfactoryplugininterface.h>
-#include <transformmgmt.h>
-#include <pip3linecallback.h>
+
+class Pip3lineCallback;
+class QWidget;
 
 // Nothing extravagant here, just the usual stuff: implementing all the virtual methods of the interface
 // Note: the plugin has to inherits from QObject and the interface, IN THAT ORDER.

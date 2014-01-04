@@ -13,6 +13,7 @@ Released under AGPL see LICENSE for more information
 
 #ifdef Q_OS_WIN
 #define LONG_LONG_MAX _I64_MAX
+#define ULONG_LONG_MAX _UI64_MAX
 #endif
 
 #endif // CROSSPLATFORM_H

@@ -11,49 +11,24 @@ Released under AGPL see LICENSE for more information
 #ifndef TEXTVIEW_H
 #define TEXTVIEW_H
 
-#include <QWidget>
-#include <QMenu>
-#include <QAction>
 #include <QHash>
-#include "../transformsgui.h"
-#include "../sources/bytesourceabstract.h"
-#include "../guihelper.h"
-#include "../loggerwidget.h"
-#include <QTextCodec>
-#include <QPlainTextEdit>
 #include <QMutex>
 #include <QQueue>
 #include <QSemaphore>
 #include <QThread>
 
-class RenderTextView : public QThread
-{
-        Q_OBJECT
-    public:
-        explicit RenderTextView(QObject *parent = 0);
-        ~RenderTextView();
-        void run();
-        void stop();
-    signals:
-        void startingRendering();
-        void finishedRendering();
-        void dataChunk(QString chunk);
-    public slots:
-        void setDataForRendering(const QString &text);
-    private :
-        QQueue<QString> textViewDisplayQueue;
-        int textRenderingChunkSize;
-        QSemaphore dataSem;
-        bool running;
-        QMutex runMutex;
-        QMutex dataMutex;
-};
+#include "singleviewabstract.h"
+
+class QTextCodec;
+class TabAbstract;
+class QMenu;
+class QAction;
 
 namespace Ui {
     class TextView;
 }
 
-class TextView : public QWidget
+class TextView : public SingleViewAbstract
 {
         Q_OBJECT
         
@@ -61,19 +36,17 @@ class TextView : public QWidget
         explicit TextView(ByteSourceAbstract *byteSource, GuiHelper *guiHelper, QWidget *parent = 0);
         ~TextView();
         void setModel(ByteSourceAbstract *byteSource);
-        bool search(QString item);
+        void search(QByteArray item);
 
     signals:
         void invalidText();
-        void askForFileLoad();
+        void searchStatus(bool);
 
     private slots:
         void updateSendToMenu();
         void updateImportExportMenu();
         void onTextChanged();
         void updateText(quintptr source);
-        void textRenderingStarted();
-        void textRenderingFinished();
         void reveceivingTextChunk(const QString &chunk);
         void updateStats();
         void onRightClick(QPoint pos);
@@ -104,14 +77,13 @@ class TextView : public QWidget
         QAction * sendToNewTabAction;
         QAction * selectAllAction;
         QAction * keepOnlySelectedAction;
-        QHash<QAction *, TransformsGui *> sendToTabMapping;
-        ByteSourceAbstract *byteSource;
-        RenderTextView *renderThread;
+        QHash<QAction *, TabAbstract *> sendToTabMapping;
+
         Ui::TextView *ui;
-        GuiHelper *guiHelper;
-        LoggerWidget *logger;
+
 
         QTextCodec *currentCodec;
+        bool errorNotReported;
 };
 
 #endif // TEXTVIEW_H

@@ -9,17 +9,18 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "quickviewdialog.h"
+#include "guihelper.h"
+#include "quickviewitem.h"
 #include "ui_quickviewdialog.h"
 #include <QDebug>
 
 QuickViewDialog::QuickViewDialog(GuiHelper *nguiHelper, QWidget *parent) :
-    QDialog(parent)
+    AppDialog(nguiHelper, parent)
 {
     ui = new(std::nothrow) Ui::QuickViewDialog();
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::QuickViewDialog X{");
     }
-    guiHelper = nguiHelper;
     ui->setupUi(this);
     setModal(false);
     connect(ui->addPushButton, SIGNAL(clicked()), this, SLOT(newItem()));

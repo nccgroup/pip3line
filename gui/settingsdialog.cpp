@@ -19,30 +19,35 @@ Released under AGPL see LICENSE for more information
 #include <commonstrings.h>
 #include <deleteablelistitem.h>
 #include "quickviewitemconfig.h"
+#include <transformmgmt.h>
+#include <QListWidgetItem>
+#include "guihelper.h"
+#include <QSettings>
+#include <QStandardItemModel>
 #include <QDebug>
 using namespace Pip3lineConst;
 
 const QString SettingsDialog::LOGID = "SettingsDialog";
 
 SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
-    QDialog(parent)
+    AppDialog(nhelper, parent)
 {
     ui = new(std::nothrow) Ui::SettingsDialog();
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::SettingsDialog X{");
     }
-    helper = nhelper;
-    tManager = helper->getTransformFactory();
+
+    tManager = guiHelper->getTransformFactory();
     settings = tManager->getSettingsObj();
     ui->setupUi(this);
 
-    ui->portSpinBox->setValue(helper->getDefaultPort());
-    ui->decodeCheckBox->setChecked(helper->getDefaultServerDecode());
-    ui->encodeCheckBox->setChecked(helper->getDefaultServerEncode());
-    ui->pipeNameLineEdit->setText(helper->getDefaultServerPipeName());
+    ui->portSpinBox->setValue(guiHelper->getDefaultPort());
+    ui->decodeCheckBox->setChecked(guiHelper->getDefaultServerDecode());
+    ui->encodeCheckBox->setChecked(guiHelper->getDefaultServerEncode());
+    ui->pipeNameLineEdit->setText(guiHelper->getDefaultServerPipeName());
     ui->autoUpdateCheckBox->setChecked(settings->value(SETTINGS_AUTO_UPDATE, true).toBool());
     ui->minimizeCheckBox->setChecked(settings->value(SETTINGS_MINIMIZE_TO_TRAY, true).toBool());
-    ui->hexWidget->setChar(helper->getDefaultServerSeparator());
+    ui->hexWidget->setChar(guiHelper->getDefaultServerSeparator());
 
     connect(ui->autoUpdateCheckBox, SIGNAL(toggled(bool)), this, SLOT(autoUpdateChanged(bool)));
     connect(ui->minimizeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onMinimizeChanged(bool)));
@@ -53,11 +58,12 @@ SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
     updateRegisteredList();
     updateSavedMarkingColors();
     updateImportExportFuncs();
+    updateFilter();
 
     connect(tManager, SIGNAL(savedUpdated()), this, SLOT(updateRegisteredList()));
-    connect(helper, SIGNAL(markingsUpdated()), this, SLOT(updateSavedMarkingColors()));
+    connect(guiHelper, SIGNAL(markingsUpdated()), this, SLOT(updateSavedMarkingColors()));
     connect(ui->resetMarkingsPushButton, SIGNAL(clicked()), this, SLOT(onResetMarkings()));
-    connect(helper, SIGNAL(importExportUpdated()), this, SLOT(updateImportExportFuncs()));
+    connect(guiHelper, SIGNAL(importExportUpdated()), this, SLOT(updateImportExportFuncs()));
     connect(ui->resetIEFuncsPushButton, SIGNAL(clicked()), this, SLOT(onResetImportExportFuncs()));
     connect(ui->savedListWidget, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(onSavedClicked(QListWidgetItem*)));
     connect(ui->pluginsListWidget, SIGNAL(clicked(QModelIndex)), this, SLOT(onPluginClicked(QModelIndex)));
@@ -150,7 +156,7 @@ void SettingsDialog::updateRegisteredList()
 void SettingsDialog::updateSavedMarkingColors()
 {
     ui->markingColorsListWidget->clear();
-    QHash<QString, QColor> colors = helper->getMarkingsColor();
+    QHash<QString, QColor> colors = guiHelper->getMarkingsColor();
     QHashIterator<QString, QColor> i(colors);
     while (i.hasNext()) {
         i.next();
@@ -175,7 +181,7 @@ void SettingsDialog::updateSavedMarkingColors()
 void SettingsDialog::updateImportExportFuncs()
 {
     ui->importExportListWidget->clear();
-    QStringList list = helper->getImportExportFunctions();
+    QStringList list = guiHelper->getImportExportFunctions();
     for (int i = 0; i < list.size(); i++) {
         DeleteableListItem *itemWid = new(std::nothrow) DeleteableListItem(list.at(i));
         if (itemWid != NULL) {
@@ -195,7 +201,7 @@ void SettingsDialog::updateImportExportFuncs()
 
 void SettingsDialog::updateMisc()
 {
-    int offsetbase = helper->getDefaultOffsetBase();
+    int offsetbase = guiHelper->getDefaultOffsetBase();
     switch (offsetbase) {
         case 8:
             ui->offsetBaseComboBox->setCurrentIndex(0);
@@ -207,19 +213,45 @@ void SettingsDialog::updateMisc()
             ui->offsetBaseComboBox->setCurrentIndex(2);
             break;
         default: // this should obviously not happen ...
-            helper->setDefaultOffsetBase(16);
+            guiHelper->setDefaultOffsetBase(16);
             ui->offsetBaseComboBox->setCurrentIndex(2);
     }
 }
 
+void SettingsDialog::updateFilter()
+{
+    QStringList typesList = tManager->getTypesList();
+    QStandardItemModel *model = new(std::nothrow) QStandardItemModel(typesList.size(), 1);
+    if (model == NULL ) {
+        qFatal("Cannot allocate memory for QStandardItemModel X{");
+        return;
+    }
+    QSet<QString> typesBlacklist = guiHelper->getTypesBlacklist();
+    QStandardItem* item = NULL;
+
+    for (int i = 0; i < typesList.size(); ++i)
+    {
+        item = new(std::nothrow) QStandardItem(typesList.at(i));
+        if (item != NULL) {
+            item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+            item->setData( (typesBlacklist.contains(typesList.at(i)) ? Qt::Unchecked : Qt::Checked), Qt::CheckStateRole);
+            model->setItem(i, 0, item);
+        } else {
+          qFatal("Cannot allocate memory for QStandardItem 2 X{");
+        }
+    }
+    connect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), guiHelper, SLOT(onFilterChanged(QModelIndex,QModelIndex)));
+    ui->filterListView->setModel(model);
+}
+
 void SettingsDialog::onImportExportFuncDeletes(const QString &name)
 {
-    helper->removeImportExportFunctions(name);
+    guiHelper->removeImportExportFunctions(name);
 }
 
 void SettingsDialog::onResetImportExportFuncs()
 {
-    helper->resetImportExportFuncs();
+    guiHelper->resetImportExportFuncs();
 }
 
 void SettingsDialog::onDoubleClickImportExportFuncs(QListWidgetItem *item)
@@ -228,15 +260,15 @@ void SettingsDialog::onDoubleClickImportExportFuncs(QListWidgetItem *item)
 
     QString name = itemWid->getName();
 
-    QuickViewItemConfig *itemConfig = new(std::nothrow) QuickViewItemConfig(helper, this);
+    QuickViewItemConfig *itemConfig = new(std::nothrow) QuickViewItemConfig(guiHelper, this);
     if (itemConfig != NULL) {
         itemConfig->setWayBoxVisible(false);
         itemConfig->setFormatVisible(false);
-        TransformAbstract *ta = helper->getImportExportFunction(name);
+        TransformAbstract *ta = guiHelper->getImportExportFunction(name);
 
         if (ta != NULL) {
 
-            ta = tManager->loadTransformFromConf(ta->getConfiguration());
+            ta = tManager->cloneTransform(ta);
             if (ta != NULL) {
                 itemConfig->setTransform(ta);
                 itemConfig->setName(name);
@@ -246,8 +278,8 @@ void SettingsDialog::onDoubleClickImportExportFuncs(QListWidgetItem *item)
                     ta = itemConfig->getTransform();
                     QString newName = itemConfig->getName();
 
-                    helper->removeImportExportFunctions(name);
-                    helper->addImportExportFunctions(newName, ta);
+                    guiHelper->removeImportExportFunctions(name);
+                    guiHelper->addImportExportFunctions(newName, ta);
                 } else {
                     delete ta;
                 }
@@ -262,7 +294,7 @@ void SettingsDialog::onDoubleClickImportExportFuncs(QListWidgetItem *item)
 
 void SettingsDialog::onAddImportExportFuncs()
 {
-    QuickViewItemConfig *itemConfig = new(std::nothrow) QuickViewItemConfig(helper, this);
+    QuickViewItemConfig *itemConfig = new(std::nothrow) QuickViewItemConfig(guiHelper, this);
     if (itemConfig != NULL) {
         itemConfig->setWayBoxVisible(false);
         itemConfig->setFormatVisible(false);
@@ -270,7 +302,7 @@ void SettingsDialog::onAddImportExportFuncs()
         if (ret == QDialog::Accepted) {
             TransformAbstract *ta = itemConfig->getTransform();
             if (ta != NULL) {
-                helper->addImportExportFunctions(itemConfig->getName(),ta);
+                guiHelper->addImportExportFunctions(itemConfig->getName(),ta);
             }
         }
 
@@ -302,7 +334,7 @@ void SettingsDialog::onSavedClicked(QListWidgetItem * item)
     if (list.contains(name))
         ui->savedDescriptLabel->setText(tManager->getSavedConfs().value(name));
     else
-        helper->getLogger()->logError(tr("Saved conf \"%1\" not found").arg(name),LOGID);
+        guiHelper->getLogger()->logError(tr("Saved conf \"%1\" not found").arg(name),LOGID);
 }
 
 void SettingsDialog::onDeleteSaved(const QString &name)
@@ -313,37 +345,37 @@ void SettingsDialog::onDeleteSaved(const QString &name)
 
 void SettingsDialog::onMarkingDelete(const QString &name)
 {
-    helper->removeMarkingColor(name);
+    guiHelper->removeMarkingColor(name);
 }
 
 void SettingsDialog::onResetMarkings()
 {
-    helper->resetMarkings();
+    guiHelper->resetMarkings();
 }
 
 void SettingsDialog::onServerPortChanged(int port)
 {
-    helper->setDefaultServerPort(port);
+    guiHelper->setDefaultServerPort(port);
 }
 
 void SettingsDialog::onServerDecodeChanged(bool val)
 {
-    helper->setDefaultServerDecode(val);
+    guiHelper->setDefaultServerDecode(val);
 }
 
 void SettingsDialog::onServerEncodeChanged(bool val)
 {
-    helper->setDefaultServerEncode(val);
+    guiHelper->setDefaultServerEncode(val);
 }
 
 void SettingsDialog::onServerSeparatorChanged(char c)
 {
-    helper->setDefaultServerSeparator(c);
+    guiHelper->setDefaultServerSeparator(c);
 }
 
 void SettingsDialog::onServerPipeNameChanged(QString name)
 {
-    helper->setDefaultServerPipeName(name);
+    guiHelper->setDefaultServerPipeName(name);
 }
 
 void SettingsDialog::onOffsetBaseChanged(QString val)
@@ -352,9 +384,9 @@ void SettingsDialog::onOffsetBaseChanged(QString val)
     int intval = val.toInt(&ok);
 
     if (!ok) {
-        helper->getLogger()->logError("Invalid integer value for offset base in settings T_T");
+        guiHelper->getLogger()->logError("Invalid integer value for offset base in settings T_T");
     } else {
-        helper->setDefaultOffsetBase(intval);
+        guiHelper->setDefaultOffsetBase(intval);
     }
 }
 

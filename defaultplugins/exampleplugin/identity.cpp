@@ -9,6 +9,7 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "identity.h"
+#include <QWidget>
 
 const QString Identity::id = "Identity";
 

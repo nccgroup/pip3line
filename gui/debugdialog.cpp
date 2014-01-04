@@ -14,38 +14,107 @@ Released under AGPL see LICENSE for more information
 #include <QHash>
 #include <QHashIterator>
 #include <QDebug>
+#include <QEvent>
+#include <QKeyEvent>
+#include <QAction>
+#include "guihelper.h"
+#include "views/hexview.h"
+#include "sources/basicsource.h"
+#include "sources/currentmemorysource.h"
 
-DebugDialog::DebugDialog(QWidget *parent) :
-    QDialog(parent)
+DebugDialog::DebugDialog(GuiHelper *helper, QWidget *parent) :
+    AppDialog(helper, parent)
 {
     ui = new(std::nothrow) Ui::DebugDialog();
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::DebugDialog X{");
     }
+
+
+    source = new(std::nothrow) CurrentMemorysource();
+    if (source == NULL) {
+        qFatal("Cannot allocate memory for BasicSource X{");
+    }
+    source->setReadOnly();
+
+    hexview = new(std::nothrow) HexView(source,guiHelper,this);
+    if (hexview == NULL) {
+        qFatal("Cannot allocate memory for HexView X{");
+    }
+
     ui->setupUi(this);
-    connect(this, SIGNAL(rejected()), this, SLOT(deleteLater()));
+
+    ui->debugLayout->insertWidget(ui->debugLayout->indexOf(ui->confLabel) + 1, hexview);
+
+    ui->addressLineEdit->installEventFilter(this);
+    ui->addressLineEdit->setText(QString::number(source->startingRealOffset(), 16));
+
+    ui->viewSizeSpinBox->setValue(source->viewSize());
+
+    refreshTransformInstances();
+
+    connect(ui->viewSizeSpinBox, SIGNAL(valueChanged(int)),source, SLOT(setViewSize(int)));
+    connect(ui->addressLineEdit,SIGNAL(returnPressed()), SLOT(onLoad()));
+    connect(ui->previousPushButton, SIGNAL(clicked()), source,SLOT(historyBackward()));
+    connect(ui->nextPushButton, SIGNAL(clicked()), source, SLOT(historyForward()));
+    connect(ui->refreshPushButton, SIGNAL(clicked()), SLOT(refreshTransformInstances()));
+    connect(ui->transformListWidget, SIGNAL(doubleClicked(QModelIndex)),SLOT(onInstanceClick(QModelIndex)));
 }
 
 DebugDialog::~DebugDialog()
 {
     delete ui;
+    delete source;
     qDebug() << "Destroyed " << this;
 }
 
-void DebugDialog::on_loadPushButton_clicked()
+void DebugDialog::onLoad()
 {
     QString addrString = ui->addressLineEdit->text();
     if (addrString.startsWith("0x"))
         addrString = addrString.mid(2);
+    else if(addrString.startsWith("x"))
+        addrString = addrString.mid(1);
 
     bool ok;
     quint64 addr = addrString.toULongLong(&ok, 16);
+
     if (!ok) {
         qWarning() << "Debugger: Invalid address entered";
         return;
+    } else if (addr == 0) {
+        qWarning() << "Debugger: NULL address entered";
+        return;
     }
 
-    QObject *obj = (QObject *) addr;
+    // QObject *obj = (QObject *) addr;
+    ui->addressLineEdit->blockSignals(true);
+    source->setStartingOffset(addr);
+    ui->addressLineEdit->blockSignals(false);
+}
+
+void DebugDialog::refreshTransformInstances()
+{
+    QList<TransformAbstract *> list = guiHelper->getTransformFactory()->getTransformInstances();
+    QList<QString> slist;
+    for (int i = 0; i < list.size(); i++) {
+        QString value = QString("0x%1").arg(QString::number((quintptr)list.at(i),16));
+        slist.append(value);
+    }
+
+    qSort(slist);
+    ui->transformListWidget->addItems(slist);
+}
+
+void DebugDialog::onInstanceClick(QModelIndex index)
+{
+    ui->addressLineEdit->setText(index.data().toString());
+    onLoad();
+    loadQObject((QObject *)index.data().toString().toULongLong(0,16));
+}
+
+void DebugDialog::loadQObject(QObject *obj)
+{
     const QMetaObject *superClassObj = obj->metaObject()->superClass();
 
     QObject *parentObj = obj->parent();
@@ -55,8 +124,8 @@ void DebugDialog::on_loadPushButton_clicked()
         QString parentName = superClassObj->className();
         ui->nameValLabel->setText(tr("%1 (%2)").arg(obj->metaObject()->className()).arg(parentName));
 
-        if (parentName == "TransformAbstract") {
-            TransformAbstract * ta = (TransformAbstract *) addr;
+        if (parentName == "TransformAbstract" || parentName == "ScriptTransformAbstract") {
+            TransformAbstract * ta = (TransformAbstract *) obj;
 
             QString stringConf;
             QHash<QString, QString> conf = ta->getConfiguration();
@@ -69,22 +138,12 @@ void DebugDialog::on_loadPushButton_clicked()
                 stringConf.chop(1);
             ui->confLabel->setText(stringConf);
 
-            int size = 128;
-            qDebug() << size << obj << ta;
-            char buf[128];
-            memcpy(buf, ta, size);
-
-            QByteArray data = QByteArray(buf,size);
-            ui->dataPlainTextEdit->appendPlainText(QString::fromUtf8(data.toHex()));
-
         } else {
             ui->confLabel->clear();
-            ui->dataPlainTextEdit->clear();
         }
-    }
-
-    else
+    } else
         ui->nameValLabel->setText(tr("%1").arg(obj->metaObject()->className()));
+
     if (parentObj == NULL)
         ui->parentValLabel->setText(tr("None"));
     else
@@ -92,11 +151,24 @@ void DebugDialog::on_loadPushButton_clicked()
 
     obj->dumpObjectInfo();
     obj->dumpObjectTree();
+}
 
+bool DebugDialog::eventFilter(QObject *o, QEvent *event)
+{
+    if (o == ui->addressLineEdit && event->type() == QEvent::KeyPress) {
+
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return) {
+            qDebug() << "enter pressed";
+            onLoad();
+            keyEvent->accept();
+            return true;
+        }
+    }
+    return false;
 }
 
 void DebugDialog::closeEvent(QCloseEvent *event)
 {
     QDialog::closeEvent(event);
-    reject();
 }

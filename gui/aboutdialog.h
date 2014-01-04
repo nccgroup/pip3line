@@ -11,18 +11,18 @@ Released under AGPL see LICENSE for more information
 #ifndef ABOUTDIALOG_H
 #define ABOUTDIALOG_H
 
-#include <QDialog>
+#include "appdialog.h"
 
 namespace Ui {
 class AboutDialog;
 }
 
-class AboutDialog : public QDialog
+class AboutDialog : public AppDialog
 {
         Q_OBJECT
         
     public:
-        explicit AboutDialog(QWidget *parent = 0);
+        explicit AboutDialog(GuiHelper * guiHelper, QWidget *parent = 0);
         ~AboutDialog();
         
     private:

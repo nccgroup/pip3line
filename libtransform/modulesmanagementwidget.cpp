@@ -11,7 +11,9 @@ Released under AGPL see LICENSE for more information
 #include "modulesmanagementwidget.h"
 #include "ui_modulesmanagementwidget.h"
 #include "deleteablelistitem.h"
+#include "modulesmanagement.h"
 #include <QFileDialog>
+#include <QListWidgetItem>
 
 ModulesManagementWidget::ModulesManagementWidget(ModulesManagement *nmodulesMgmt, QWidget *parent) :
     QWidget(parent)
@@ -22,6 +24,7 @@ ModulesManagementWidget::ModulesManagementWidget(ModulesManagement *nmodulesMgmt
     }
     modulesMgmt = nmodulesMgmt;
     moduleTitle = modulesMgmt->getLangName();
+
     ui->setupUi(this);
 
     connect(modulesMgmt,SIGNAL(modulesUpdated()), this, SLOT(loadModules()));

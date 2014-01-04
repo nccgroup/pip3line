@@ -40,22 +40,18 @@ class ByteItemModel : public QAbstractTableModel
         bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
         void setHexColumnCount(int val);
 
-        QModelIndex createIndex(qint64 pos);
+        QModelIndex createIndex(int pos);
         QModelIndex createIndex(int row, int column) const;
-        void insert(qint64 pos, const QByteArray &data);
-        void remove(qint64 pos, int length);
-        void replace(qint64 pos, int length, QByteArray val);
-        QByteArray extract(qint64 pos, int length);
+        bool insert(int pos, const QByteArray &data);
+        bool remove(int pos, int length);
+        bool replace(int pos, int length, QByteArray val);
+        QByteArray extract(int pos, int length);
         void clear();
-        qint64 position(const QModelIndex &index) const;
+        int position(const QModelIndex &index) const;
 
-        void mark(qint64 start, qint64 end, const QColor &color, QString toolTip = QString());
-        void clearMarking(qint64 start, qint64 end);
-        void clearAllMarkings();
-        bool hasMarking() const;
+        bool historyForward();
+        bool historyBackward();
 
-        void historyForward();
-        void historyBackward();
     signals:
         void error(QString message);
         void warning(QString message);
@@ -64,12 +60,6 @@ class ByteItemModel : public QAbstractTableModel
     private:
         Q_DISABLE_COPY(ByteItemModel)
         int hexColumncount;
-        struct Markings {
-                QColor color;
-                QString text;
-        };
-
-        QHash<qint64, Markings> marked;
         ByteSourceAbstract * byteSource;
 };
 

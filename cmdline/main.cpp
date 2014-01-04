@@ -12,6 +12,7 @@ Released under AGPL see LICENSE for more information
 #include <QObject>
 #include <QStringList>
 #include <QTextStream>
+#include <QTimer>
 #include "masterthread.h"
 #include "../version.h"
 
@@ -35,8 +36,40 @@ void usage() {
     cout << "       " << VERBOSEPARAM << QObject::tr(" verbose") << endl;
 }
 
+#ifdef Q_OS_LINUX
+#include <signal.h>
+
+void termSignalHandler(int) {
+    QTimer::singleShot(0,QCoreApplication::instance(),SLOT(quit()));
+}
+
+static void setup_unix_signal_handlers()
+{
+    struct sigaction term;
+
+    term.sa_handler = termSignalHandler;
+    sigemptyset(&term.sa_mask);
+    term.sa_flags |= SA_RESTART;
+
+    if (sigaction(SIGTERM, &term, 0) == -1)
+        qWarning("Could not set the SIGTERM signal handler");
+    if (sigaction(SIGINT, &term, 0) == -1)
+        qWarning("Could not set the SIGINT signal handler");
+    if (sigaction(SIGQUIT, &term, 0) == -1)
+        qWarning("Could not set the SIGQUIT signal handler");
+    if (sigaction(SIGABRT, &term, 0) == -1)
+        qWarning("Could not set the SIGABRT signal handler");
+
+}
+#endif
+
+
 int main(int argc, char *argv[])
 {
+#ifdef Q_OS_LINUX
+    setup_unix_signal_handlers();
+#endif
+
     QCoreApplication a(argc, argv);
     QTextStream cerr(stderr);
     QStringList args = a.arguments();

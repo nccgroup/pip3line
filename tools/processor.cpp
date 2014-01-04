@@ -10,6 +10,10 @@ Released under AGPL see LICENSE for more information
 
 #include "processor.h"
 #include "QMutexLocker"
+#include <QXmlStreamReader>
+#include <transformmgmt.h>
+#include <QIODevice>
+#include <QMutex>
 #include <QDebug>
 
 const char Processor::DEFAULT_SEPARATOR = '\n';
@@ -21,13 +25,13 @@ Processor::Processor(TransformMgmt * tFactory, QObject *parent) : QThread(parent
     out = NULL;
     in = NULL;
     separator = DEFAULT_SEPARATOR;
-    ocount = 0;
     encode = false;
     decode = false;
 }
 
 Processor::~Processor()
 {
+    qDebug() << "Destroying " << this;
     clearChain();
 }
 
@@ -41,7 +45,7 @@ bool Processor::configureFromName(const QString &name, TransformAbstract::Way wa
 {
     TransformChain chain;
     TransformAbstract * t = transformFactory->getTransform(name);
-    if (t != 0) {
+    if (t != NULL) {
         t->setWay(way);
         chain.append(t);
     }
@@ -61,6 +65,7 @@ bool Processor::setTransformsChain(TransformChain ntlist)
         return false;
     } else {
         for (int i = 0; i < tlist.size(); i++) {
+            //qDebug() << "Tranformation loaded" << tlist.at(i)->name();
             connect(tlist.at(i),SIGNAL(error(QString,QString)), this, SLOT(logError(QString, QString)));
             connect(tlist.at(i),SIGNAL(warning(QString,QString)), this, SLOT(logError(QString, QString)));
         }
@@ -100,10 +105,10 @@ void Processor::setSeparator(char c)
     separator = c;
 }
 
-long Processor::getStatsOut()
+ProcessingStats Processor::getStats()
 {
     QMutexLocker lock(&statsLock);
-    return ocount;
+    return stats;
 }
 
 void Processor::setEncoding(bool flag)
@@ -118,20 +123,29 @@ void Processor::setDecoding(bool flag)
 
 void Processor::logError(const QString mess, const QString id)
 {
+    statsLock.lock();
+    stats.incrErrorsCount();
+    statsLock.unlock();
     emit error(mess, id);
 }
 
 void Processor::logStatus(const QString mess, const QString id)
 {
+    statsLock.lock();
+    stats.incrStatusCount();
+    statsLock.unlock();
     emit status(mess, id);
 }
 
 void Processor::writeBlock(const QByteArray &data)
 {
 
+    statsLock.lock();
+    stats.incrInBlocks();
+    statsLock.unlock();
     QByteArray temp = data;
     QByteArray temp2;
-    QByteArray * outputval;
+    QByteArray * outputval = NULL;
     int i = 0;
 
     if (decode)
@@ -158,7 +172,7 @@ void Processor::writeBlock(const QByteArray &data)
         while (outputval->size() > 0) {
             int whatHasBeenDone = out->write(*outputval);
             if (whatHasBeenDone < 0) {
-                emit error(out->errorString(), "Processor");
+                logError(out->errorString(), this->metaObject()->className());
                 break;
             }
 
@@ -169,7 +183,7 @@ void Processor::writeBlock(const QByteArray &data)
         if (outputLock != 0)
             outputLock->unlock();
         statsLock.lock();
-        ocount++;
+        stats.incrOutBlocks();
         statsLock.unlock();
     }
 }

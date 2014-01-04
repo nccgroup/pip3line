@@ -47,7 +47,7 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
+       <item row="3" column="1">
         <widget class="QStackedWidget" name="stackedWidget">
          <widget class="QWidget" name="basePage">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -102,6 +102,20 @@ It can also be deleted within the plugin configuration interface.</string>
            </item>
           </layout>
          </widget>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QCheckBox" name="autoReloadCheckBox">
+         <property name="text">
+          <string>Auto reload module</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QPushButton" name="forceReloadPushButton">
+         <property name="text">
+          <string>Force Reload</string>
+         </property>
         </widget>
        </item>
       </layout>

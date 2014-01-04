@@ -29,6 +29,8 @@ class SplitWidget : public QWidget
         void onSeparatorChange(QString);
         void onGroupChange(int);
         void onAllGroupChange(bool);
+        void onTrimChange(bool val);
+        void onProcLineChanged(bool val);
     private:
         Ui::SplitWidget *ui;
         Split *transform;

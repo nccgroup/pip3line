@@ -114,6 +114,7 @@ void PipeServer::processingNewClient(quintptr socketDescriptor)
         connect(processor,SIGNAL(finished(LocalSocketProcessor *)), this, SLOT(processorFinished(LocalSocketProcessor *)), Qt::QueuedConnection);
         connect(processor,SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)));
         connect(processor,SIGNAL(status(QString,QString)), this, SLOT(logStatus(QString,QString)));
+        connect(this, SIGNAL(newTransformChain(QString)), processor, SLOT(setTransformsChain(QString)));
 
         processor->setOutput(output);
 
@@ -134,7 +135,8 @@ void PipeServer::processingNewClient(quintptr socketDescriptor)
 void PipeServer::processorFinished(LocalSocketProcessor * target)
 {
     confLocker.lock();
-
+    ProcessingStats preStats = target->getStats();
+    stats += preStats;
     if (clientProcessor.contains(target)) {
         clientProcessor.removeAll(target);
     } else {

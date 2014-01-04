@@ -15,6 +15,7 @@ Released under AGPL see LICENSE for more information
 #include <QString>
 #include <QTextStream>
 #include <transformmgmt.h>
+#include "../tools/processor.h"
 
 class MasterThread : public QThread
 {
@@ -41,6 +42,7 @@ class MasterThread : public QThread
         QString transformName;
         TransformMgmt transformFactory;
         TransformAbstract::Way singleWay;
+        Processor *processor;
 };
 
 #endif // MASTERTHREAD_H

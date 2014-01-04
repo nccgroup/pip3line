@@ -122,9 +122,11 @@ QString Hieroglyphy::credits() const
 
 void Hieroglyphy::setUseBtoa(bool val)
 {
-    btoaInUse = val;
-    init();
-    emit confUpdated();
+    if (btoaInUse != val) {
+        btoaInUse = val;
+        init();
+        emit confUpdated();
+    }
 }
 
 bool Hieroglyphy::isBtoaInUse() const

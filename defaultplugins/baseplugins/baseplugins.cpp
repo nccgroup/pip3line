@@ -53,6 +53,8 @@ Released under AGPL see LICENSE for more information
 #include "bytesinteger.h"
 #include "ntlmssp.h"
 #include "bytestofloat.h"
+#include "byterot.h"
+#include "hmactransform.h"
 #include "../../version.h"
 
 #if QT_VERSION >= 0x050000
@@ -88,19 +90,13 @@ TransformAbstract *BasePlugins::getTransform(QString name)
 
     if (name == Base64Url) {
         return getTransformFromFile(":/harcoded/composedxml/base64UrlEncode.xml");
-    }
-
-    if (name == BinaryNum) {
+    } else if (name == BinaryNum) {
         return getTransformFromFile(":/harcoded/composedxml/binarynumber.xml");
-    }
-
-    if (name == OctalNum) {
+    } else if (name == OctalNum) {
         return getTransformFromFile(":/harcoded/composedxml/octalnumber.xml");
-    }
-
-    if (name == HexaNum) {
+    } else if (name == HexaNum) {
         return getTransformFromFile(":/harcoded/composedxml/hexanumber.xml");
-    }
+    } else
 
 #if QT_VERSION >= 0x050000
 
@@ -109,305 +105,231 @@ TransformAbstract *BasePlugins::getTransform(QString name)
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Sha224 X{");
         }
-    }
-
-    if (Sha256::id == name) {
+    } else if (Sha256::id == name) {
         ta = new(std::nothrow) Sha256();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Sha256 X{");
         }
-    }
-
-    if (Sha384::id == name) {
+    } else if (Sha384::id == name) {
         ta = new(std::nothrow) Sha384();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Sha384 X{");
         }
-    }
-
-    if (Sha512::id == name) {
+    } else if (Sha512::id == name) {
         ta = new(std::nothrow) Sha512();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Sha512 X{");
         }
-    }
+    } else
 
 #endif
 
-    if (BytesToFloat::id == name) {
+    if (ByteRot::id == name) {
+        ta = new(std::nothrow) ByteRot();
+        if (ta == NULL) {
+            qFatal("Cannot allocate memory for ByteRot X{");
+        }
+    } else if (HMACTransform::id == name) {
+        ta = new(std::nothrow) HMACTransform();
+        if (ta == NULL) {
+            qFatal("Cannot allocate memory for HMACTransform X{");
+        }
+    } else if (BytesToFloat::id == name) {
         ta = new(std::nothrow) BytesToFloat();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for BytesToFloat X{");
         }
-    }
-
-    if (Ntlmssp::id == name) {
+    } else if (Ntlmssp::id == name) {
         ta = new(std::nothrow) Ntlmssp();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Ntlmssp X{");
         }
-    }
-
-    if (BaseX::id == name) {
+    } else if (BaseX::id == name) {
         ta = new(std::nothrow) BaseX();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for BaseX X{");
         }
-    }
-
-    if (BytesInteger::id == name) {
+    } else if (BytesInteger::id == name) {
         ta = new(std::nothrow) BytesInteger();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for BytesInteger X{");
         }
-    }
-
-    if (TimeStamp::id == name) {
+    } else if (TimeStamp::id == name) {
         ta = new(std::nothrow) TimeStamp();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for TimeStamp X{");
         }
-    }
-
-    if (MicrosoftTimestamp::id == name) {
+    } else if (MicrosoftTimestamp::id == name) {
         ta = new(std::nothrow) MicrosoftTimestamp();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for MicrosoftTimestamp X{");
         }
-    }
-
-    if (name == Zlib::id) {
+    } else if (name == Zlib::id) {
         ta = new(std::nothrow) Zlib();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Zlib X{");
         }
-    }
-
-    if (name == Hieroglyphy::id) {
+    } else if (name == Hieroglyphy::id) {
         ta = new(std::nothrow) Hieroglyphy();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Hieroglyphy X{");
         }
-    }
-
-    if (name == NumberToChar::id) {
+    } else if (name == NumberToChar::id) {
         ta = new(std::nothrow) NumberToChar();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for NumberToChar X{");
         }
-    }
-
-    if (name == Substitution::id) {
+    } else if (name == Substitution::id) {
         ta = new(std::nothrow) Substitution();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Substitution X{");
         }
-    }
-
-    if (name == CiscoSecret7::id) {
+    } else if (name == CiscoSecret7::id) {
         ta = new(std::nothrow) CiscoSecret7();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for CiscoSecret7 X{");
         }
-    }
-
-    if (name == FixProtocol::id) {
+    } else if (name == FixProtocol::id) {
         ta = new(std::nothrow) FixProtocol();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for FixProtocol X{");
         }
-    }
-
-    if (name == IPTranslateIPv4::id) {
+    } else if (name == IPTranslateIPv4::id) {
         ta = new(std::nothrow) IPTranslateIPv4();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for IPTranslateIPv4 X{");
         }
-    }
-
-    if (name == NetworkMaskIPv4::id) {
+    } else if (name == NetworkMaskIPv4::id) {
         ta = new(std::nothrow) NetworkMaskIPv4();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for NetworkMaskIPv4 X{");
         }
-    }
-
-    if (name == NetworkMaskIPv6::id) {
+    } else if (name == NetworkMaskIPv6::id) {
         ta = new(std::nothrow) NetworkMaskIPv6();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for NetworkMaskIPv6 X{");
         }
-    }
-
-    if (name == MySqlConcatv2::id) {
+    } else if (name == MySqlConcatv2::id) {
         ta = new(std::nothrow) MySqlConcatv2();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for MySqlConcatv2 X{");
         }
-    }
-
-    if (name == JavaScriptConcat::id) {
+    } else if (name == JavaScriptConcat::id) {
         ta = new(std::nothrow) JavaScriptConcat();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for JavaScriptConcat X{");
         }
-    }
-
-    if (name == MSSqlConcat::id) {
+    } else if (name == MSSqlConcat::id) {
         ta = new(std::nothrow) MSSqlConcat();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for MSSqlConcat X{");
         }
-    }
-
-    if (name == PostgresConcat::id) {
+    } else if (name == PostgresConcat::id) {
         ta = new(std::nothrow) PostgresConcat();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for PostgresConcat X{");
         }
-    }
-
-    if (name == MysqlConcat::id) {
+    } else if (name == MysqlConcat::id) {
         ta = new(std::nothrow) MysqlConcat();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for MysqlConcat X{");
         }
-    }
-
-    if (name == OracleConcat::id) {
+    } else if (name == OracleConcat::id) {
         ta = new(std::nothrow) OracleConcat();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for OracleConcat X{");
         }
-    }
-
-    if (name == UrlEncode::id) {
+    } else if (name == UrlEncode::id) {
         ta = new(std::nothrow) UrlEncode();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for UrlEncode X{");
         }
-    }
-
-    if (name == Padding::id) {
+    } else if (name == Padding::id) {
         ta = new(std::nothrow) Padding();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Padding X{");
         }
-    }
-
-    if (name == Rotx::id) {
+    } else if (name == Rotx::id) {
         ta = new(std::nothrow) Rotx();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Rotx X{");
         }
-    }
-
-    if (name == Cut::id) {
+    } else if (name == Cut::id) {
         ta = new(std::nothrow) Cut();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Cut X{");
         }
-    }
-
-    if (name == RandomCase::id) {
+    } else if (name == RandomCase::id) {
         ta = new(std::nothrow) RandomCase();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for RandomCase X{");
         }
-    }
-
-    if (name == RegularExp::id) {
+    } else if (name == RegularExp::id) {
         ta = new(std::nothrow) RegularExp();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for RegularExp X{");
         }
-    }
-
-    if (name == Split::id) {
+    } else if (name == Split::id) {
         ta = new(std::nothrow) Split();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Split X{");
         }
-    }
-
-    if (name == Md5::id) {
+    } else if (name == Md5::id) {
         ta = new(std::nothrow) Md5();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Md5 X{");
         }
-    }
-
-    if (name == Sha1::id) {
+    } else if (name == Sha1::id) {
         ta = new(std::nothrow) Sha1();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Sha1 X{");
         }
-    }
-
-    if (name == Md4::id) {
+    } else if (name == Md4::id) {
         ta = new(std::nothrow) Md4();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Md4 X{");
         }
-    }
-
-    if (name == Xor::id) {
+    } else if (name == Xor::id) {
         ta = new(std::nothrow) Xor();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Xor X{");
         }
-    }
-
-    if (name == CharEncoding::id) {
+    } else if (name == CharEncoding::id) {
         ta = new(std::nothrow) CharEncoding();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for CharEncoding X{");
         }
-    }
-
-    if (name == Base64::id) {
+    } else if (name == Base64::id) {
         ta = new(std::nothrow) Base64();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Base64 X{");
         }
-    }
-
-    if (name == Base32::id) {
+    } else if (name == Base32::id) {
         ta = new(std::nothrow) Base32();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Base32 X{");
         }
-    }
-
-    if (name == Html::id) {
+    } else if (name == Html::id) {
         ta = new(std::nothrow) Html();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Html X{");
         }
-    }
-
-    if (name == HexEncode::id) {
+    } else if (name == HexEncode::id) {
         ta = new(std::nothrow) HexEncode();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for HexEncode X{");
         }
-    }
-
-    if (name == Reverse::id) {
+    } else if (name == Reverse::id) {
         ta = new(std::nothrow) Reverse();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for Reverse X{");
         }
-    }
-
-    if (name == Binary::id) {
+    } else if (name == Binary::id) {
         ta = new(std::nothrow) Binary();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for BasBinaryeX X{");
         }
-    }
-
-    if (name == XmlQuery::id) {
+    } else if (name == XmlQuery::id) {
         ta = new(std::nothrow) XmlQuery();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for XmlQuery X{");
@@ -446,6 +368,8 @@ const QStringList BasePlugins::getTransformList(QString typeName)
         enclist.append(Rotx::id);
         enclist.append(CiscoSecret7::id);
         enclist.append(Substitution::id);
+        enclist.append(ByteRot::id);
+        enclist.append(HMACTransform::id);
     } else if (typeName == DEFAULT_TYPE_HACKING) {
         enclist.append(Hieroglyphy::id);
         enclist.append(RandomCase::id);

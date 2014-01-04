@@ -407,7 +407,7 @@ void UnittestsTest::testBase64UrlEncode()
     failconfiguration.remove(PROP_WAY);
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
-
+    delete transf;
 }
 
 void UnittestsTest::testBinary()
@@ -465,6 +465,7 @@ void UnittestsTest::testBinary()
     failconfiguration.insert(XMLBLOCKSIZE,QString::number(1025));
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
+    delete transf;
 }
 
 void UnittestsTest::testCharEncoding()
@@ -482,7 +483,7 @@ void UnittestsTest::testCharEncoding()
 
     transf->setWay(TransformAbstract::INBOUND);
     QCOMPARE(transf->transform(QByteArray("un test 123s4")), QByteArray("un test 123s4"));
-    QCOMPARE(transf->transform(QByteArray("\xc2\xa3")), QByteArray("\x3f"));
+    QCOMPARE(transf->transform(QByteArray("\xc2\xa3")), QByteArray(1,'\0'));
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
 
     configuration = transf->getConfiguration();
@@ -512,6 +513,7 @@ void UnittestsTest::testCharEncoding()
     failconfiguration.remove(XMLCODECNAME);
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
+    delete transf;
 }
 
 void UnittestsTest::testCisco7()
@@ -539,6 +541,7 @@ void UnittestsTest::testCisco7()
     failconfiguration.remove(PROP_WAY);
 
     QVERIFY(!transf->setConfiguration(failconfiguration));
+    delete transf;
 }
 
 void UnittestsTest::testCut()
@@ -608,6 +611,7 @@ void UnittestsTest::testCut()
     failconfiguration = configuration;
     failconfiguration.insert(XMLEVERYTHING,QString::number(2));
     QVERIFY(!transf->setConfiguration(failconfiguration));
+    delete transf;
 }
 
 void UnittestsTest::testHexencode()
@@ -677,6 +681,7 @@ void UnittestsTest::testHexencode()
     failconfiguration = configuration;
     failconfiguration.remove(XMLTYPE);
     QVERIFY(!transf->setConfiguration(failconfiguration));
+    delete transf;
 }
 
 void UnittestsTest::testHieroglyphy()
@@ -717,6 +722,7 @@ void UnittestsTest::testHieroglyphy()
     failconfiguration = configuration;
     failconfiguration.remove("btoaInUse");
     QVERIFY(!transf->setConfiguration(failconfiguration));
+    delete transf;
 }
 
 void UnittestsTest::testBytesToInteger()
@@ -769,7 +775,7 @@ void UnittestsTest::testBytesToInteger()
     QCOMPARE(transf->transform(QByteArray("\xb1\x32\x33\x34")),QByteArray("-1322110156"));
     configuration.insert("IntegerSize",QString("8"));
     QVERIFY(transf->setConfiguration(configuration));
-    QCOMPARE(transf->transform(QByteArray("\xb1\x32\x33\x34")),QByteArray("-5678419881729458176"));
+    QCOMPARE(transf->transform(QByteArray("\xb1\x32\x33\x34")),QByteArray("2972857140"));
 
     configuration.insert("SignedInteger",QString("0"));
     configuration.insert("Endianness",QString("1"));
@@ -798,7 +804,7 @@ void UnittestsTest::testBytesToInteger()
     QCOMPARE(transf->transform(QByteArray("\xb1\x32\x33\x34")),QByteArray("2972857140"));
     configuration.insert("IntegerSize",QString("8"));
     QVERIFY(transf->setConfiguration(configuration));
-    QCOMPARE(transf->transform(QByteArray("\xb1\x32\x33\x34")),QByteArray("12768324191980093440"));
+    QCOMPARE(transf->transform(QByteArray("\xb1\x32\x33\x34")),QByteArray("2972857140"));
 
     failconfiguration = configuration;
     failconfiguration.remove(PROP_WAY);
@@ -815,6 +821,7 @@ void UnittestsTest::testBytesToInteger()
     failconfiguration = configuration;
     failconfiguration.remove("IntegerSize");
     QVERIFY(!transf->setConfiguration(failconfiguration));
+    delete transf;
 
 }
 

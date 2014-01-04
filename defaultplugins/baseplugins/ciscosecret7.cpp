@@ -82,7 +82,7 @@ unsigned int CiscoSecret7::getSeed() const
 bool CiscoSecret7::setSeed(unsigned int nseed)
 {
     if (seed > 52) {
-        emit (tr("Valid values for a seed are supposed to be in [0-52]"),id);
+        emit error(tr("Valid values for a seed are supposed to be in [0-52]"),id);
         return false;
     }
     if (nseed != seed) {

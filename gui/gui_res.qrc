@@ -24,6 +24,9 @@
         <file>icons/edit-redo-8.png</file>
         <file>icons/edit-undo-8.png</file>
         <file>icons/object-flip-horizontal.png</file>
+        <file>icons/configure-5.png</file>
+        <file>icons/go-bottom-3.png</file>
+        <file>icons/edit-delete-4.png</file>
     </qresource>
     <qresource prefix="/xmlconfs">
         <file>defaultsxml/base32decode.xml</file>

@@ -12,13 +12,13 @@ Released under AGPL see LICENSE for more information
 #define MODULETRANSFORMWIDGET_H
 
 #include "libtransform_global.h"
-#include "scripttransformabstract.h"
 #include <QWidget>
-#include <QStringList>
+#include <QList>
 
 namespace Ui {
 class ModuleTransformWidget;
 }
+class ScriptTransformAbstract;
 
 #include <QAbstractTableModel>
 #include <QHash>
@@ -63,7 +63,7 @@ class LIBTRANSFORMSHARED_EXPORT ModuleTransformWidget : public QWidget
         void onMakePersistent(bool checked);
         void onAddParameter();
         void onParametersUpdated();
-
+        void onAutoReload(bool val);
     private:
         Q_DISABLE_COPY(ModuleTransformWidget)
         bool eventFilter(QObject *sender, QEvent *event);

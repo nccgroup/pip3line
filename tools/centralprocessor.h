@@ -34,6 +34,7 @@ class CentralProcessor : public QThread
         void onChildThreadDestroyed();
     private:
         Q_DISABLE_COPY(CentralProcessor)
+        void clearQueue();
         QHash<quintptr, QMutex * > current;
         QHash<TransformRequest * , quintptr> children;
         QMutex globalMutex;

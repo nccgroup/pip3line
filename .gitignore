@@ -9,7 +9,7 @@ Makefile*
 build/*
 bin/*
 lib/*
-plugins/ExamplePlugin/libExamplePlugin.so*
+*.so*
 qrc_*
 scripts/__pycache__/*
 *.pyc
@@ -17,4 +17,4 @@ scripts/__pycache__/*
 unittests/unittests-build-*
 pip3line.kdev4
 extras/burp_plugin/bin
-
+*.jardesc

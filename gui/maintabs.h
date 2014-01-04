@@ -17,10 +17,12 @@ Released under AGPL see LICENSE for more information
 #include <QHash>
 #include <QNetworkAccessManager>
 #include <transformmgmt.h>
+#include "sources/bytesourceabstract.h"
 #include "guihelper.h"
-#include "transformsgui.h"
+#include "tabs/tababstract.h"
 #include "loggerwidget.h"
 #include "floatingdialog.h"
+#include <QDragMoveEvent>
 
 class MainTabs : public QTabWidget
 {
@@ -28,9 +30,11 @@ class MainTabs : public QTabWidget
     public:
         explicit MainTabs(GuiHelper *guiHelper, QWidget *parent = 0);
         ~MainTabs();
-        bool eventFilter(QObject * receiver, QEvent * event);
+
         void askForRenaming(int index);
         void loadFile(QString fileName);
+        int integrateTab(TabAbstract * newTab);
+        static const uint DEFAULT_MAX_TAB_COUNT;
     public slots:
         int newTabTransform(const QByteArray &initialValue = QByteArray(), const QString &conf = QString());
         void onDeleteTab(int index);
@@ -38,19 +42,23 @@ class MainTabs : public QTabWidget
     private slots:
         void onLogError();
         void onLogCleanStatus();
-        void receivedNameChanged(TransformsGui * tab);
-        void receivedTabWindowSwitch(TransformsGui * tab);
-        void receivedBringToFront(TransformsGui * tab);
+        void receivedNameChanged();
+        void receivedTabWindowSwitch();
+        void detachTab(TabAbstract * tab);
+        void receivedBringToFront();
         void onFloatingWindowsReject();
     private:
         Q_DISABLE_COPY(MainTabs)
         static const QString ID;
+        bool eventFilter(QObject * receiver, QEvent * event);
+
         QTabBar * tabBarRef;
         GuiHelper *guiHelper;
         LoggerWidget * logger;
-        QHash<TransformsGui *,bool> tabList;
-        QHash<TransformsGui *, FloatingDialog *> activeWindows;
+        QHash<TabAbstract *,bool> tabList;
+        QHash<TabAbstract *, FloatingDialog *> activeWindows;
         uint tabCount;
+        uint maxTabCount;
 };
 
 #endif // MAINTABS_H

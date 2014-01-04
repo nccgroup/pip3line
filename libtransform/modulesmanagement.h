@@ -15,11 +15,12 @@ Released under AGPL see LICENSE for more information
 #include <QStringList>
 #include <QObject>
 #include <QHash>
-#include <QWidget>
-#include "pip3linecallback.h"
+
 #include "libtransform_global.h"
+
 class ModulesManagementWidget;
-#include "modulesmanagementwidget.h"
+class Pip3lineCallback;
+class QWidget;
 
 class LIBTRANSFORMSHARED_EXPORT ModulesManagement : public QObject
 {

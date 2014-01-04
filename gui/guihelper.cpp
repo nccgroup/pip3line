@@ -16,6 +16,8 @@ Released under AGPL see LICENSE for more information
 #include <QClipboard>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QSettings>
+#include <QXmlStreamWriter>
 #include "guihelper.h"
 #include "newbytedialog.h"
 
@@ -37,6 +39,7 @@ GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nm
     transformFactory = ntransformFactory;
     networkManager = nmanager;
     logger = nlogger;
+    centralTransProc = NULL;
     settings = transformFactory->getSettingsObj();
     bool ok = false;
     defaultServerPort = settings->value(SETTINGS_SERVER_PORT,DEFAULT_PORT).toInt(&ok);
@@ -79,12 +82,21 @@ GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nm
     }
 
     loadImportExportFunctions();
-    centralTransProc.start();
+    centralTransProc = new(std::nothrow) CentralProcessor();
+    if (centralTransProc == NULL) {
+        qFatal("Cannot allocate memory for action CentralProcessor X{");
+        return;
+    }
+    centralTransProc->start();
 }
 
 GuiHelper::~GuiHelper()
 {
-    centralTransProc.stop();
+    centralTransProc->stop();
+    if (!centralTransProc->wait(10000))
+		qCritical() << "Could not stop the central processor";
+    delete centralTransProc;
+    centralTransProc = NULL;
     saveImportExportFunctions();
     deleteImportExportFuncs();
     delete settings;
@@ -108,7 +120,7 @@ QNetworkAccessManager *GuiHelper::getNetworkManager()
 
 void GuiHelper::processTransform(TransformRequest *request)
 {
-    centralTransProc.addToProcessingQueue(request);
+    centralTransProc->addToProcessingQueue(request);
 }
 
 void GuiHelper::sendNewSelection(const QByteArray &selection)
@@ -121,7 +133,7 @@ void GuiHelper::sendToNewTab(const QByteArray &initialValue)
     emit newTabRequested(initialValue);
 }
 
-void GuiHelper::addTab(TransformsGui * tab)
+void GuiHelper::addTab(TabAbstract *tab)
 {
     tabs.insert(tab);
     connect(tab, SIGNAL(destroyed()), this, SLOT(onTabDeleted()), Qt::UniqueConnection);
@@ -129,21 +141,21 @@ void GuiHelper::addTab(TransformsGui * tab)
     emit tabsUpdated();
 }
 
-void GuiHelper::removeTab(TransformsGui * tab)
+void GuiHelper::removeTab(TabAbstract *tab)
 {
     tabs.remove(tab);
     updateSortedTabs();
     emit tabsUpdated();
 }
 
-QList<TransformsGui *> GuiHelper::getTabs()
+QList<TabAbstract *> GuiHelper::getTabs()
 {
     return sortedTabs.values();
 }
 
 void GuiHelper::onTabDeleted()
 {
-    TransformsGui * tg = static_cast<TransformsGui *>(sender());
+    TabAbstract * tg = static_cast<TabAbstract *>(sender());
     if (!tabs.remove(tg)) {
         logger->logError(tr("Deleted Tab not found"), LOGID);
     } else {
@@ -152,12 +164,17 @@ void GuiHelper::onTabDeleted()
     }
 }
 
+void GuiHelper::raisePip3lineWindow()
+{
+    emit raiseWindowRequest();
+}
+
 void GuiHelper::updateSortedTabs()
 {
     sortedTabs.clear();
-    QSetIterator<TransformsGui *> i(tabs);
+    QSetIterator<TabAbstract *> i(tabs);
     while (i.hasNext()) {
-     TransformsGui * tg = i.next();
+     TabAbstract * tg = i.next();
      sortedTabs.insertMulti(tg->getName(), tg);
     }
 }
@@ -227,39 +244,6 @@ void GuiHelper::buildTransformComboBox(QComboBox *box, const QString &defaultSel
         box->insertItem(1,defaultSelected);
         box->setCurrentIndex(1);
     }
-}
-
-void GuiHelper::buildFilterComboBox(QComboBox *box)
-{
-    QStringList typesList = transformFactory->getTypesList();
-    QStandardItemModel *model = new(std::nothrow) QStandardItemModel(typesList.size(), 1);
-    if (model == NULL ) {
-        qFatal("Cannot allocate memory for QStandardItemModel X{");
-        return;
-    }
-    QStandardItem* item = new(std::nothrow) QStandardItem(tr("Transformations filter"));
-    if (item == NULL) {
-        qFatal("Cannot allocate memory for QStandardItem 1 X{");
-        delete model;
-        return;
-    }
-
-    item->setEnabled(false);
-    model->setItem(0, 0, item);
-    for (int i = 0; i < typesList.size(); ++i)
-    {
-        item = new(std::nothrow) QStandardItem(typesList.at(i));
-        if (item != NULL) {
-            item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-            item->setData( (typesBlacklist.contains(typesList.at(i)) ? Qt::Unchecked : Qt::Checked), Qt::CheckStateRole);
-            model->setItem(i + 1, 0, item);
-        } else {
-          qFatal("Cannot allocate memory for QStandardItem 2 X{");
-        }
-    }
-    connect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(onFilterChanged(QModelIndex,QModelIndex)));
-    box->setModel(model);
-    box->setCurrentIndex(0);
 }
 
 QStringList GuiHelper::getDefaultQuickViews()
@@ -466,6 +450,10 @@ void GuiHelper::deleteImportExportFuncs()
         importExportFunctions.clear();
     }
 }
+QSet<QString> GuiHelper::getTypesBlacklist() const
+{
+    return typesBlacklist;
+}
 
 void GuiHelper::saveMarkingsColor()
 {
@@ -550,6 +538,16 @@ void GuiHelper::setDefaultOffsetBase(int val)
     }
 }
 
+void GuiHelper::goIntoHidding()
+{
+    emit appGoesIntoHidding();
+}
+
+void GuiHelper::isRising()
+{
+    emit appIsRising();
+}
+
 bool GuiHelper::eventFilter(QObject *o, QEvent *e)
 {
     // Filtering out wheel event for comboboxes
@@ -613,7 +611,7 @@ void GuiHelper::loadAction(QString action, ByteSourceAbstract *byteSource)
     QClipboard *clipboard = QApplication::clipboard();
     QString input = clipboard->text();
     if (action == NEW_BYTE_ACTION) {
-        NewByteDialog *dialog = new(std::nothrow) NewByteDialog();
+        NewByteDialog *dialog = new(std::nothrow) NewByteDialog(this);
         if (dialog == NULL) {
             qFatal("Cannot allocate memory for action NewByteDialog X{");
             return;

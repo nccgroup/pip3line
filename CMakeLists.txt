@@ -8,7 +8,7 @@
 # Released under AGPL see LICENSE for more information
 ####
 
-cmake_policy(VERSION 2.8.10)
+cmake_policy(VERSION 2.8.11)
 
 message( STATUS "Git information --" )
 
@@ -39,7 +39,7 @@ message(STATUS "Building using git commit: ${GIT_COMMIT}")
 message( STATUS "General Configuration --" )
 
 project( pip3lineall )
-cmake_minimum_required( VERSION 2.8 )
+cmake_minimum_required( VERSION 2.8.11 )
 set ( CMAKE_BUILD_TYPE Release )
 
 add_definitions(-DQT_NO_DEBUG_OUTPUT)
@@ -50,6 +50,14 @@ if (MSVC)
 	message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 	message(STATUS "CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
 endif(MSVC)
+
+if (CMAKE_COMPILER_IS_GNUCC)
+	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s")
+endif()
+
+if (CMAKE_COMPILER_IS_GNUCXX)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s ")
+endif()
 
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
@@ -77,9 +85,24 @@ if (ALL)
 	SET (WITH_LIB ON)
 	SET (WITH_GUI ON)
 	SET (WITH_CMD ON)
-	SET (WITH_OPENSSL ON)
-	SET (WITH_PYTHON27 ON)
-	SET (WITH_PYTHON3 ON)
+
+	if (WITH_PYTHON3 STREQUAL "OFF")
+		message(WARNING "The Python 3.x plugin has been manually disabled")
+	else()
+		SET (WITH_PYTHON3 ON)
+	endif()
+
+	if (WITH_PYTHON27 STREQUAL "OFF")
+		message(WARNING "The Python 2.7 plugin has been manually disabled")
+	else()
+		SET (WITH_PYTHON27 ON)
+	endif()
+
+	if (WITH_OPENSSL STREQUAL "OFF")
+		message(WARNING "The Openssl plugin has been manually disabled")
+	else()
+		SET (WITH_OPENSSL ON)
+	endif()
 
 	if (WITH_DISTORM STREQUAL "OFF")
 		message(WARNING "The Distorm plugin has been manually disabled")
@@ -87,7 +110,7 @@ if (ALL)
 		SET (WITH_DISTORM ON)
 	endif()
 
-	if (WITH_EAMPLE STREQUAL "OFF")
+	if (WITH_EXAMPLE STREQUAL "OFF")
 		message(WARNING "The example plugin has been manually disabled")
 	else()
 		SET (WITH_EXAMPLE ON)
@@ -132,7 +155,6 @@ endif ( WITH_DISTORM )
 if ( WITH_EXAMPLE ) 
 	add_subdirectory(defaultplugins/exampleplugin)
 endif ( WITH_EXAMPLE )
-
 
 # uninstall target
 configure_file(

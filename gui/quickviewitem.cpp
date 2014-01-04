@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "quickviewitem.h"
 #include <QMutexLocker>
+#include <QXmlStreamReader>
 #include <QTimer>
 #include <QDebug>
 #include "ui_quickviewitem.h"
@@ -81,12 +82,15 @@ void QuickViewItem::processData(const QByteArray &data)
 {
     currentData = data;
     if (currentTransform != NULL) {
-        TransformRequest *tr = new TransformRequest(
+        TransformRequest *tr = new(std::nothrow) TransformRequest(
                     currentTransform,
                     data,
                     (quintptr) this,
                     false
                                    );
+        if (tr == NULL) {
+            qFatal("Cannot allocate memory for TransformRequest X{");
+        }
 
         connect(tr,SIGNAL(finishedProcessing(QByteArray,Messages)), this, SLOT(processingFinished(QByteArray,Messages)));
         guiHelper->processTransform(tr);

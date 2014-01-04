@@ -30,9 +30,20 @@ class TcpSocketProcessor : public StreamProcessor
         void finished(TcpSocketProcessor *);
     private :
         Q_DISABLE_COPY(TcpSocketProcessor)
-        explicit TcpSocketProcessor(TransformMgmt * tFactory,int socketDescr, QObject * parent = 0);
+        explicit TcpSocketProcessor(TransformMgmt * tFactory,
+#if QT_VERSION >= 0x050000
+                                    qintptr socketDescr,
+#else
+                                    int socketDescr,
+#endif
+                                    QObject * parent = 0);
         static const QString TCP_SOCKET;
+#if QT_VERSION >= 0x050000
+        qintptr socketDescriptor;
+#else
         int socketDescriptor;
+#endif
+
         QTcpSocket * socket;
 };
 
@@ -41,11 +52,20 @@ class InternalTcpServer : public QTcpServer
         Q_OBJECT
         friend class TcpServer;
     signals:
+#if QT_VERSION >= 0x050000
+        void newClient(qintptr socketDescriptor);
+#else
         void newClient(int socketDescriptor);
+#endif
+
     private:
         Q_DISABLE_COPY(InternalTcpServer)
         explicit InternalTcpServer(QObject *parent = 0);
+#if QT_VERSION >= 0x050000
+        void incomingConnection(qintptr socketDescriptor);
+#else
         void incomingConnection(int socketDescriptor);
+#endif
 };
 
 class TcpServer : public ServerAbstract
@@ -63,7 +83,11 @@ class TcpServer : public ServerAbstract
         void setPort(int port);
     private slots:
         void processorFinished(TcpSocketProcessor *);
+#if QT_VERSION >= 0x050000
+        void processingNewClient(qintptr socketDescriptor);
+#else
         void processingNewClient(int socketDescriptor);
+#endif
     private:
         Q_DISABLE_COPY(TcpServer)
         QMutex confLocker;

@@ -11,19 +11,20 @@ Released under AGPL see LICENSE for more information
 #ifndef INFODIALOG_H
 #define INFODIALOG_H
 
-#include <QDialog>
-#include <transformabstract.h>
+#include "appdialog.h"
 
 namespace Ui {
 class InfoDialog;
 }
 
-class InfoDialog : public QDialog
+class TransformAbstract;
+
+class InfoDialog : public AppDialog
 {
         Q_OBJECT
         
     public:
-        explicit InfoDialog(TransformAbstract *transform, QWidget *parent = 0);
+        explicit InfoDialog(GuiHelper * guiHelper, TransformAbstract *transform, QWidget *parent = 0);
         ~InfoDialog();
         TransformAbstract * getTransform();
         

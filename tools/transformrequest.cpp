@@ -20,6 +20,7 @@ TransformRequest::TransformRequest(TransformAbstract *ntransform, const QByteArr
     transform = ntransform;
     connect(transform, SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)),Qt::DirectConnection);
     connect(transform, SIGNAL(warning(QString,QString)), this, SLOT(logWarning(QString,QString)),Qt::DirectConnection);
+    connect(this, SIGNAL(finished()), SLOT(deleteLater()));
     deleteObject = takeOwnerShip;
     mutex = NULL;
     ptid = nptid;
@@ -30,6 +31,7 @@ TransformRequest::~TransformRequest()
 {
     if (deleteObject)
         delete transform;
+    transform = NULL;
 }
 
 void TransformRequest::run()
@@ -47,8 +49,6 @@ void TransformRequest::run()
  //   qDebug() << "Processor fisnished: " << this <<  " exec time: " << timer.elapsed() << "ms";
 
     emit finishedProcessing(outputData, messagesList);
-
-    deleteLater();
 }
 
 void TransformRequest::setMutex(QMutex *nmutex)

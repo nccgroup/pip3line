@@ -38,18 +38,29 @@ PythonPlugin::PythonPlugin()
     pyTruncateFunc = NULL;
     pySeekFunc = NULL;
     modules = NULL;
+
     Py_SetProgramName(PROG_NAME);
-    Py_Initialize();
+
+    // initialize the Python interpreter without signal handler
+    Py_InitializeEx(0);
+    // initialize thread support
+    PyEval_InitThreads();
+    pymainstate = PyEval_SaveThread();
+
     qDebug() << "Created " << this;
 }
 
 PythonPlugin::~PythonPlugin()
 {
     qDebug() << "Destroying " << this;
+
+    PyEval_RestoreThread(pymainstate);
+
     cleaningPyObjs();
+
     Py_Finalize();
-    if (modules != NULL)
-        delete modules;
+
+    delete modules;
 }
 
 void PythonPlugin::setCallBack(Pip3lineCallback *ncallback)
@@ -95,7 +106,7 @@ TransformAbstract *PythonPlugin::getTransform(QString name)
     }
 
     if (ta != NULL)
-        connect(ta, SIGNAL(pythonError()), this, SLOT(retrievePythonErrors()));
+        connect(ta, SIGNAL(pythonError()), this, SLOT(retrievePythonErrors()), Qt::DirectConnection);
 
     return ta;
 }
@@ -148,6 +159,9 @@ void PythonPlugin::updatePath()
         pathString.append(list.at(i)).append(separator);
     }
 
+    PyGILState_STATE lgstate;
+    lgstate = PyGILState_Ensure();
+
 #ifdef BUILD_PYTHON_3
     // Qt garantee that QString.size() is always enough to convert to wchar_t
     int size = pathString.size();
@@ -167,14 +181,19 @@ void PythonPlugin::updatePath()
 #else
     PySys_SetPath(pathString.toUtf8().data());
 #endif
+
+    PyGILState_Release(lgstate);
 }
 
 void PythonPlugin::retrievePythonErrors()
 {
-    qDebug() << "Processing " << PYTHON_TYPE << " error";
+    PyGILState_STATE lgstate;
+    lgstate = PyGILState_Ensure();
+
     PyErr_Print(); // Dump the error message(s) in the buffer
     if (pyGetValFunc == NULL || pyTruncateFunc == NULL || pySeekFunc ==NULL || pyStringIO == NULL) {
         callback->logError(tr("The error catching mecanism was not properly initialized, ignoring Python error request."));
+        PyGILState_Release(lgstate);
         return;
     }
 
@@ -182,10 +201,11 @@ void PythonPlugin::retrievePythonErrors()
     PyObject *obResult = NULL;
     QString final = "[Script error]";
 
-    obResult = PyObject_CallObject(pyGetValFunc, NULL);
+    obResult = PyObject_CallObject(pyGetValFunc, NULL); // new ref or NULL
     if (!checkPyObject(obResult)){
         callback->logError("[stderr read] getvalue() failed");
         Py_XDECREF(obResult);
+        PyGILState_Release(lgstate);
         return;
     }
 
@@ -197,6 +217,7 @@ void PythonPlugin::retrievePythonErrors()
 #endif
         callback->logError("[stderr read] getvalue() did not return error string");
         Py_XDECREF(obResult);
+        PyGILState_Release(lgstate);
         return;
     }
 
@@ -209,6 +230,7 @@ void PythonPlugin::retrievePythonErrors()
     if (size < 1) {
         callback->logError(tr("[stderr read] invalid size returned %1").arg(size));
         Py_XDECREF(obResult);
+        PyGILState_Release(lgstate);
         return;
     }
 
@@ -234,65 +256,79 @@ void PythonPlugin::retrievePythonErrors()
     callback->logError(final);
 
     Py_XDECREF(obResult);
+    obResult = NULL;
 
     // Cleaning the StringIO object
-    PyObject* pArgs = PyTuple_New(1);
+    PyObject* pArgs = PyTuple_New(1); // new ref
 
     if (!checkPyObject( pArgs)) {
         callback->logError("[stderr cleaning] Error while creating the Python argument tuple");
         Py_XDECREF(pArgs);
+        PyGILState_Release(lgstate);
         return;
     }
 
-    PyObject* inputPy = PyLong_FromLong(0);
+    PyObject* inputPy = PyLong_FromLong(0); // new ref
     if (!checkPyObject( inputPy)) {
         callback->logError("[stderr cleaning] Error while creating the Python int value (0)");
         Py_XDECREF(pArgs);
         Py_XDECREF(inputPy);
+        PyGILState_Release(lgstate);
         return;
     }
 
     if (PyTuple_SetItem(pArgs, 0, inputPy) != 0) { // don't need to clean inputPy at this point (stolen)
+        callback->logError("[stderr cleaning] Error while assigning the long value to the arg tuple");
         Py_XDECREF(pArgs);
+        Py_XDECREF(inputPy);
+        PyGILState_Release(lgstate);
         return;
     }
 
-    obResult = PyObject_CallObject(pyTruncateFunc, pArgs);
+    obResult = PyObject_CallObject(pyTruncateFunc, pArgs); // new ref or NULL
     if (!checkPyObject(obResult)){
         callback->logError("[stderr cleaning] truncate() failed");
+    } else {
+        Py_XDECREF(obResult);
     }
-    Py_XDECREF(obResult);
+    obResult = NULL;
     Py_XDECREF(pArgs);
 
     // seek(0)
 
-    pArgs = PyTuple_New(1);
+    pArgs = PyTuple_New(1); // new ref
 
     if (!checkPyObject( pArgs)) {
         callback->logError("[stderr cleaning] Error while creating the Python argument tuple");
         Py_XDECREF(pArgs);
+        PyGILState_Release(lgstate);
         return;
     }
 
-    inputPy = PyLong_FromLong(0);
+    inputPy = PyLong_FromLong(0); // new ref
     if (!checkPyObject( inputPy)) {
         callback->logError("[stderr cleaning] Error while creating the Python int value (0)");
         Py_XDECREF(pArgs);
         Py_XDECREF(inputPy);
+        PyGILState_Release(lgstate);
         return;
     }
 
     if (PyTuple_SetItem(pArgs, 0, inputPy) != 0) { // don't need to clean inputPy at this point (stolen)
         Py_XDECREF(pArgs);
+        Py_XDECREF(inputPy);
+        PyGILState_Release(lgstate);
         return;
     }
 
-    obResult = PyObject_CallObject(pySeekFunc, pArgs);
+    obResult = PyObject_CallObject(pySeekFunc, pArgs); // new ref or NULL
     if (!checkPyObject(obResult)){
         callback->logError("[stderr cleaning] seek() failed");
+    } else {
+        Py_XDECREF(obResult);
     }
-    Py_XDECREF(obResult);
     Py_XDECREF(pArgs);
+    PyGILState_Release(lgstate);
 }
 
 void PythonPlugin::cleaningPyObjs()
@@ -309,6 +345,9 @@ void PythonPlugin::cleaningPyObjs()
 
 QStringList PythonPlugin::getCurrentSysPath()
 {
+    PyGILState_STATE lgstate;
+    lgstate = PyGILState_Ensure();
+
     QStringList list;
     Py_ssize_t listSize = 0;
     Py_ssize_t size = 0;
@@ -327,7 +366,7 @@ QStringList PythonPlugin::getCurrentSysPath()
                     PyMem_Free(wstring);
 #else
             if (PyString_Check(pathObj)) {
-                char * buf; // don't touch that
+                char * buf = NULL; // don't touch that
                 if (PyString_AsStringAndSize(pathObj, &buf, &size) != -1) {
                     list.append(QString::fromUtf8(QByteArray(buf, size)));
 #endif
@@ -342,11 +381,15 @@ QStringList PythonPlugin::getCurrentSysPath()
         }
     }
 
+    PyGILState_Release(lgstate);
     return list;
 }
 
 void PythonPlugin::settingUpStderr()
 {
+    PyGILState_STATE lgstate;
+    lgstate = PyGILState_Ensure();
+
     PyObject *modStringIO = NULL;
     PyObject *obFuncStringIO = NULL;
     char stderrString[] = "stderr";
@@ -364,6 +407,7 @@ void PythonPlugin::settingUpStderr()
         callback->logError("[stderr init]Importing cStringIO failed");
 #endif
         Py_XDECREF(modStringIO);
+        PyGILState_Release(lgstate);
         return;
     }
     // get StringIO constructor
@@ -372,6 +416,7 @@ void PythonPlugin::settingUpStderr()
         callback->logError("[stderr init] can't find io.StringIO");
         Py_XDECREF(modStringIO);
         Py_XDECREF(obFuncStringIO);
+        PyGILState_Release(lgstate);
         return;
     }
     // Construct cStringIO object
@@ -381,6 +426,7 @@ void PythonPlugin::settingUpStderr()
         Py_XDECREF(modStringIO);
         Py_XDECREF(obFuncStringIO);
         cleaningPyObjs();
+        PyGILState_Release(lgstate);
         return;
     }
     Py_XDECREF(obFuncStringIO);
@@ -391,6 +437,7 @@ void PythonPlugin::settingUpStderr()
     if (!checkPyObject(pyGetValFunc)){
         callback->logError("[stderr init] can't find getvalue() function");
         cleaningPyObjs();
+        PyGILState_Release(lgstate);
         return;
     }
 
@@ -399,6 +446,7 @@ void PythonPlugin::settingUpStderr()
     if (!checkPyObject(pyTruncateFunc)){
         callback->logError("[stderr init] can't find truncate() function");
         cleaningPyObjs();
+        PyGILState_Release(lgstate);
         return;
     }
 
@@ -407,6 +455,7 @@ void PythonPlugin::settingUpStderr()
     if (!checkPyObject(pySeekFunc)){
         callback->logError("[stderr init] can't find seek() function");
         cleaningPyObjs();
+        PyGILState_Release(lgstate);
         return;
     }
 
@@ -417,6 +466,7 @@ void PythonPlugin::settingUpStderr()
         PyErr_Print();
         cleaningPyObjs();
     }
+    PyGILState_Release(lgstate);
     return;
 }
 

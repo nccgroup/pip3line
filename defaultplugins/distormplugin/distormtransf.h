@@ -36,14 +36,23 @@ class DistormTransf : public TransformAbstract
         void setMaxInstruction(uint val);
         uint getMaxInstruction() const;
 
+        void setShowOffset(bool val);
+        bool getShowOffset() const;
+
+        void setShowOpcodes(bool val);
+        bool getShowOpcodes() const;
         QString help() const;
     private:
         Q_DISABLE_COPY(DistormTransf)
         static const QString XMLASMTYPE;
         static const QString XMLMAXINSTRUCTION;
+        static const QString XMLSHOWOFFSET;
+        static const QString XMLSHOWOPCODES;
         quint64 codeOffset;
         ASMType asmType;
         uint maxInstruction;
+        bool showoffset;
+        bool showopcodes;
 };
 
 #endif // DISTORM_H

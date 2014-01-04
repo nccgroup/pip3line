@@ -20,6 +20,7 @@ MasterThread::MasterThread(bool nbinaryInput, bool hideErrorsFlag, bool verboseF
     verbose = verboseFlag;
     hideErrors = hideErrorsFlag;
     binaryInput = nbinaryInput;
+    processor = NULL;
     singleWay = TransformAbstract::INBOUND;
     errlog = new(std::nothrow) QTextStream(stderr);
     if (errlog == NULL) {
@@ -37,8 +38,11 @@ MasterThread::MasterThread(bool nbinaryInput, bool hideErrorsFlag, bool verboseF
 
 MasterThread::~MasterThread()
 {
+    processor->stop();
+    delete processor;
     delete errlog;
     delete messlog;
+
 }
 
 void MasterThread::run()

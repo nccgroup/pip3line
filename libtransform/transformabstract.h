@@ -12,7 +12,6 @@ Released under AGPL see LICENSE for more information
 #define TRANSFORMABSTRACT_H
 
 #include <QObject>
-#include <QWidget>
 #include <QString>
 #include <QByteArray>
 #include <QStringList>
@@ -20,6 +19,8 @@ Released under AGPL see LICENSE for more information
 #include "commonstrings.h"
 #include "libtransform_global.h"
 using namespace Pip3lineConst;
+
+class QWidget;
 
 class LIBTRANSFORMSHARED_EXPORT TransformAbstract : public QObject
 {
@@ -43,7 +44,7 @@ class LIBTRANSFORMSHARED_EXPORT TransformAbstract : public QObject
 
         // methods only used for gui coolness (optionals)
         virtual bool isTwoWays();
-        QWidget * getGui(QWidget * parent);
+        QWidget * getGui(QWidget * parent); // beware this one is not virtual anymore use requestGui() instead
         virtual QString inboundString() const;
         virtual QString outboundString() const;
         // Optional Help string. Will be accessible from the Gui

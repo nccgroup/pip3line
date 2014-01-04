@@ -66,7 +66,7 @@ void QuickViewItemConfig::closeEvent(QCloseEvent *event)
 TransformAbstract *QuickViewItemConfig::getTransform()
 {
     if (currentTransform != NULL)
-        return transformFactory->loadTransformFromConf(currentTransform->getConfiguration());
+        return transformFactory->cloneTransform(currentTransform);
     else
         return NULL;
 }
@@ -75,7 +75,7 @@ void QuickViewItemConfig::setTransform(TransformAbstract *transform)
 {
     if (transform != NULL) {
         delete currentTransform;
-        currentTransform = transformFactory->loadTransformFromConf(transform->getConfiguration());
+        currentTransform = transformFactory->cloneTransform(transform);
         if (currentTransform != NULL) {
             int index = ui->transformComboBox->findText(currentTransform->name());
             if (index != -1) {
@@ -166,7 +166,7 @@ void QuickViewItemConfig::onInfo()
             infoDialog = NULL;
         }
 
-        infoDialog = new(std::nothrow) InfoDialog(currentTransform,this);
+        infoDialog = new(std::nothrow) InfoDialog(guiHelper, currentTransform,this);
         if (infoDialog == NULL) {
             qFatal("Cannot allocate memory for infoDialog (QuickViewItemConfig) X{");
         }

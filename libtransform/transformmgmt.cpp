@@ -20,6 +20,14 @@ Released under AGPL see LICENSE for more information
 #include <QCoreApplication>
 #include <QSetIterator>
 #include <QMetaType>
+#include <QSettings>
+#include <QPluginLoader>
+#include <QtPlugin>
+#include <QXmlStreamWriter>
+#include <QXmlStreamReader>
+#include "transformabstract.h"
+#include "transformfactoryplugininterface.h"
+#include "pip3linecallback.h"
 #include "composedtransform.h"
 #include "../version.h"
 
@@ -534,6 +542,11 @@ TransformAbstract *TransformMgmt::loadTransformFromConf(const QHash<QString, QSt
     return transf;
 }
 
+TransformAbstract *TransformMgmt::cloneTransform(TransformAbstract *transform)
+{
+    return loadTransformFromConf(transform->getConfiguration());
+}
+
 QHash<QString, TransformFactoryPluginInterface *> TransformMgmt::getPlugins()
 {
     return pluginsList;
@@ -753,6 +766,11 @@ QSettings *TransformMgmt::getSettingsObj()
         qFatal("Cannot allocate memory for QSettings (lib) X{");
     }
     return settings;
+}
+
+QList<TransformAbstract *> TransformMgmt::getTransformInstances() const
+{
+    return transformInstances.toList();
 }
 
 

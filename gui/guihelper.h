@@ -21,7 +21,6 @@ Released under AGPL see LICENSE for more information
 #include <QComboBox>
 #include <QString>
 #include <QMultiHash>
-#include <QSettings>
 #include <QColor>
 #include <QSet>
 #include <QMultiMap>
@@ -29,18 +28,20 @@ Released under AGPL see LICENSE for more information
 #include <QMenu>
 #include "sources/bytesourceabstract.h"
 #include <transformabstract.h>
-#include "transformsgui.h"
+#include "tabs/tababstract.h"
 #include "textinputdialog.h"
 #include "../tools/centralprocessor.h"
 
 namespace GuiStyles {
     static const QString LineEditError = "QLineEdit { background-color: #FFB1B2; }";
     static const QString ComboBoxError = "QComboBox { color : red; }";
+    static const QString PushButtonReadonly = "QPushButton { background-color : #FF595C; }";
     static const QString LineEditWarning = "";
     static const QString LineEditMessage = "";
 }
 
 class TransformsGui;
+class QSettings;
 
 class GuiHelper : public QObject
 {
@@ -59,13 +60,12 @@ class GuiHelper : public QObject
         void sendNewSelection(const QByteArray &selection);
 
         void sendToNewTab(const QByteArray &initialValue = QByteArray());
-        void addTab(TransformsGui *tab);
-        void removeTab(TransformsGui * tab);
-        QList<TransformsGui *> getTabs();
+        void addTab(TabAbstract *tab);
+        void removeTab(TabAbstract * tab);
+        QList<TabAbstract *> getTabs();
 
         TextInputDialog *getNameDialog(QWidget *parent, const QString &defaultvalue, const QString &title = QString());
         void buildTransformComboBox(QComboBox *box, const QString &defaultSelected = QString(), bool applyFilter = false);
-        void buildFilterComboBox(QComboBox *box);
 
         QStringList getDefaultQuickViews();
         QStringList getQuickViewConf();
@@ -104,10 +104,13 @@ class GuiHelper : public QObject
         int getDefaultOffsetBase() const;
         void setDefaultOffsetBase(int val);
 
+        void goIntoHidding();
+        void isRising();
 
+        QSet<QString> getTypesBlacklist() const;
 
     public slots:
-
+        void raisePip3lineWindow();
     signals:
         void newSelection(QByteArray selection);
         void newTabRequested(QByteArray initialValue);
@@ -115,9 +118,13 @@ class GuiHelper : public QObject
         void markingsUpdated();
         void importExportUpdated();
         void tabsUpdated();
+        void appGoesIntoHidding();
+        void appIsRising();
+        void raiseWindowRequest();
     private slots:
         void onFilterChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
         void onTabDeleted();
+
     private:
         Q_DISABLE_COPY(GuiHelper)
         static const QString SETTINGS_QUICKVIEWS;
@@ -139,8 +146,8 @@ class GuiHelper : public QObject
         QNetworkAccessManager *networkManager;
         LoggerWidget *logger;
         QSettings *settings;
-        QSet<TransformsGui *> tabs;
-        QMultiMap<QString, TransformsGui *> sortedTabs;
+        QSet<TabAbstract *> tabs;
+        QMultiMap<QString, TabAbstract *> sortedTabs;
         int defaultServerPort;
         QString defaultServerIp;
         QString defaultServerPipeName;
@@ -150,7 +157,7 @@ class GuiHelper : public QObject
         QSet<QString> typesBlacklist;
         QHash<QString, QColor> markingColors;
         QHash<QString , TransformAbstract *> importExportFunctions;
-        CentralProcessor centralTransProc;
+        CentralProcessor * centralTransProc;
         int offsetDefaultBase;
 };
 

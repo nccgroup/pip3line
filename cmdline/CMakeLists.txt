@@ -18,7 +18,6 @@
 
 message ( STATUS "Configuring pip3linecmd --" )
 project( pip3linecmd )
-cmake_minimum_required( VERSION 2.8.9 )
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall )
 
@@ -53,6 +52,7 @@ set ( pip3linecmd_HDRS
 	../tools/binaryprocessor.h
 	../tools/textprocessor.h
 	../tools/serverabstract.h
+	../tools/processingstats.h
 	)
 
 set ( pip3linecmd_SRCS
@@ -62,6 +62,7 @@ set ( pip3linecmd_SRCS
 	../tools/binaryprocessor.cpp
 	../tools/textprocessor.cpp
 	../tools/serverabstract.cpp
+	../tools/processingstats.cpp
 	)
 
 add_executable ( pip3linecmd ${pip3linecmd_SRCS} )

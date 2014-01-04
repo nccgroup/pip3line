@@ -12,6 +12,10 @@ Released under AGPL see LICENSE for more information
 #include "ui_massprocessingdialog.h"
 #include "../tools/textprocessor.h"
 #include "../tools/binaryprocessor.h"
+#include "tabs/transformsgui.h"
+#include "../tools/processor.h"
+#include "../tools/tcpserver.h"
+#include "../tools/pipeserver.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QMutexLocker>
@@ -23,27 +27,31 @@ Released under AGPL see LICENSE for more information
 #include <QBuffer>
 #include <QNetworkInterface>
 #include <commonstrings.h>
+#include <transformabstract.h>
+#include <transformmgmt.h>
+#include "guihelper.h"
+#include "../tools/serverabstract.h"
+#include "screeniodevice.h"
+#include <QIODevice>
 using namespace Pip3lineConst;
 
 const QString MassProcessingDialog::SETTINGS_MASS_PROCESSING_GROUP = "MassProcessing";
 
 MassProcessingDialog::MassProcessingDialog(GuiHelper *helper, TransformsGui *ntGui) :
-    QDialog(ntGui),
+    AppDialog(helper, ntGui),
+    errorDialog(helper),
     statTimer(this)
 {
     ui = new(std::nothrow) Ui::MassProcessingDialog();
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::MassProcessingDialog X{");
     }
-    guiHelper = helper;
     ui->setupUi(this);
     transformFactory = guiHelper->getTransformFactory();
     processor = NULL;
     currentInput = NULL;
     currentOutput = NULL;
     tGui = ntGui;
-    logger = guiHelper->getLogger();
-
 
     errorDialog.setJustShowMessages(true);
     errorDialog.setWindowTitle(tr("Errors found while processing"));
@@ -69,21 +77,27 @@ MassProcessingDialog::MassProcessingDialog(GuiHelper *helper, TransformsGui *ntG
     ui->restartPushButton->setEnabled(false);
     ui->stopPushButton->setEnabled(false);
 
-    connect(&statTimer, SIGNAL(timeout()), this, SLOT(stats()));
-    connect(ui->inputComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onInputChanged(int)));
-    connect(ui->outputComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onOutputChanged(int)));
-    connect(ui->refreshIPsPushButton, SIGNAL(clicked()), this, SLOT(refreshIPs()));
-    connect(ui->clearPushButton, SIGNAL(clicked()), this, SLOT(clearOnScreenOutput()));
-    connect(ui->inputFilePushButton, SIGNAL(clicked()), this, SLOT(selectInputFile()));
-    connect(ui->outputFileButton, SIGNAL(clicked()), this, SLOT(selectOutputFile()));
-    connect(ui->stopPushButton, SIGNAL(clicked()), this, SLOT(stopCurrentServer()));
-    connect(ui->restartPushButton, SIGNAL(clicked()), this, SLOT(restartCurrentServer()));
-    connect(ui->separatorLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onSeparatorChanged(QString)));
-    connect(ui->useSocketForOutputcheckBox, SIGNAL(toggled(bool)), this, SLOT(onUseSocketForOutput(bool)));
-    connect(ui->keepSynchronizedCheckBox, SIGNAL(toggled(bool)), this, SLOT(onKeepSynchronize(bool)));
-    connect(ui->refreshConfPushButton, SIGNAL(clicked()), this, SLOT(refreshTransformConf()));
 
-    connect(tGui, SIGNAL(chainChanged(QString)), this, SLOT(setTranformChain(QString)));
+
+    connect(&statTimer, SIGNAL(timeout()), SLOT(stats()));
+    connect(ui->inputComboBox, SIGNAL(currentIndexChanged(int)), SLOT(onInputChanged(int)));
+    connect(ui->outputComboBox, SIGNAL(currentIndexChanged(int)), SLOT(onOutputChanged(int)));
+    connect(ui->refreshIPsPushButton, SIGNAL(clicked()), SLOT(refreshIPs()));
+    connect(ui->clearPushButton, SIGNAL(clicked()), SLOT(clearOnScreenOutput()));
+    connect(ui->inputFilePushButton, SIGNAL(clicked()), SLOT(selectInputFile()));
+    connect(ui->outputFileButton, SIGNAL(clicked()), SLOT(selectOutputFile()));
+    connect(ui->stopPushButton, SIGNAL(clicked()), SLOT(stopCurrentServer()));
+    connect(ui->restartPushButton, SIGNAL(clicked()), SLOT(restartCurrentServer()));
+    connect(ui->separatorLineEdit, SIGNAL(textChanged(QString)), SLOT(onSeparatorChanged(QString)));
+    connect(ui->useSocketForOutputcheckBox, SIGNAL(toggled(bool)), SLOT(onUseSocketForOutput(bool)));
+    connect(ui->keepSynchronizedCheckBox, SIGNAL(toggled(bool)), SLOT(onKeepSynchronize(bool)));
+    connect(ui->refreshConfPushButton, SIGNAL(clicked()), SLOT(refreshTransformConf()));
+    connect(ui->logsCheckBox, SIGNAL(toggled(bool)), SLOT(onLogsEnabled(bool)));
+
+    connect(tGui, SIGNAL(chainChanged(QString)), this, SLOT(setTranformChain(QString)), Qt::QueuedConnection);
+
+  //  ui->outputComboBox->setCurrentIndex(0);
+  //  ui->outputFileLineEdit->setText("/dev/null");
 }
 
 MassProcessingDialog::~MassProcessingDialog()
@@ -96,9 +110,11 @@ MassProcessingDialog::~MassProcessingDialog()
 
 void MassProcessingDialog::setTranformChain(const QString &chainConf)
 {
+    //qDebug() << "Updating transform configuration" << chainConf;
     transformConf = chainConf;
-    if (server != NULL)
-        server->setTransformations(transformConf);
+    if (server != NULL) {
+        emit newServerTransformChain(transformConf);
+    }
 }
 
 void MassProcessingDialog::selectInputFile()
@@ -147,6 +163,7 @@ void MassProcessingDialog::on_processingPushButton_clicked()
 
         if (output == NULL) {
             delete input;
+            input = NULL;
             massMutex.unlock();
             releasingThread();
             return;
@@ -154,6 +171,7 @@ void MassProcessingDialog::on_processingPushButton_clicked()
 
         errorDialog.clearMessages();
         processor = new(std::nothrow) TextProcessor(transformFactory);
+       // qDebug() << "new processor instanciated" << transformConf;
         if (processor != NULL) {
             processor->setInput(input);
             processor->setOutput(output);
@@ -161,8 +179,8 @@ void MassProcessingDialog::on_processingPushButton_clicked()
             processor->setDecoding(ui->decodeCheckBox->isChecked());
             processor->setEncoding(ui->encodeCheckBox->isChecked());
 
-            connect(processor, SIGNAL(error(QString,QString)), logger, SLOT(logError(QString,QString)));
-            connect(processor, SIGNAL(status(QString,QString)), logger, SLOT(logStatus(QString,QString)));
+            connect(processor, SIGNAL(error(QString,QString)), logger, SLOT(logError(QString,QString)),Qt::QueuedConnection);
+            connect(processor, SIGNAL(status(QString,QString)), logger, SLOT(logStatus(QString,QString)),Qt::QueuedConnection);
             connect(processor,SIGNAL(finished()),this,SLOT(releasingThread()));
 
             processor->start();
@@ -205,15 +223,17 @@ void MassProcessingDialog::on_processingPushButton_clicked()
         }
 
         if (server != NULL) {
-            connect(server, SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
-            connect(server, SIGNAL(status(QString,QString)), logger,SLOT(logStatus(QString,QString)));
+            connect(server, SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)),Qt::QueuedConnection);
+            connect(server, SIGNAL(status(QString,QString)), logger,SLOT(logStatus(QString,QString)),Qt::QueuedConnection);
             connect(ui->encodeCheckBox, SIGNAL(toggled(bool)), server,SLOT(setEncoding(bool)));
             connect(ui->decodeCheckBox, SIGNAL(toggled(bool)), server,SLOT(setDecoding(bool)));
+            connect(this, SIGNAL(newServerTransformChain(QString)), server,SLOT(setTransformations(QString)), Qt::QueuedConnection);
 
             server->setOutput(output);
             server->setTransformations(tGui->getCurrentChainConf());
             server->setDecoding(ui->decodeCheckBox->isChecked());
             server->setEncoding(ui->encodeCheckBox->isChecked());
+            server->setAllowForwardingLogs(ui->logsCheckBox->isCheckable());
             onSeparatorChanged(ui->separatorLineEdit->text());
 
             ui->serverTypeComboBox->setEnabled(false);
@@ -283,10 +303,25 @@ void MassProcessingDialog::cleaningMem()
 void MassProcessingDialog::stats()
 {
     QMutexLocker locked(&threadMutex);
+    QString bstring;
+    ProcessingStats stats;
     if (processor != NULL)
-        ui->statsLabel->setText(QString("Output blocks written: %1").arg(processor->getStatsOut()));
+        stats = processor->getStats();
     else if (server != NULL)
-        ui->statsLabel->setText(QString("Output blocks written: %1").arg(server->getStatsOut()));
+        stats = server->getStats();
+
+    bstring.append(tr("Blocks read: %1 Blocks written: %2").arg(stats.getInBlocks()).arg(stats.getOutBlocks()));
+
+    if (stats.getErrorsCount() != 0)
+        bstring.append(tr(" Errors: %1").arg(stats.getErrorsCount()));
+
+    if (stats.getWarningsCount() != 0)
+        bstring.append(tr(" Warnings: %1").arg(stats.getWarningsCount()));
+
+    if (stats.getStatusCount() != 0)
+        bstring.append(tr(" Info: %1").arg(stats.getStatusCount()));
+
+    ui->statsLabel->setText(bstring);
 
 }
 
@@ -401,11 +436,20 @@ void MassProcessingDialog::onKeepSynchronize(bool checked)
 {
     if (checked) {
         refreshTransformConf();
-        connect(tGui, SIGNAL(chainChanged(QString)), this, SLOT(setTranformChain(QString)), Qt::UniqueConnection);
+        connect(tGui, SIGNAL(chainChanged(QString)), this, SLOT(setTranformChain(QString)), Qt::QueuedConnection);
         ui->refreshConfPushButton->setEnabled(false);
     } else {
         disconnect(tGui, SIGNAL(chainChanged(QString)), this, SLOT(setTranformChain(QString)));
         ui->refreshConfPushButton->setEnabled(true);
+    }
+}
+
+void MassProcessingDialog::onLogsEnabled(bool checked)
+{
+    if (processor != NULL) {
+
+    } else if (server != NULL) {
+        server->setAllowForwardingLogs(checked);
     }
 }
 

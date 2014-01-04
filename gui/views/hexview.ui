@@ -26,11 +26,26 @@
    <property name="spacing">
     <number>0</number>
    </property>
-   <property name="margin">
+   <property name="leftMargin">
     <number>0</number>
    </property>
-   <item>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item alignment="Qt::AlignBottom">
     <widget class="QWidget" name="statsWidget" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QLabel" name="statsLabel">
@@ -68,7 +83,10 @@
   </action>
   <action name="saveToFileAction">
    <property name="text">
-    <string>Save to file</string>
+    <string>All</string>
+   </property>
+   <property name="toolTip">
+    <string>Save all the content to file</string>
    </property>
   </action>
   <action name="selectAllAction">
@@ -111,6 +129,14 @@
    </property>
    <property name="toolTip">
     <string>Reset to a new byte array</string>
+   </property>
+  </action>
+  <action name="saveSelectedToFileAction">
+   <property name="text">
+    <string>Selection</string>
+   </property>
+   <property name="toolTip">
+    <string>Save selected bytes to file</string>
    </property>
   </action>
  </widget>

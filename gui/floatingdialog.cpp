@@ -12,9 +12,10 @@ Released under AGPL see LICENSE for more information
 #include "ui_floatingdialog.h"
 #include <QDebug>
 
-FloatingDialog::FloatingDialog(QWidget * widget, QWidget *parent) :
-    QDialog(parent)
+FloatingDialog::FloatingDialog(GuiHelper * guiHelper, QWidget * widget, QWidget *parent) :
+    AppDialog(guiHelper, parent)
 {
+    allowReject = true;
     ui = new(std::nothrow) Ui::FloatingDialog();
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::FloatingDialog X{");
@@ -32,8 +33,15 @@ FloatingDialog::~FloatingDialog()
     qDebug() << "Destroyed " << this;
 }
 
+void FloatingDialog::setAllowReject(bool val)
+{
+    allowReject = val;
+}
+
 void FloatingDialog::closeEvent(QCloseEvent *event)
 {
-    reject();
-    QDialog::closeEvent(event);
+    if (allowReject) {
+        reject();
+        QDialog::closeEvent(event);
+    }
 }

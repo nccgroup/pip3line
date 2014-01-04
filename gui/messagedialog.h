@@ -11,7 +11,7 @@ Released under AGPL see LICENSE for more information
 #ifndef MESSAGEDIALOG_H
 #define MESSAGEDIALOG_H
 
-#include <QDialog>
+#include "appdialog.h"
 #include <QColor>
 #include <QMutex>
 
@@ -19,12 +19,12 @@ namespace Ui {
 class MessageDialog;
 }
 
-class MessageDialog : public QDialog
+class MessageDialog : public AppDialog
 {
     Q_OBJECT
     
     public:
-        explicit MessageDialog(QWidget *parent = 0);
+        explicit MessageDialog(GuiHelper * guiHelper, QWidget *parent = 0);
         ~MessageDialog();
         long errors();
         long warnings();

@@ -13,14 +13,17 @@ Released under AGPL see LICENSE for more information
 
 #include <QDialog>
 #include <QList>
-#include "quickviewitem.h"
-#include "guihelper.h"
+#include <QPoint>
+#include "appdialog.h"
 
 namespace Ui {
 class QuickViewDialog;
 }
 
-class QuickViewDialog : public QDialog
+class GuiHelper;
+class QuickViewItem;
+
+class QuickViewDialog : public AppDialog
 {
         Q_OBJECT
         
@@ -39,7 +42,6 @@ class QuickViewDialog : public QDialog
         void addItem(const QString & conf);
         Ui::QuickViewDialog *ui;
         QList<QuickViewItem *> itemList;
-        GuiHelper * guiHelper;
         QByteArray currentData;
 };
 

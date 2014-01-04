@@ -14,6 +14,7 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QStyleFactory>
 #include <QObject>
+#include <QTimer>
 
 
 #define DEBUG_CMD "--debug"
@@ -61,6 +62,9 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &, const QString &
         }
         abort();
     }
+	if (_logFile != NULL) {
+		fflush(_logFile);
+	}
 }
 #endif
 
@@ -69,7 +73,8 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &, const QString &
 #ifdef Q_OS_LINUX
 #include <signal.h>
 
-void termSignalHandler(int) {
+void termSignalHandler(int signal) {
+    qWarning() <<"Received signal " << signal;
     QTimer::singleShot(0,QCoreApplication::instance(),SLOT(quit()));
 }
 
@@ -82,7 +87,13 @@ static void setup_unix_signal_handlers()
     term.sa_flags |= SA_RESTART;
 
     if (sigaction(SIGTERM, &term, 0) == -1)
-        qWarning("Could not set the signal handler");
+        qWarning("Could not set the SIGTERM signal handler");
+    if (sigaction(SIGINT, &term, 0) == -1)
+        qWarning("Could not set the SIGINT signal handler");
+    if (sigaction(SIGQUIT, &term, 0) == -1)
+        qWarning("Could not set the SIGQUIT signal handler");
+    if (sigaction(SIGABRT, &term, 0) == -1)
+        qWarning("Could not set the SIGABRT signal handler");
 
 }
 #endif
@@ -96,6 +107,7 @@ int main(int argc, char *argv[])
 #if QT_VERSION >= 0x050000
     QStringList pathlist = QCoreApplication::libraryPaths();
     qDebug() << pathlist;
+	
     // Fixing the qt5 plugin mess
     pathlist << ".";
     QCoreApplication::setLibraryPaths(pathlist);
@@ -136,21 +148,27 @@ int main(int argc, char *argv[])
 
 #endif
 
-#ifdef Q_CC_MSVC
+#ifdef Q_OS_WIN
     // forcing style on windows. can be overwritten at runtime
-    // with the option --style
+    // with the option -style [style name]
+    // An indicative list of available themes is given in the Help->info dialog
     QStringList stylelist = QStyleFactory::keys();
-
-    if (stylelist.contains("WindowsVista"))
+    if (stylelist.contains("Fusion"))
+        QApplication::setStyle("Fusion");
+    else if (stylelist.contains("WindowsVista"))
         QApplication::setStyle("WindowsVista");
     else if (stylelist.contains("WindowsXP"))
         QApplication::setStyle("WindowsXP");
+
+
 #endif
 
     // Qt initialisation
     QApplication a(argc, argv);
+    a.setStyleSheet("QWidget{ selection-background-color: blue}");
+	qWarning() << "App started";
 
-    // Cleaning the PATH to avoid library loading corruption
+    // Cleaning the PATH to avoid library corruption whenever loading plugins
     qputenv("PATH", QByteArray());
 
 #ifdef Q_OS_UNIX
@@ -179,14 +197,19 @@ int main(int argc, char *argv[])
 
     QApplication::setQuitOnLastWindowClosed(false);
 
-    MainWindow * w = new MainWindow(debugging);
-    if (!fileName.isEmpty())
-        w->loadFile(fileName);
-    w->show();
+    int ret = 0;
+    MainWindow * w = new(std::nothrow) MainWindow(debugging);
+    if (w != NULL) {
+        if (!fileName.isEmpty())
+            w->loadFile(fileName);
 
-    int ret = a.exec();
+        w->show();
 
-    delete w;
+        ret = a.exec();
+        //qWarning() << "App ending";
+
+        delete w;
+    }
 #if QT_VERSION >= 0x050000
     if (_logFile != NULL) {
         fclose (_logFile);

@@ -41,47 +41,13 @@ Released under AGPL see LICENSE for more information
 #include "../tools/transformrequest.h"
 #include "sources/basicsource.h"
 #include "crossplatform.h"
+#include "shared/offsetgotowidget.h"
+#include "shared/searchwidget.h"
+#include "views/textview.h"
+#include "views/hexview.h"
 #include <QDebug>
 #include <QRegExp>
-
-OffsetValidator::OffsetValidator(QObject *parent) :
-    QValidator(parent)
-{
-}
-
-QValidator::State OffsetValidator::validate(QString &input, int &) const
-{
-    if (input.isEmpty())
-        return QValidator::Intermediate;
-
-    QRegExp offsetRegExp("^([=+-])?([oxn])?([0-9a-fA-F]{0,20})$");
-
-    if (offsetRegExp.indexIn(input) != -1) {
-
-        if (!offsetRegExp.cap(3).isEmpty()) {
-            quint64 val = 0;
-            bool ok = false;
-            if (offsetRegExp.cap(2) == "o") {
-                val = offsetRegExp.cap(3).toULongLong(&ok, 8);
-            } else if (offsetRegExp.cap(2) == "n") {
-                val = offsetRegExp.cap(3).toULongLong(&ok, 10);
-            } else {
-                val = offsetRegExp.cap(3).toULongLong(&ok, 16);
-            }
-
-            if (ok && val < LONG_LONG_MAX) {
-                return QValidator::Acceptable;
-            } else {
-                return QValidator::Invalid;
-            }
-
-        }
-        return QValidator::Intermediate;
-    }
-    return QValidator::Invalid;
-}
-
-//=======================================================================
+#include "shared/clearallmarkingsbutton.h"
 
 const int TransformWidget::MAX_DIRECTION_TEXT = 20;
 const QString TransformWidget::NEW_BYTE_ACTION = "New Byte(s)";
@@ -96,6 +62,8 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
     currentTransform = NULL;
     infoDialog = NULL;
     settingsTab = NULL;
+    gotoWidget = NULL;
+    searchWidget = NULL;
     guiHelper = nguiHelper;
     transformFactory = guiHelper->getTransformFactory();
     manager = guiHelper->getNetworkManager();
@@ -105,7 +73,7 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
         qFatal("Cannot allocate memory for byteSource X{");
     }
 
-    connect(byteSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger, SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)));
+    connect(byteSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger, SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)), Qt::QueuedConnection);
     connect(byteSource, SIGNAL(updated(quintptr)), this, SLOT(refreshOutput()));
 
     ui->setupUi(this);
@@ -130,16 +98,17 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
     connect(transformFactory, SIGNAL(transformsUpdated()),this, SLOT(buildSelectionArea()), Qt::QueuedConnection);
     connect(guiHelper, SIGNAL(filterChanged()), this, SLOT(buildSelectionArea()));
 
-    qDebug() << "Created" << this;
+ //   qDebug() << "Created" << this;
 }
 
 TransformWidget::~TransformWidget()
 {
 
-    qDebug() << "Destroying:" << this << " " << (currentTransform == NULL ? "Null" : currentTransform->name());
+  //  qDebug() << "Destroying:" << this << " " << (currentTransform == NULL ? "Null" : currentTransform->name());
 
     clearCurrentTransform();
-
+    delete gotoWidget;
+    delete searchWidget;
     delete infoDialog;
 
     delete hexView;
@@ -165,16 +134,36 @@ void TransformWidget::configureViewArea() {
     ui->tabWidget->addTab(textView,"Text");
     ui->tabWidget->addTab(hexView,"Hexadecimal");
 
-    connect(ui->clearMarkingsPushButton, SIGNAL(clicked()), hexView, SLOT(onClearAllMArkings()));
-
-    OffsetValidator *val = new OffsetValidator(ui->gotoLineEdit);
-    ui->gotoLineEdit->setValidator(val);
-    ui->gotoLineEdit->installEventFilter(this);
-    ui->searchLineEdit->installEventFilter(this);
     hexView->installEventFilter(this);
     textView->installEventFilter(this);
     ui->tabWidget->installEventFilter(this);
     this->installEventFilter(this);
+
+    searchWidget = new SearchWidget(byteSource, this);
+    if (searchWidget == NULL) {
+        qFatal("Cannot allocate memory for SearchWidget X{");
+    }
+
+    searchWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    searchWidget->setStopVisible(false);
+    ui->toolsLayout->addWidget(searchWidget);
+    connect(searchWidget, SIGNAL(searchRequest(QByteArray,bool)), SLOT(onSearch(QByteArray,bool)));
+    connect(textView, SIGNAL(searchStatus(bool)), searchWidget,SLOT(setError(bool)));
+
+    gotoWidget = new OffsetGotoWidget(guiHelper, this);
+    if (gotoWidget == NULL) {
+        qFatal("Cannot allocate memory for OffsetGotoWidget X{");
+    }
+
+    gotoWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    ui->toolsLayout->addWidget(gotoWidget);
+    connect(gotoWidget, SIGNAL(gotoRequest(quint64,bool,bool,bool)), SLOT(onGotoOffset(quint64,bool,bool,bool)));
+
+    clearAllMarkingsButton = new(std::nothrow) ClearAllMarkingsButton(byteSource,this);
+    if (clearAllMarkingsButton == NULL) {
+        qFatal("Cannot allocate memory for ClearAllMarkingsButton X{");
+    }
+    ui->uppperToolLayout->insertWidget(1,clearAllMarkingsButton);
 
     connect(ui->backwardPushButton, SIGNAL(clicked()), this, SLOT(onHistoryBackward()));
     connect(ui->forwardPushButton, SIGNAL(clicked()), this, SLOT(onHistoryForward()));
@@ -217,6 +206,7 @@ void TransformWidget::clearCurrentTransform()
 
 void TransformWidget::updatingFromTransform() {
     configureDirectionBox();
+    emit transformChanged();
     refreshOutput();
 }
 
@@ -290,12 +280,16 @@ void TransformWidget::refreshOutput()
     if (currentTransform != NULL) {
         ui->activityStackedWidget->setCurrentIndex(0);
 
-        TransformAbstract * ta = transformFactory->loadTransformFromConf(currentTransform->getConfiguration());
+        TransformAbstract * ta = transformFactory->cloneTransform(currentTransform);
         if (ta != NULL) {
-            TransformRequest *tr = new TransformRequest(
+            TransformRequest *tr = new(std::nothrow) TransformRequest(
                         ta,
                         byteSource->getRawData(),
                         (quintptr) this);
+
+            if (tr == NULL) {
+                qFatal("Cannot allocate memory for TransformRequest X{");
+            }
 
             connect(tr,SIGNAL(finishedProcessing(QByteArray,Messages)), this, SLOT(processingFinished(QByteArray,Messages)));
             guiHelper->processTransform(tr);
@@ -373,9 +367,14 @@ bool TransformWidget::setTransform(TransformAbstract * transf)  {
     return false;
 }
 
-ByteItemModel *TransformWidget::getBytesModel()
+ByteSourceAbstract *TransformWidget::getSource()
 {
-    return hexView->getModel();
+    return byteSource;
+}
+
+ByteTableView *TransformWidget::getHexTableView()
+{
+    return hexView->getHexTableView();
 }
 
 void TransformWidget::forceUpdating()
@@ -475,22 +474,19 @@ bool TransformWidget::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        if (obj == ui->gotoLineEdit && keyEvent->key() == Qt::Key_Return) {
-            onGoToOffset(keyEvent->modifiers().testFlag(Qt::ShiftModifier));
+        if (keyEvent->key() == Qt::Key_N && keyEvent->modifiers().testFlag(Qt::ControlModifier))  {
+            if (ui->tabWidget->currentWidget() == textView) {
+                textView->searchAgain();
+            } else {
+                hexView->searchAgain();
+            }
             return true;
-        } else if (obj == ui->searchLineEdit && keyEvent->key() == Qt::Key_Return) {
-            int modifiers = keyEvent->modifiers();
-            if ((modifiers & Qt::ShiftModifier) || (modifiers & Qt::AltModifier) || (modifiers & Qt::ControlModifier))
-                ui->tabWidget->setCurrentWidget(hexView);
-            onSearch(modifiers);
         } else if (keyEvent->key() == Qt::Key_G && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
-            ui->gotoLineEdit->setFocus();
-            ui->gotoLineEdit->selectAll();
+            gotoWidget->setFocus();
+            return true;
         } else if (keyEvent->key() == Qt::Key_F && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
-            ui->searchLineEdit->setFocus();
-            ui->searchLineEdit->selectAll();
-        } else if (keyEvent->key() == Qt::Key_N && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
-            onSearch(0);
+            searchWidget->setFocus();
+            return true;
         }
     }
     return QObject::eventFilter(obj, event);
@@ -599,13 +595,9 @@ void TransformWidget::fromLocalFile(QString fileName)
 void TransformWidget::onFileLoadRequest()
 {
     QString fileName;
-    if (byteSource->hasCapability(ByteSourceAbstract::CAP_RESET)) {
-        fileName = QFileDialog::getOpenFileName(this,tr("Choose file to load from"));
-        if (!fileName.isEmpty()) {
-            fromLocalFile(fileName);
-        }
-    } else {
-        QMessageBox::critical(this,tr("Error"), tr("%1 does not have the CAP_RESET capability, ignoring").arg(((QObject *)byteSource)->metaObject()->className()),QMessageBox::Ok);
+    fileName = QFileDialog::getOpenFileName(this,tr("Choose file to load from"));
+    if (!fileName.isEmpty()) {
+        fromLocalFile(fileName);
     }
 }
 
@@ -620,7 +612,7 @@ void TransformWidget::on_infoPushButton_clicked()
         return;
 
     if (infoDialog == NULL) {
-        infoDialog = new(std::nothrow) InfoDialog(currentTransform,this);
+        infoDialog = new(std::nothrow) InfoDialog(guiHelper, currentTransform,this);
         if (infoDialog == NULL) {
             qFatal("Cannot allocate memory for InfoDialog X{");
             return;
@@ -634,107 +626,22 @@ void TransformWidget::on_clearDataPushButton_clicked()
     byteSource->clear();
 }
 
-void TransformWidget::onGoToOffset(bool select)
+void TransformWidget::onSearch(QByteArray item, bool couldBeText)
 {
-    QString gotoValue = ui->gotoLineEdit->text();
-    if (gotoValue.isEmpty()) {
-        return;
-    }
-
-    QRegExp offsetRegExp("^([=+-])?([oxn])?([0-9a-fA-F]{0,20})$");
-
-    if (offsetRegExp.indexIn(gotoValue) != -1) {
-
-
-        if (!offsetRegExp.cap(3).isEmpty()) {
-            quint64 val = 0;
-            bool ok = false;
-            if (offsetRegExp.cap(2) == "o") {
-                val = offsetRegExp.cap(3).toULongLong(&ok, 8);
-            } else if (offsetRegExp.cap(2) == "n") {
-                val = offsetRegExp.cap(3).toULongLong(&ok, 10);
-            } else if (offsetRegExp.cap(2) == "x"){
-                val = offsetRegExp.cap(3).toULongLong(&ok, 16);
-            } else { // default from configuration
-                val = offsetRegExp.cap(3).toULongLong(&ok, guiHelper->getDefaultOffsetBase());
-            }
-
-
-            if (ok && val < LONG_LONG_MAX) {
-                ok = false;
-                if (offsetRegExp.cap(1) == "-") {
-                    ok = hexView->goTo(-1 * val,false,select);
-                } else if (offsetRegExp.cap(1) == "+") {
-                    ok = hexView->goTo(val,false,select);
-                } else {
-                    ok = hexView->goTo(val,true,select);
-                }
-
-                ui->tabWidget->setCurrentWidget(hexView);
-
-                if (!ok) {
-                    ui->gotoLineEdit->setStyleSheet(GuiStyles::LineEditError);
-                } else {
-                   ui->gotoLineEdit->setStyleSheet("");
-                }
-            } else {
-                logger->logError("Invalid Offset value T_T");
-            }
-
-        }
+    if (ui->tabWidget->currentWidget() == textView && couldBeText) {
+        textView->search(searchWidget->text().toUtf8());
     } else {
-        logger->logError("Invalid Offset specification T_T");
+        ui->tabWidget->setCurrentWidget(hexView);
+        hexView->search(item);
     }
 }
 
-void TransformWidget::onSearch(int modifiers)
+void TransformWidget::onGotoOffset(quint64 offset, bool absolute, bool negative, bool select)
 {
-
-    if (ui->tabWidget->currentWidget() == textView) {
-        if (textView->search(ui->searchLineEdit->text())) {
-            ui->searchLineEdit->setStyleSheet("");
-        } else {
-            ui->searchLineEdit->setStyleSheet(GuiStyles::LineEditError);
-        }
+    if (!hexView->goTo(offset,absolute,negative, select)) {
+        gotoWidget->setStyleSheet(GuiStyles::LineEditError);
     } else {
-        QByteArray item = ui->searchLineEdit->text().toUtf8();
-        bool errorHasOccured = false;
-        if (!item.isEmpty()) {
-            if ((modifiers & Qt::ControlModifier) || (modifiers & Qt::AltModifier)) {
-
-                if (modifiers & Qt::ControlModifier) {
-                    QTextCodec *codec = NULL;
-                    codec = QTextCodec::codecForName("UTF-16");
-                    if (codec == NULL) {
-                        logger->logError(tr("Could not find the require codec T_T"));
-                        return;
-                    } else {
-                        QTextEncoder *encoder = codec->makeEncoder(QTextCodec::IgnoreHeader | QTextCodec::ConvertInvalidToNull);
-                        item = encoder->fromUnicode(ui->searchLineEdit->text());
-                        errorHasOccured = encoder->hasFailure();
-                        delete encoder;
-
-                    }
-                } // if utf-8 required, there is nothing to do
-
-            } else {
-                item = QByteArray::fromHex(item);
-            }
-
-            if (item.isEmpty()) {
-                errorHasOccured = true;
-            } else {
-                if (hexView->search(item)) {
-                    ui->tabWidget->setCurrentWidget(hexView);
-                } else {
-                    errorHasOccured = true;
-                }
-            }
-
-            if (errorHasOccured)
-                ui->searchLineEdit->setStyleSheet(GuiStyles::LineEditError);
-            else
-                ui->searchLineEdit->setStyleSheet("");
-        }
+        ui->tabWidget->setCurrentWidget(hexView);
+        gotoWidget->setStyleSheet(qApp->styleSheet());
     }
 }

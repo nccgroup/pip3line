@@ -118,7 +118,7 @@ bool Cut::doCutEverything()
 bool Cut::setFromPos(int val)
 {
     if (val < 0) {
-        emit (tr("Invalid starting position: %1").arg(val),id);
+        emit error(tr("Invalid starting position: %1").arg(val),id);
         return false;
     }
     from = val;
@@ -129,7 +129,7 @@ bool Cut::setFromPos(int val)
 bool Cut::setLength(int val)
 {
     if (val < 1) {
-        emit (tr("Invalid length: %1").arg(val),id);
+        emit error(tr("Invalid length: %1").arg(val),id);
         return false;
     }
     length = val;

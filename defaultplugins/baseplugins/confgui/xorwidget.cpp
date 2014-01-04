@@ -21,6 +21,8 @@ XorWidget::XorWidget(Xor *ntransform, QWidget *parent) :
     }
     transform = ntransform;
     ui->setupUi(this);
+    ui->typeComboBox->setFocusPolicy(Qt::StrongFocus);
+    ui->typeComboBox->installEventFilter(this);
     connect(ui->keyPlainTextEdit,SIGNAL(textChanged()),this,SLOT(onKeyChange()));
     connect(ui->fromHexcheckBox,SIGNAL(toggled(bool)),this,SLOT(onFromHexChange(bool)));
     connect(ui->typeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onTypeChange(int)));
@@ -58,4 +60,15 @@ void XorWidget::onTypeChange(int index)
         default:
             qCritical() << tr("Unknown index for Xor type T_T");
     }
+}
+
+bool XorWidget::eventFilter(QObject *o, QEvent *e)
+{
+    // Filtering out wheel event for comboboxes
+    if ( e->type() == QEvent::Wheel && qobject_cast<QComboBox*>(o) )
+    {
+        e->ignore();
+        return true;
+    }
+    return false;
 }

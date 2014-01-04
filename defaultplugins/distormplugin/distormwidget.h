@@ -30,6 +30,8 @@ class DistormWidget : public QWidget
         void onMaxInstruc(int val);
         void onOffset(QString val);
         void onType(int val);
+        void onShowOffset(bool val);
+        void onShowOpcodes(bool val);
     private:
         Q_DISABLE_COPY(DistormWidget)
         static const QStringList asmTypeStrings;

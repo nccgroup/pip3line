@@ -93,7 +93,11 @@ SOURCES += baseplugins.cpp \
     confgui/ntlmsspwidget.cpp \
     confgui/numbertocharwidget.cpp \
     bytestofloat.cpp \
-    confgui/bytestofloatwdiget.cpp
+    confgui/bytestofloatwdiget.cpp \
+    byterot.cpp \
+    confgui/byterotwidget.cpp \
+    hmactransform.cpp \
+    confgui/hmactransformwidget.cpp
 
 greaterThan(QT_MAJOR_VERSION, 4): SOURCES += sha256.cpp \
     sha512.cpp \
@@ -168,7 +172,11 @@ HEADERS += baseplugins.h\
     confgui/ntlmsspwidget.h \
     confgui/numbertocharwidget.h \
     bytestofloat.h \
-    confgui/bytestofloatwdiget.h
+    confgui/bytestofloatwdiget.h \
+    byterot.h \
+    confgui/byterotwidget.h \
+    hmactransform.h \
+    confgui/hmactransformwidget.h
 
 greaterThan(QT_MAJOR_VERSION, 4): HEADERS += sha256.h \
     sha512.h \
@@ -202,7 +210,9 @@ FORMS += \
     confgui/basexwidget.ui \
     confgui/ntlmsspwidget.ui \
     confgui/numbertocharwidget.ui \
-    confgui/bytestofloatwdiget.ui
+    confgui/bytestofloatwdiget.ui \
+    confgui/byterotwidget.ui \
+    confgui/hmactransformwidget.ui
 
 RESOURCES += \
     baseplugins_res.qrc

@@ -36,11 +36,14 @@ DistormWidget::DistormWidget(DistormTransf *ntransform, QWidget *parent) :
     }
 
     ui->offsetLineEdit->setText(QString::number(transform->getOffset(),16)); // hex format
+    ui->showOffsetCheckBox->setChecked(transform->getShowOffset());
+    ui->showOpcodesCheckBox->setChecked(transform->getShowOpcodes());
 
-    connect(ui->maxInstructionSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onMaxInstruc(int)));
-    connect(ui->offsetLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onOffset(QString)));
-    connect(ui->asmTypeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onType(int)));
-
+    connect(ui->maxInstructionSpinBox, SIGNAL(valueChanged(int)), SLOT(onMaxInstruc(int)));
+    connect(ui->offsetLineEdit, SIGNAL(textChanged(QString)), SLOT(onOffset(QString)));
+    connect(ui->asmTypeComboBox, SIGNAL(currentIndexChanged(int)), SLOT(onType(int)));
+    connect(ui->showOffsetCheckBox,SIGNAL(toggled(bool)),SLOT(onShowOffset(bool)));
+    connect(ui->showOpcodesCheckBox,SIGNAL(toggled(bool)),SLOT(onShowOpcodes(bool)));
 
 }
 
@@ -76,4 +79,14 @@ void DistormWidget::onType(int val)
     } else if (val == 2) {
         transform->setDecodeType(DistormTransf::A64Bits);
     }
+}
+
+void DistormWidget::onShowOffset(bool val)
+{
+    transform->setShowOffset(val);
+}
+
+void DistormWidget::onShowOpcodes(bool val)
+{
+    transform->setShowOpcodes(val);
 }

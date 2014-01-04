@@ -11,7 +11,6 @@
 message( STATUS "Configuring the Distorm plugin --")
 project( distormplugin )
 
-cmake_minimum_required( VERSION 2.8.9 )
 cmake_policy(SET CMP0015 NEW)
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DDISTORM_LIBRARY )
@@ -31,13 +30,13 @@ endif(WITH_QT5)
 include_directories (
 	${DISTORM3_INCLUDE_PATH}
 	../../libtransform
-	../../../distorm/trunk/include
+	../../../distorm/include
 	)
 
 link_directories (
 	${DISTORM3_LIB_PATH}
 	${PROJECT_SOURCE_DIR}/../../lib
-	../../../distorm/trunk/build/lib/distorm3
+	../../../distorm/build/lib/distorm3
 	)
 
 set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../bin/plugins )
@@ -46,11 +45,11 @@ set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../bin/plugins )
 if (WIN32)
 	include_directories (
 		${DISTORM3_INCLUDE_PATH}
-		..\\..\\..\\distorm\\trunk\\include
+		..\\..\\..\\distorm\\include
 		)
 	link_directories (
 		${DISTORM3_LIB_PATH}
-		..\\..\\..\\distorm\\trunk
+		..\\..\\..\\distorm
 		)
 endif ()
 

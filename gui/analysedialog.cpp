@@ -17,8 +17,8 @@ Released under AGPL see LICENSE for more information
 #include <QTextStream>
 #include <QBuffer>
 
-AnalyseDialog::AnalyseDialog(QWidget *parent) :
-    QDialog(parent)
+AnalyseDialog::AnalyseDialog(GuiHelper *guiHelper, QWidget *parent) :
+    AppDialog(guiHelper, parent)
 {
     ui = new(std::nothrow) Ui::AnalyseDialog();
     if (ui == NULL) {

@@ -47,10 +47,14 @@ SplitWidget::SplitWidget(Split *ntransform, QWidget *parent) :
     ui->groupSpinBox->setMaximum(Split::MAXGROUPVALUE);
     ui->groupSpinBox->setMinimum(0);
     ui->allCheckBox->setChecked(transform->doWeTakeAllGroup());
+    ui->trimCheckBox->setChecked(transform->isTrimmingBlank());
+    ui->procLineBLinecheckBox->setChecked(transform->isProcessingLineByLine());
 
-    connect(ui->separatorLineEdit,SIGNAL(textChanged(QString)), this, SLOT(onSeparatorChange(QString)));
-    connect(ui->groupSpinBox,SIGNAL(valueChanged(int)), this, SLOT(onGroupChange(int)));
-    connect(ui->allCheckBox,SIGNAL(toggled(bool)), this, SLOT(onAllGroupChange(bool)));
+    connect(ui->separatorLineEdit,SIGNAL(textChanged(QString)), SLOT(onSeparatorChange(QString)));
+    connect(ui->groupSpinBox,SIGNAL(valueChanged(int)), SLOT(onGroupChange(int)));
+    connect(ui->allCheckBox,SIGNAL(toggled(bool)),  SLOT(onAllGroupChange(bool)));
+    connect(ui->trimCheckBox,SIGNAL(toggled(bool)), SLOT(onTrimChange(bool)));
+    connect(ui->procLineBLinecheckBox, SIGNAL(toggled(bool)), SLOT(onProcLineChanged(bool)));
 }
 
 SplitWidget::~SplitWidget()
@@ -72,6 +76,16 @@ void SplitWidget::onGroupChange(int val)
 void SplitWidget::onAllGroupChange(bool val)
 {
     transform->setTakeAllGroup(val);
+}
+
+void SplitWidget::onTrimChange(bool val)
+{
+    transform->setTrimBlank(val);
+}
+
+void SplitWidget::onProcLineChanged(bool val)
+{
+    transform->setProcessLineByLine(val);
 }
 
 void SplitWidget::onSeparatorChange(QString val)

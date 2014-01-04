@@ -11,33 +11,29 @@ Released under AGPL see LICENSE for more information
 #ifndef MASSPROCESSINGDIALOG_H
 #define MASSPROCESSINGDIALOG_H
 
-#include <QDialog>
-#include <transformabstract.h>
+#include "appdialog.h"
+
 #include <QMutex>
-#include <QIODevice>
 #include <QTextEdit>
 #include "messagedialog.h"
-#include "transformsgui.h"
-#include "../tools/processor.h"
-#include "../tools/tcpserver.h"
-#include "../tools/pipeserver.h"
-#include <transformmgmt.h>
 #include <transformchain.h>
-#include "screeniodevice.h"
 #include "loggerwidget.h"
 #include <QTimer>
 #include <QSettings>
-#include "guihelper.h"
-#include "../tools/serverabstract.h"
 
 class TransformsGui;
 class GuiHelper;
+class Processor;
+class TransformMgmt;
+class ServerAbstract;
+class QIODevice;
+class LoggerWidget;
 
 namespace Ui {
 class MassProcessingDialog;
 }
 
-class MassProcessingDialog : public QDialog
+class MassProcessingDialog : public AppDialog
 {
         Q_OBJECT
         
@@ -48,6 +44,7 @@ class MassProcessingDialog : public QDialog
         void setTranformChain(const QString &chainConf);
     signals:
         void finished();
+        void newServerTransformChain(QString chainConf);
     private slots:
         void selectInputFile();
         void selectOutputFile();
@@ -65,6 +62,7 @@ class MassProcessingDialog : public QDialog
         void stopCurrentServer();
         void refreshIPs();
         void onKeepSynchronize(bool checked);
+        void onLogsEnabled(bool checked);
 
     private:
         Q_DISABLE_COPY(MassProcessingDialog)
@@ -84,10 +82,9 @@ class MassProcessingDialog : public QDialog
         TransformMgmt * transformFactory;
         QByteArray tempManualInput;
         TransformsGui * tGui;
-        LoggerWidget * logger;
         QTimer statTimer;
-        GuiHelper *guiHelper;
         ServerAbstract *server;
+
 };
 
 #endif // MASSPROCESSINGDIALOG_H

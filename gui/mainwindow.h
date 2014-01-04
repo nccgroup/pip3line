@@ -18,21 +18,25 @@ Released under AGPL see LICENSE for more information
 #include <QMenu>
 #include <QNetworkProxy>
 #include <QPushButton>
-#include "analysedialog.h"
-#include "massprocessingdialog.h"
-#include "regexphelpdialog.h"
-#include "loggerwidget.h"
-#include "customdialogdockwidget.h"
-#include "settingsdialog.h"
-#include "downloadmanager.h"
-#include "guihelper.h"
-#include "maintabs.h"
-#include "quickviewdialog.h"
-#include "comparisondialog.h"
+#include <QNetworkAccessManager>
+#include <QPoint>
 
 namespace Ui {
 class MainWindow;
 }
+
+class DebugDialog;
+class ComparisonDialog;
+class QuickViewDialog;
+class SettingsDialog;
+class AnalyseDialog;
+class RegExpHelpDialog;
+class MainTabs;
+class LoggerWidget;
+class TransformMgmt;
+class GuiHelper;
+class DownloadManager;
+class BlocksSource;
 
 class MainWindow : public QMainWindow
 {
@@ -44,48 +48,65 @@ class MainWindow : public QMainWindow
         void loadFile(QString fileName);
     private slots:
         void onAboutPip3line();
-        void onAnalyse();
+        void onAnalyse(bool checked);
         void onHelpWithRegExp();
-        void onSettingsDialogOpen();
+        void onSettingsDialogOpen(bool checked);
         void checkForUpdates();
         void processingCheckForUpdate(DownloadManager * dm);
         void processingUrlDownload(DownloadManager * dm);
-        void on_actionNew_Tab_triggered();
         void iconActivated(QSystemTrayIcon::ActivationReason reason);
         void onImport(QAction* action);
         void onDataFromURL();
-        void onQuickView();
-        void onCompare();
+        void onQuickView(bool checked);
+        void onCompare(bool checked);
         void on_actionLogs_triggered();
         void updateTrayIcon();
         void onDebug();
+        void onDebugDestroyed();
+        void onNewAction(QAction * action);
+        void onNewDefault();
+        void showWindow();
+
     private:
         Q_DISABLE_COPY(MainWindow)
         void buildToolBar();
         void initializeLibTransform();
         void closeEvent(QCloseEvent *event);
         void createTrayIcon();
-        void showWindow();
 
+        void hideEvent(QHideEvent * event);
+        void showEvent(QShowEvent * event);
+
+        static const QString NEW_TRANSFORMTAB;
+        static const QString NEW_FILE;
+        static const QString NEW_CURRENTMEM;
+        static const QString NEW_BASEHEX;
         Ui::MainWindow *ui;
         SettingsDialog *settingsDialog;
         AnalyseDialog *analyseDialog;
         RegExpHelpDialog *regexphelpDialog;
+        QuickViewDialog * quickView;
+        ComparisonDialog *comparisonView;
+        DebugDialog * debugDialog;
         GuiHelper *guiHelper;
-        QNetworkAccessManager networkManager;
         TransformMgmt *transformFactory;
         LoggerWidget *logger;
         MainTabs * mainTabs;
+
+        QNetworkAccessManager networkManager;
         QSystemTrayIcon *trayIcon;
         QMenu *trayIconMenu;
+        QMenu *newMenu;
         QAction *trayIconLabel;
         QSettings *settings;
-        QuickViewDialog * quickView;
-        ComparisonDialog *comparison;
+
         bool quickViewWasVisible;
         bool settingsWasVisible;
+        bool compareWasVisible;
         QNetworkProxy networkProxy;
+        QPoint savedPos;
       //  QPushButton *newPushButton;
+        BlocksSource * blockListener;
 };
 
 #endif // MAINWINDOW_H

@@ -11,8 +11,8 @@ Released under AGPL see LICENSE for more information
 #include "newbytedialog.h"
 #include "ui_newbytedialog.h"
 
-NewByteDialog::NewByteDialog(QWidget *parent, bool isSimple) :
-    QDialog(parent)
+NewByteDialog::NewByteDialog(GuiHelper * guiHelper, QWidget *parent, bool isSimple) :
+    AppDialog(guiHelper, parent)
 {
     ui = new(std::nothrow) Ui::NewByteDialog();
     if (ui == NULL) {

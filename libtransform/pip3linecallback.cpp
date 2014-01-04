@@ -9,6 +9,8 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "pip3linecallback.h"
+#include "transformmgmt.h"
+#include "transformabstract.h"
 #include <QDebug>
 
 Pip3lineCallback::Pip3lineCallback(TransformMgmt *tfactory, const QString &confFile, const QString &plugin, QObject *parent) :

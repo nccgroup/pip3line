@@ -11,7 +11,7 @@ Released under AGPL see LICENSE for more information
 #ifndef ANALYSE_H
 #define ANALYSE_H
 
-#include <QDialog>
+#include "appdialog.h"
 #include <QMutex>
 #include <QMenu>
 
@@ -19,12 +19,12 @@ namespace Ui {
 class AnalyseDialog;
 }
 
-class AnalyseDialog : public QDialog
+class AnalyseDialog : public AppDialog
 {
         Q_OBJECT
         
     public:
-        explicit AnalyseDialog(QWidget *parent = 0);
+        explicit AnalyseDialog(GuiHelper * guiHelper, QWidget *parent = 0);
         ~AnalyseDialog();
 
     signals:

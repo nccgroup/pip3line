@@ -13,7 +13,7 @@ Released under AGPL see LICENSE for more information
 #include <QString>
 #include <QByteArray>
 
-#define LIB_TRANSFORM_VERSION 11
+#define LIB_TRANSFORM_VERSION 12
 
 namespace Pip3lineConst {
     // Default types
@@ -77,6 +77,8 @@ namespace Pip3lineConst {
     static const QString XMLFORMAT = "Format";
     static const QString XMLDECODE = "Decode";
     static const QString XMLOFFSET = "Offset";
+    static const QString XMLCLEAN = "Clean";
+    static const QString XMLAUTORELOAD = "AutoReload";
 
     static const QString SETTINGS_SERVER_PORT = "DefaultServerPort";
     static const QString SETTINGS_SERVER_IP = "DefaultServerIP";
@@ -85,7 +87,7 @@ namespace Pip3lineConst {
     static const QString SETTINGS_SERVER_ENCODE = "DefaultServerEncode";
     static const QString SETTINGS_SERVER_SEPARATOR = "DefaultServerSeparator";
     static const QString SETTINGS_PIPE_NAME="PipeName";
-    static const QString UPDATE_URL = "https://raw.github.com/nccgroup/pip3line/master/version.h";
+    static const QString UPDATE_URL = "https://raw.github.com/nccgroup/pip3line/master/gui/release.txt";
     static const QString SETTINGS_AUTO_UPDATE = "AutoUpdate";
     static const QString SETTINGS_GENERAL_GROUP = "General";
     static const QString SETTINGS_MINIMIZE_TO_TRAY = "MinimizeToTray";
@@ -105,6 +107,7 @@ namespace Pip3lineConst {
     static const QString PIPE_SERVER = "Unix Local Socket Server";
     static const QString PIPE_SOCKET = "Unix Local Socket";
 #endif
+
     enum OutputFormat {TEXTFORMAT = 0, HEXAFORMAT = 1};
 
     static const QString USER_DIRECTORY = ".pip3line";

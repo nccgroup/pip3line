@@ -17,22 +17,21 @@ Released under AGPL see LICENSE for more information
 #include <QHash>
 #include <QStringList>
 #include <QMutex>
-#include <QStringList>
 #include <QList>
-#include <QtPlugin>
-#include <QPluginLoader>
-#include <QXmlStreamWriter>
-#include <QXmlStreamReader>
 #include <QRegExp>
-#include <QSettings>
 #include <QSemaphore>
 #include <QSet>
-#include "transformabstract.h"
-#include "transformfactoryplugininterface.h"
-#include "pip3linecallback.h"
+#include "commonstrings.h"
 
 #include "transformchain.h"
 
+class TransformAbstract;
+class TransformFactoryPluginInterface;
+class QSettings;
+class QPluginLoader;
+class QXmlStreamReader;
+class QXmlStreamWriter;
+class Pip3lineCallback;
 
 class LIBTRANSFORMSHARED_EXPORT TransformMgmt : public QObject
 {
@@ -57,6 +56,7 @@ class LIBTRANSFORMSHARED_EXPORT TransformMgmt : public QObject
 
         TransformAbstract * getTransform(QString name); // the central function
         TransformAbstract * loadTransformFromConf(const QHash<QString, QString> confEle);
+        TransformAbstract * cloneTransform(TransformAbstract * transform);
         TransformAbstract * loadComposedTransformFromXML(QXmlStreamReader *streamReader);
         TransformAbstract * loadComposedTransformFromXML(const QString &conf);
 
@@ -75,6 +75,7 @@ class LIBTRANSFORMSHARED_EXPORT TransformMgmt : public QObject
         QHash<QString, QString> getSavedConfs();
 
         QSettings *getSettingsObj();
+        QList<TransformAbstract *> getTransformInstances() const;
 
     Q_SIGNALS:
         void error(const QString,const QString);

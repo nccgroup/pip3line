@@ -12,8 +12,8 @@ Released under AGPL see LICENSE for more information
 #include "ui_messagedialog.h"
 #include <QMutexLocker>
 
-MessageDialog::MessageDialog(QWidget *parent) :
-    QDialog(parent)
+MessageDialog::MessageDialog(GuiHelper *guiHelper, QWidget *parent) :
+    AppDialog(guiHelper, parent)
 {
     ui = new(std::nothrow) Ui::MessageDialog();
     if (ui == NULL) {

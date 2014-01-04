@@ -23,6 +23,7 @@ RegularExpWidget::RegularExpWidget(RegularExp *ntransform, QWidget *parent) :
 
     ui->lineByLineCheckBox->setChecked(transform->doWeProcessLineByLine());
     ui->typeComboBox->setCurrentIndex(transform->getActionType());
+    ui->typeComboBox->installEventFilter(this);
     ui->actionStackedWidget->setCurrentIndex(transform->getActionType());
     ui->greedyCheckBox->setChecked(transform->isUsingGreedyQuantifier());
     ui->regExpLineEdit->setText(transform->getRegularExpression());
@@ -85,4 +86,15 @@ void RegularExpWidget::onReplacementStringChange(QString val)
 void RegularExpWidget::onLinByLineChange(bool val)
 {
     transform->setProcessLineByLine(val);
+}
+
+bool RegularExpWidget::eventFilter(QObject *o, QEvent *e)
+{
+    // Filtering out wheel event for comboboxes
+    if ( e->type() == QEvent::Wheel && qobject_cast<QComboBox*>(o) )
+    {
+        e->ignore();
+        return true;
+    }
+    return false;
 }

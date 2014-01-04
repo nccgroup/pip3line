@@ -49,17 +49,9 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="actionNewDefault"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
-   </widget>
-   <widget class="QMenu" name="menuInput">
-    <property name="title">
-     <string>&amp;Tools</string>
-    </property>
-    <addaction name="action_Analyse"/>
-    <addaction name="actionCompare"/>
-    <addaction name="separator"/>
-    <addaction name="actionPip3line_settings"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -72,7 +64,6 @@
     <addaction name="actionDebug_dialog"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuInput"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -85,15 +76,21 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionNew_Tab"/>
+   <addaction name="actionNewDefault"/>
    <addaction name="separator"/>
    <addaction name="action_Analyse"/>
    <addaction name="actionMagic"/>
-   <addaction name="actionLogs"/>
    <addaction name="actionCompare"/>
+   <addaction name="separator"/>
+   <addaction name="actionLogs"/>
+   <addaction name="actionPip3line_settings"/>
    <addaction name="separator"/>
   </widget>
   <action name="actionExit">
+   <property name="icon">
+    <iconset resource="gui_res.qrc">
+     <normaloff>:/Images/icons/dialog-cancel-3.png</normaloff>:/Images/icons/dialog-cancel-3.png</iconset>
+   </property>
    <property name="text">
     <string>E&amp;xit</string>
    </property>
@@ -109,6 +106,9 @@
    </property>
   </action>
   <action name="action_Analyse">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="gui_res.qrc">
      <normaloff>:/Images/icons/edit-find-10.png</normaloff>:/Images/icons/edit-find-10.png</iconset>
@@ -126,17 +126,15 @@
    </property>
   </action>
   <action name="actionPip3line_settings">
-   <property name="text">
-    <string>&amp;Settings</string>
+   <property name="checkable">
+    <bool>true</bool>
    </property>
-  </action>
-  <action name="actionNew_Tab">
    <property name="icon">
     <iconset resource="gui_res.qrc">
-     <normaloff>:/Images/icons/document-new-3.png</normaloff>:/Images/icons/document-new-3.png</iconset>
+     <normaloff>:/Images/icons/configure-5.png</normaloff>:/Images/icons/configure-5.png</iconset>
    </property>
    <property name="text">
-    <string>New Tab</string>
+    <string>&amp;Settings</string>
    </property>
   </action>
   <action name="actionGet_data_from_URL">
@@ -157,6 +155,9 @@
    </property>
   </action>
   <action name="actionMagic">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="gui_res.qrc">
      <normaloff>:/Images/icons/edit-find-and-replace-2.png</normaloff>:/Images/icons/edit-find-and-replace-2.png</iconset>
@@ -174,6 +175,9 @@
    </property>
   </action>
   <action name="actionCompare">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="gui_res.qrc">
      <normaloff>:/Images/icons/object-flip-horizontal.png</normaloff>:/Images/icons/object-flip-horizontal.png</iconset>
@@ -182,7 +186,19 @@
     <string>Compare</string>
    </property>
    <property name="toolTip">
-    <string>Compare two bytes input</string>
+    <string>Comparison tool</string>
+   </property>
+  </action>
+  <action name="actionNewDefault">
+   <property name="icon">
+    <iconset resource="gui_res.qrc">
+     <normaloff>:/Images/icons/document-new-3.png</normaloff>:/Images/icons/document-new-3.png</iconset>
+   </property>
+   <property name="text">
+    <string>New default</string>
+   </property>
+   <property name="toolTip">
+    <string>Open a default tab</string>
    </property>
   </action>
  </widget>
@@ -190,24 +206,7 @@
  <resources>
   <include location="gui_res.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>action_Analyse</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>onAnalyse()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>407</x>
-     <y>332</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>processNewTransformation(TransformWidget*)</slot>
   <slot>on_actionMass_processing_triggered()</slot>

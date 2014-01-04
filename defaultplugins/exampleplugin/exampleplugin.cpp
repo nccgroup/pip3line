@@ -10,6 +10,8 @@ Released under AGPL see LICENSE for more information
 
 #include "exampleplugin.h"
 #include "identity.h"
+#include <QWidget>
+#include <pip3linecallback.h>
 #include <QDebug>
 #include "../../version.h"
 

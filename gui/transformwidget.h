@@ -24,27 +24,18 @@ Released under AGPL see LICENSE for more information
 #include <QTime>
 #include <QUrl>
 #include <QLineEdit>
-#include "views/textview.h"
 #include "sources/bytesourceabstract.h"
 #include "downloadmanager.h"
 #include "guihelper.h"
 #include "loggerwidget.h"
-#include "views/hexview.h"
 #include "views/byteitemmodel.h"
-
-#include <QValidator>
-
-class OffsetValidator : public QValidator
-{
-        Q_OBJECT
-    public:
-        explicit OffsetValidator(QObject *parent = 0);
-        State validate(QString & input, int & pos) const;
-
-};
 
 class HexView;
 class TextView;
+class OffsetGotoWidget;
+class SearchWidget;
+class ClearAllMarkingsButton;
+class ByteTableView;
 
 namespace Ui {
 class TransformWidget;
@@ -61,7 +52,8 @@ class TransformWidget : public QWidget
         TransformAbstract *getTransform();
         void forceUpdating();
         bool setTransform(TransformAbstract *transf);
-        ByteItemModel * getBytesModel();
+        ByteSourceAbstract * getSource();
+        ByteTableView *getHexTableView();
 
     signals:
         void updated();
@@ -98,8 +90,8 @@ class TransformWidget : public QWidget
         void on_deleteButton_clicked();
         void on_infoPushButton_clicked();
         void on_clearDataPushButton_clicked();
-        void onGoToOffset(bool select = false);
-        void onSearch(int modifiers);
+        void onSearch(QByteArray item, bool couldBeText);
+        void onGotoOffset(quint64 offset, bool absolute, bool negative, bool select);
 
     private:
         Q_DISABLE_COPY(TransformWidget)
@@ -131,6 +123,9 @@ class TransformWidget : public QWidget
         HexView *hexView;
         TextView *textView;
         QWidget *settingsTab;
+        OffsetGotoWidget *gotoWidget;
+        SearchWidget *searchWidget;
+        ClearAllMarkingsButton * clearAllMarkingsButton;
 };
 
 

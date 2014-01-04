@@ -12,9 +12,12 @@ Released under AGPL see LICENSE for more information
 #define TRANSFORMCHAIN_H
 
 #include "libtransform_global.h"
-#include "transformabstract.h"
-#include "commonstrings.h"
 #include <QList>
+
+#include "commonstrings.h"
+
+
+class TransformAbstract;
 
 class LIBTRANSFORMSHARED_EXPORT TransformChain : public QList<TransformAbstract *>
 {
@@ -29,14 +32,14 @@ class LIBTRANSFORMSHARED_EXPORT TransformChain : public QList<TransformAbstract 
         QString getDescription() const;
         void setHelp(const QString &help);
         QString getHelp() const;
-        void setFormat(OutputFormat val);
-        OutputFormat getFormat() const;
+        void setFormat(Pip3lineConst::OutputFormat val);
+        Pip3lineConst::OutputFormat getFormat() const;
     private:
 
         QString name;
         QString description;
         QString help;
-        OutputFormat preferredFormat;
+        Pip3lineConst::OutputFormat preferredFormat;
 };
 
 #endif // TRANSFORMCHAIN_H

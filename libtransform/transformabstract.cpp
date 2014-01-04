@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "transformabstract.h"
 #include <QTextStream>
+#include <QWidget>
 #include <QDebug>
 
 const QByteArray TransformAbstract::HEXCHAR("abcdefABCDEF1234567890");

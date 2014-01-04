@@ -15,7 +15,7 @@ Released under AGPL see LICENSE for more information
 
 #ifdef Q_OS_LINUX
 #ifdef BUILD_PYTHON_3
-#include <python3.2/Python.h>
+#include <python3.3/Python.h>
 #else
 #include <python2.7/Python.h>
 #endif // BUILD_PYTHON_X
@@ -72,7 +72,7 @@ class PYTHONPLUGINSHARED_EXPORT PythonPlugin : public QObject, public TransformF
         PyObject *pyStringIO;
         ModulesManagement * modules;
         QStringList defaultsysPath;
-
+        PyThreadState *pymainstate;
 };
 
 #endif // PYTHONPLUGIN_H

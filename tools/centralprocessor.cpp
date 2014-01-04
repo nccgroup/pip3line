@@ -17,20 +17,25 @@ CentralProcessor::CentralProcessor(QObject *parent) :
     QThread(parent)
 {
     running = false;
-    qDebug() << "created " << this;
+    //qDebug() << "created " << this;
 }
 
 CentralProcessor::~CentralProcessor()
 {
+    //qDebug() << "Destroying " << this << isRunning();
+    if (isRunning()) {
+        stop();
+    }
     QMutexLocker lock(&globalMutex);
     if (!children.isEmpty()) {
-        qWarning("[CentralProcessor] children still running ... waiting");
+        qWarning("[CentralProcessor] children still running ... waiting for them to finish");
         QHashIterator<TransformRequest * , quintptr> i(children);
          while (i.hasNext()) {
              i.next();
-             bool eop = (static_cast<TransformRequest *>(i.key()))->wait(100);
-             if (!eop)
-                 qWarning("[CentralProcessor] children still running ... now ignoring T_T");
+             TransformRequest *request = static_cast<TransformRequest *>(i.key());
+             if (!request->wait(10000)) {
+                 qWarning() << "[CentralProcessor] children still running ... now ignoring T_T" << request;
+             }
          }
     }
 
@@ -38,7 +43,7 @@ CentralProcessor::~CentralProcessor()
          delete value;
 
     current.clear();
-    qDebug() << "Destroying " << this;
+
 
 }
 
@@ -94,10 +99,11 @@ void CentralProcessor::stop()
 {
     runMutex.lock();
     running = false;
-    globalMutex.lock();
-    queueSem.release(1);
-    globalMutex.unlock();
     runMutex.unlock();
+
+    clearQueue();
+    queueSem.release(1);
+
 }
 
 void CentralProcessor::onChildThreadDestroyed()
@@ -115,4 +121,13 @@ void CentralProcessor::onChildThreadDestroyed()
         if (current.remove(source) != 1)
             qWarning("[CentralProcessor::onChildThreadDelete] value not found when removing source T_T");
     }
+}
+
+void CentralProcessor::clearQueue()
+{
+    globalMutex.lock();
+    while (!queue.isEmpty()) {
+        delete queue.dequeue();
+    }
+    globalMutex.unlock();
 }

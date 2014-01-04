@@ -83,8 +83,6 @@ void RegularExp::transform(const QByteArray &input, QByteArray &output)
                             ++it;
                         }
                      }
-                    if (!output.isEmpty())
-                        output.chop(1);
 
                 } else if (selectedGroup > list.size() -1) {
                     emit warning(tr("Selected group index not found"),id);

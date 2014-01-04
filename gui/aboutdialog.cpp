@@ -14,8 +14,8 @@ Released under AGPL see LICENSE for more information
 #include <commonstrings.h>
 #include <QStyleFactory>
 
-AboutDialog::AboutDialog(QWidget *parent) :
-    QDialog(parent)
+AboutDialog::AboutDialog(GuiHelper *guiHelper, QWidget *parent) :
+    AppDialog(guiHelper, parent)
 {
     ui = new(std::nothrow) Ui::AboutDialog();
     if (ui == NULL) {

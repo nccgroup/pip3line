@@ -29,6 +29,7 @@ ByteItemModel::ByteItemModel(ByteSourceAbstract * nbyteSource,  QObject *parent)
 
 ByteItemModel::~ByteItemModel()
 {
+    byteSource = NULL;
     //qDebug() << "Destroyed: " << this;
 }
 
@@ -53,11 +54,8 @@ ByteSourceAbstract *ByteItemModel::getSource() const
 
 int ByteItemModel::size()
 {
-    qint64 lsize = byteSource->size();
-    if (lsize > INT_MAX) {
-        qCritical("Hitting int limit in size()");
-        lsize = INT_MAX;
-    } else if (lsize < 0) {
+    int lsize = byteSource->viewSize();
+    if (lsize < 0) {
         qWarning() << tr("Bytes source size is negative [x%1]").arg((quintptr)byteSource);
         lsize = 0;
     }
@@ -67,7 +65,6 @@ int ByteItemModel::size()
 
 int ByteItemModel::columnCount(const QModelIndex & parent) const
 {
-
     if (parent.isValid()) {
         return 0;
     }
@@ -79,12 +76,11 @@ int ByteItemModel::rowCount(const QModelIndex & parent) const
     if (parent.isValid()) {
         return 0;
     }
+    int viewSize = byteSource->viewSize();
 
-    qint64 rowCountVal = (byteSource->size() / hexColumncount) + ((byteSource->size() % hexColumncount) == 0 ? 0 : 1);
-    if (rowCountVal > INT_MAX) {
-        qCritical("Hitting int limit in rowCount()");
-        rowCountVal = INT_MAX;
-    } else if (rowCountVal < 0) {
+    int rowCountVal = (viewSize / hexColumncount) + ((viewSize % hexColumncount) == 0 ? 0 : 1);
+
+    if (rowCountVal < 0) {
         rowCountVal = 0;
     }
     return rowCountVal;
@@ -97,31 +93,54 @@ QVariant ByteItemModel::data(const QModelIndex &index, int role) const
     {
         case Qt::DisplayRole:
         {
-            if (index.column() == hexColumncount)
-                return byteSource->toPrintableString(byteSource->extract(hexColumncount * index.row(),hexColumncount));
+            if (index.column() == hexColumncount) {
+                int datalength = hexColumncount;
+                if (index.row() == rowCount() - 1) {
+                    datalength = qMin(hexColumncount,byteSource->viewSize() % hexColumncount);
+                    if (datalength == 0)
+                        datalength = hexColumncount;
+                }
+                return byteSource->toPrintableString(byteSource->viewExtract(hexColumncount * index.row()
+                                                                             ,datalength));
+            }
             else if (pos != INVALID_POSITION)
-                return QString::fromUtf8(byteSource->extract(pos,1).toHex());
+                return QString::fromUtf8(byteSource->viewExtract(pos,1).toHex());
         }
             break;
         case Qt::BackgroundRole:
         {
             if (index.column() == hexColumncount)
-                return QVariant(QColor(Qt::white));
-            else if (marked.contains(pos))
-                return QVariant(marked.value(pos).color);
-            else if ((index.column() / 4) % 2 == 0)
-                return QVariant(QColor(Qt::white));
-            else if ((index.column() / 4) % 2 == 1)
-                return QVariant(QColor(243,243,243,255));
-            else
-                return QVariant(QColor(Qt::white));
+                return QVariant();
+            else if (pos != INVALID_POSITION){
+                QColor bg = byteSource->getBgViewColor(pos);
+                if (bg.isValid()) {
+                   return QVariant(bg);
+                } else if ((index.column() / 4) % 2 == 0)
+                    return QVariant(QColor(Qt::white));
+                else if ((index.column() / 4) % 2 == 1)
+                    return QVariant(QColor(224,222,255,255));
+                else
+                    return QVariant();
+            }
         }
             break;
-        case Qt::ToolTipRole:
-        {
-            if (marked.contains(pos)) {
-                return QVariant(marked.value(pos).text);
+        case Qt::ForegroundRole:
+            {
+        if (pos != INVALID_POSITION) {
+            return QVariant(byteSource->getFgViewColor(pos));
+        }
             }
+            break;
+        case Qt::ToolTipRole:
+            {
+                if (pos != INVALID_POSITION) {
+                    return QVariant(byteSource->getViewToolTip(pos));
+                }
+            }
+            break;
+        case Qt::TextAlignmentRole:
+        {
+            return Qt::AlignCenter;
         }
         break;
     }
@@ -142,7 +161,7 @@ QVariant ByteItemModel::headerData(int section, Qt::Orientation orientation, int
             return QVariant();
     } else {
         if (section < rowCount())
-            return QString("0x%1").arg(section * hexColumncount,0,16);
+            return QString("0x%1").arg((section * hexColumncount) + byteSource->startingRealOffset(),0,16);
         else
             return QVariant();
     }
@@ -150,14 +169,14 @@ QVariant ByteItemModel::headerData(int section, Qt::Orientation orientation, int
 
 Qt::ItemFlags ByteItemModel::flags(const QModelIndex &index) const
 {
-    if (!index.isValid() || byteSource->size() <= 0)
+    if (!index.isValid() || byteSource->viewSize() <= 0)
         return Qt::ItemIsEnabled;
 
     if (index.column() >= hexColumncount)
         return Qt::ItemIsEnabled;
 
-    if (hexColumncount * index.row() + index.column() < byteSource->size())
-        return QAbstractItemModel::flags(index) | Qt::ItemIsEditable;
+    if (hexColumncount * index.row() + index.column() + byteSource->startingRealOffset() < byteSource->size())
+        return QAbstractItemModel::flags(index) | (byteSource->isReadonly() ? Qt::ItemIsEnabled : Qt::ItemIsEditable);
     else
         return Qt::ItemIsEnabled;
 }
@@ -170,7 +189,7 @@ bool ByteItemModel::setData(const QModelIndex &index, const QVariant &value, int
             return false;
 
         qint64 pos = hexColumncount * index.row() + index.column();
-        qint64 size = byteSource->size();
+        qint64 size = byteSource->viewSize();
         if (size <= 0)
             return false;
 
@@ -181,9 +200,9 @@ bool ByteItemModel::setData(const QModelIndex &index, const QVariant &value, int
                 temp = INT_MAX;
             }
 
-            byteSource->insert(size,QByteArray(temp,0x00),(quintptr) this);
+            byteSource->viewInsert(size,QByteArray(temp,0x00),(quintptr) this);
         }
-        byteSource->replace(pos,1, hexVal, (quintptr) this);
+        byteSource->viewReplace(pos,1, hexVal, (quintptr) this);
 
         emit dataChanged(index, index);
         return true;
@@ -200,22 +219,13 @@ void ByteItemModel::setHexColumnCount(int val)
     }
 }
 
-QModelIndex ByteItemModel::createIndex(qint64 pos)
+QModelIndex ByteItemModel::createIndex(int pos)
 {
-    if ( pos < 0 || pos >= byteSource->size()) {
+    if ( pos < 0 || pos >= byteSource->viewSize()) {
         return QAbstractTableModel::createIndex(-1, -1);
     }
-    qint64 row = pos / hexColumncount;
-    if (row > INT_MAX) {
-        qCritical("Hitting the int limit for row");
-        row = INT_MAX;
-    }
-    qint64 column = pos % hexColumncount;
-    if (column > INT_MAX) {
-        qCritical("Hitting the int limit for column");
-        column = INT_MAX;
-    }
-    return QAbstractTableModel::createIndex(row, column);
+
+    return QAbstractTableModel::createIndex(pos / hexColumncount, pos % hexColumncount);
 }
 
 QModelIndex ByteItemModel::createIndex(int row, int column) const
@@ -223,30 +233,46 @@ QModelIndex ByteItemModel::createIndex(int row, int column) const
     return QAbstractTableModel::createIndex(row, column);
 }
 
-void ByteItemModel::insert(qint64 pos, const QByteArray &data)
+bool ByteItemModel::insert(int pos, const QByteArray &data)
 {
-    beginResetModel();
-    byteSource->insert(pos,data, (quintptr) this);
-    endResetModel();
+    if (byteSource->hasCapability(ByteSourceAbstract::CAP_RESIZE) && !byteSource->isReadonly()) {
+        beginResetModel();
+        byteSource->viewInsert(pos,data, (quintptr) this);
+        endResetModel();
+        return true;
+    }
+
+    return false;
 }
 
-void ByteItemModel::remove(qint64 pos, int length)
+bool ByteItemModel::remove(int pos, int length)
 {
-    beginResetModel();
-    byteSource->remove(pos,length, (quintptr) this);
-    endResetModel();
+    if (byteSource->hasCapability(ByteSourceAbstract::CAP_RESIZE) && !byteSource->isReadonly()) {
+        beginResetModel();
+        byteSource->viewRemove(pos,length, (quintptr) this);
+        endResetModel();
+        return true;
+    }
+    return false;
 }
 
-void ByteItemModel::replace(qint64 pos, int length, QByteArray val)
+bool ByteItemModel::replace(int pos, int length, QByteArray val)
 {
-    beginResetModel();
-    byteSource->replace(pos,length,val, (quintptr) this);
-    endResetModel();
+    if (!byteSource->isReadonly()) {
+        if ((val.size() != length &&
+             !byteSource->hasCapability(ByteSourceAbstract::CAP_RESIZE))) {
+            return false;
+        }
+        byteSource->viewReplace(pos,length,val, (quintptr) this);
+        emit dataChanged(createIndex(pos), createIndex(pos + length));
+        return true;
+    }
+    return false;
 }
 
-QByteArray ByteItemModel::extract(qint64 pos, int length)
+QByteArray ByteItemModel::extract(int pos, int length)
 {
-    return byteSource->extract(pos,length);
+    return byteSource->viewExtract(pos,length);
 }
 
 void ByteItemModel::clear()
@@ -254,59 +280,14 @@ void ByteItemModel::clear()
     byteSource->clear();
 }
 
-qint64 ByteItemModel::position(const QModelIndex &index) const
+int ByteItemModel::position(const QModelIndex &index) const
 {
     if (index.isValid() && index.column() < hexColumncount && index.column() > -1 ) {
         qint64 pos = (qint64)hexColumncount * (qint64)index.row() + (qint64)index.column();
-        return (pos < byteSource->size() ? pos : INVALID_POSITION);
+        return ((pos < byteSource->viewSize() && pos < INT_MAX) ? pos : INVALID_POSITION);
     } else {
         return INVALID_POSITION;
     }
-}
-
-void ByteItemModel::mark(qint64 start, qint64 end, const QColor &ncolor, QString toolTip)
-{
-    qint64 size = byteSource->size();
-    if (start >= 0 && end >= 0 && end < size && start < size) {
-        qint64 temp = start;
-        start = qMin(start,end);
-        end = qMax(temp, end);
-        for (qint64 i = start; i <= end; i++) {
-            Markings ma;
-            ma.color = ncolor;
-            ma.text = toolTip;
-            beginResetModel();
-            marked.insert(i, ma);
-            endResetModel();
-        }
-    }
-}
-
-void ByteItemModel::clearMarking(qint64 start, qint64 end)
-{
-    qint64 size = byteSource->size();
-    if (start >= 0 && end >= 0 && end < size && start < size) {
-        qint64 temp = start;
-        start = qMin(start,end);
-        end = qMax(temp, end);
-        beginResetModel();
-        for (qint64 i = start; i <= end; i++) {
-            marked.remove(i);
-        }
-        endResetModel();
-    }
-}
-
-void ByteItemModel::clearAllMarkings()
-{
-    beginResetModel();
-    marked.clear();
-    endResetModel();
-}
-
-bool ByteItemModel::hasMarking() const
-{
-    return !marked.isEmpty();
 }
 
 void ByteItemModel::receivedSourceUpdate(quintptr viewSource)
@@ -317,12 +298,20 @@ void ByteItemModel::receivedSourceUpdate(quintptr viewSource)
     }
 }
 
-void ByteItemModel::historyForward()
+bool ByteItemModel::historyForward()
 {
-    byteSource->historyForward();
+    if (byteSource->hasCapability(ByteSourceAbstract::CAP_HISTORY)) {
+        byteSource->historyForward();
+        return true;
+    }
+    return false;
 }
 
-void ByteItemModel::historyBackward()
+bool ByteItemModel::historyBackward()
 {
-    byteSource->historyBackward();
+    if (byteSource->hasCapability(ByteSourceAbstract::CAP_HISTORY)) {
+        byteSource->historyBackward();
+        return true;
+    }
+    return false;
 }

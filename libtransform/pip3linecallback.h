@@ -14,9 +14,10 @@ Released under AGPL see LICENSE for more information
 #include <QObject>
 #include <QSettings>
 #include "libtransform_global.h"
+
 class TransformMgmt;
-#include "transformmgmt.h"
-#include "transformabstract.h"
+class TransformAbstract;
+class QXmlStreamReader;
 
 class LIBTRANSFORMSHARED_EXPORT Pip3lineCallback : public QObject
 {

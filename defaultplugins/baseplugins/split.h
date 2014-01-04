@@ -31,16 +31,23 @@ class Split : public TransformAbstract
         static const QString id;
         QString help() const;
 
-        char getSeparator();
-        int getSelectedGroup();
-        bool doWeTakeAllGroup();
+        char getSeparator() const;
+        int getSelectedGroup() const;
+        bool doWeTakeAllGroup() const;
+        bool isTrimmingBlank() const;
+        bool isProcessingLineByLine() const;
         void setSeparator(char val);
         bool setSelectedGroup(int val);
         void setTakeAllGroup(bool val);
+        void setTrimBlank(bool val);
+        void setProcessLineByLine(bool val);
     private:
+        void appendingToOutput(QByteArray &out, QByteArray &val);
         char separator;
         int group;
         bool allGroup;
+        bool trimBlank;
+        bool processLineByLine;
 };
 
 #endif // SPLIT_H

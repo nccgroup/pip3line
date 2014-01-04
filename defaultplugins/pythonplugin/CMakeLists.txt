@@ -11,7 +11,7 @@
 message ( STATUS "Configuring the Python 3 plugin --" )
 project( python3plugin )
 
-cmake_minimum_required( VERSION 2.8.9 )
+cmake_minimum_required( VERSION 2.8.11 )
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DPYTHONPLUGIN_LIBRARY -DQT_NO_KEYWORDS -DBUILD_PYTHON_3)
 
@@ -57,7 +57,7 @@ set ( pythonplugin_SRCS
 if(WIN32)
 	set ( EXTERN_LIB transform python33 )
 else()
-	set ( EXTERN_LIB transform python3.2 )
+	set ( EXTERN_LIB transform python3.3 )
 endif()
 
 add_library ( python3plugin MODULE ${pythonplugin_SRCS} )

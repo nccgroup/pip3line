@@ -12,14 +12,14 @@ Released under AGPL see LICENSE for more information
 #define MODULESMANAGEMENTWIDGET_H
 
 #include <QWidget>
-#include <QListWidgetItem>
 #include "libtransform_global.h"
-class ModulesManagement;
-#include "modulesmanagement.h"
 
 namespace Ui {
 class ModulesManagementWidget;
 }
+
+class QListWidgetItem;
+class ModulesManagement;
 
 class LIBTRANSFORMSHARED_EXPORT ModulesManagementWidget : public QWidget
 {

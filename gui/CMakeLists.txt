@@ -10,7 +10,7 @@
 
 message ( STATUS "Configuring pip3line gui --" )
 project( pip3line )
-cmake_minimum_required( VERSION 2.8.9 )
+cmake_minimum_required( VERSION 2.8.11)
 set ( CMAKE_BUILD_TYPE Release )
 
 set(CMAKE_AUTOMOC ON)
@@ -50,7 +50,6 @@ set ( pip3line_HDRS
 	analysedialog.h
 	massprocessingdialog.h
 	regexphelpdialog.h
-	customdialogdockwidget.h
 	loggerwidget.h
 	infodialog.h
 	screeniodevice.h
@@ -58,17 +57,16 @@ set ( pip3line_HDRS
 	downloadmanager.h
 	pluginconfwidget.h
 	guihelper.h
-	transformsgui.h
 	maintabs.h
 	floatingdialog.h
 	quickviewdialog.h
 	quickviewitem.h
 	quickviewitemconfig.h
 	newbytedialog.h
-	hexwidget.h
 	debugdialog.h
 	textinputdialog.h
 	comparisondialog.h
+	appdialog.h
 	../tools/processor.h
 	../tools/pipeserver.h
 	../tools/streamprocessor.h
@@ -78,14 +76,38 @@ set ( pip3line_HDRS
 	../tools/serverabstract.h
 	../tools/transformrequest.h
 	../tools/centralprocessor.h
+	../tools/processingstats.h
 	../version.h
 	sources/basicsource.h
 	sources/bytesourceabstract.h
+	sources/currentmemorysource.h
+	sources/largerandomaccesssource.h
+	sources/memorywidget.h
+	sources/filewidget.h
+	sources/largefile.h
+	sources/blockssource.h
+	sources/udplistener.h
+	sources/tcpserverlistener.h
+	sources/tcplistener.h
+	sources/searchabstract.h
 	views/hexview.h
 	views/textview.h
 	views/bytetableview.h
 	views/byteitemmodel.h
-	views/doubleviewwidget.h
+	views/singleviewabstract.h
+	tabs/tababstract.h
+	tabs/transformsgui.h
+	tabs/generictab.h
+	tabs/tababstract.h
+	tabs/transformsgui.h
+	tabs/randomaccesstab.h
+	shared/hexwidget.h
+	shared/offsetgotowidget.h
+	shared/searchwidget.h
+	shared/readonlybutton.h
+	shared/clearallmarkingsbutton.h
+	shared/bytesourceguibutton.h
+	shared/detachtabbutton.h
 	)
 
 
@@ -99,7 +121,6 @@ set ( pip3line_SRCS
 	analysedialog.cpp
 	massprocessingdialog.cpp
 	regexphelpdialog.cpp
-	customdialogdockwidget.cpp
 	loggerwidget.cpp
 	infodialog.cpp
 	screeniodevice.cpp
@@ -107,17 +128,16 @@ set ( pip3line_SRCS
 	downloadmanager.cpp
 	pluginconfwidget.cpp
 	guihelper.cpp
-	transformsgui.cpp
 	maintabs.cpp
 	floatingdialog.cpp
 	quickviewdialog.cpp
 	quickviewitem.cpp
 	quickviewitemconfig.cpp
 	newbytedialog.cpp
-	hexwidget.cpp
 	debugdialog.cpp
 	textinputdialog.cpp
 	comparisondialog.cpp
+	appdialog.cpp
 	../tools/processor.cpp
 	../tools/binaryprocessor.cpp
 	../tools/textprocessor.cpp
@@ -127,42 +147,70 @@ set ( pip3line_SRCS
 	../tools/serverabstract.cpp
 	../tools/transformrequest.cpp
 	../tools/centralprocessor.cpp
+	../tools/processingstats.cpp
 	sources/basicsource.cpp
 	sources/bytesourceabstract.cpp
+	sources/currentmemorysource.cpp
+	sources/largerandomaccesssource.cpp
+	sources/memorywidget.cpp
+	sources/filewidget.cpp
+	sources/largefile.cpp
+	sources/blockssource.cpp
+	sources/udplistener.cpp
+	sources/tcpserverlistener.cpp
+	sources/tcplistener.cpp
+	sources/searchabstract.cpp
 	views/hexview.cpp
 	views/bytetableview.cpp
 	views/byteitemmodel.cpp
 	views/textview.cpp
-	views/doubleviewwidget.cpp
+	views/singleviewabstract.cpp
+	tabs/generictab.cpp
+	tabs/tababstract.cpp
+	tabs/transformsgui.cpp
+	tabs/transformsgui.cpp
+	tabs/tababstract.cpp
+	tabs/randomaccesstab.cpp
+	shared/hexwidget.cpp
+	shared/offsetgotowidget.cpp
+	shared/searchwidget.cpp
+	shared/readonlybutton.cpp
+	shared/clearallmarkingsbutton.cpp
+	shared/bytesourceguibutton.cpp
+	shared/detachtabbutton.cpp
 	)
 
 set ( pip3line_UIS
 	mainwindow.ui
+	comparisondialog.ui
 	transformwidget.ui
 	aboutdialog.ui
 	messagedialog.ui
 	regexphelpdialog.ui
 	analysedialog.ui
-	customdialogdockwidget.ui
 	loggerwidget.ui
 	massprocessingdialog.ui
 	insertdialog.ui
 	infodialog.ui
 	settingsdialog.ui
 	pluginconfwidget.ui
-	transformsgui.ui
+	tabs/transformsgui.ui
+	tabs/generictab.ui
+	tabs/transformsgui.ui
+	tabs/randomaccesstab.ui
 	floatingdialog.ui
 	quickviewdialog.ui
 	quickviewitem.ui
 	quickviewitemconfig.ui
 	newbytedialog.ui
-	hexwidget.ui
+	shared/hexwidget.ui
 	debugdialog.ui
+	sources/memorywidget.ui
+	sources/filewidget.ui
 	comparisondialog.ui
-	views/hexview.ui
 	textinputdialog.ui
+	views/hexview.ui
 	views/textview.ui
-	views/doubleviewwidget.ui
 	)
 
 set ( pip3line_RSCS

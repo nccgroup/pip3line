@@ -22,8 +22,21 @@ Released under AGPL see LICENSE for more information
 #include <QMenu>
 #include <QKeyEvent>
 #include "byteitemmodel.h"
-
+#include <QSize>
 #include <QValidator>
+#include <QLabel>
+
+class SearchAbstract;
+
+// need to subclass QLabel just for the text cells of the hexview, in order to apply a specific background color
+// there is probably a better way
+class TextCell : public QLabel
+{
+    Q_OBJECT
+    public:
+        explicit TextCell(QWidget *parent = 0, Qt::WindowFlags f = 0);
+        explicit TextCell(const QString &text, QWidget *parent = 0, Qt::WindowFlags f = 0);
+};
 
 class HexValidator : public QValidator
 {
@@ -61,18 +74,19 @@ class HexDelegate : public QStyledItemDelegate
         void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const ;
         QSize sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const;
         void clearSelected();
+        void selectAll();
     public slots:
         void setColumnCount(int val);
         void onEditorValid();
     private:
         Q_DISABLE_COPY(HexDelegate)
-        QFont labelFont;
         QHash<int,int> selectedLines;
         static int colFlags[];
         static int COMPLETE_LINE;
         int hexColumncount;
-        QSize normalCell;
-        QSize previewCell;
+        QSize normalCellSize;
+        QSize previewCellSize;
+        bool allSelected;
         friend class HexSelectionModel;
 };
 
@@ -87,6 +101,7 @@ class HexSelectionModel : public QItemSelectionModel
     public slots:
          void select(const QModelIndex & index, QItemSelectionModel::SelectionFlags command);
          void select(const QItemSelection & selection, QItemSelectionModel::SelectionFlags command);
+         void selectAll();
          void clear();
          void setColumnCount(int val);
     private:
@@ -106,7 +121,7 @@ class ByteTableView : public QTableView
         ~ByteTableView();
         void setModel(ByteItemModel * model);
         QByteArray getSelectedBytes();
-        int getSelectedBytesCount();
+        qint64 getSelectedBytesCount();
         void deleteSelectedBytes();
         void replaceSelectedBytes(char byte);
         void replaceSelectedBytes(QByteArray data);
@@ -115,18 +130,23 @@ class ByteTableView : public QTableView
         QMenu *getDefaultContextMenu();
         int getLowerSelected() const;
         int getHigherSelected() const;
-        qint64 getCurrentPos() const;
+        int getCurrentPos() const;
         void markSelected(const QColor &color, QString text = QString());
         void clearMarkOnSelected();
         bool hasSelection();
-        bool goTo(qint64 offset, bool absolute, bool select = false);
-        bool search(QByteArray item, bool flag = false);
-        static int MAXCOL;
-        static int MINCOL;
-        static int TEXTCOLUMNWIDTH;
-        static int HEXCOLUMNWIDTH;
+        void search(QByteArray item);
+        void searchAgain();
+        static const int MAXCOL;
+        static const int MINCOL;
+        static const int TEXTCOLUMNWIDTH;
+        static const int HEXCOLUMNWIDTH;
+        static const int DEFAULTROWSHEIGHT;
+        static const QFont RegularFont;
     public slots:
         void setColumnCount(int val);
+        void gotoSearch(quint64 soffset, quint64 eoffset);
+        bool goTo(quint64 offset, bool absolute,bool negative, bool select = false);
+        void resizeVerticalHeaders();
     signals:
         void newSelection();
         void error(QString mess, QString source);
@@ -145,11 +165,15 @@ class ByteTableView : public QTableView
         bool getSelectionInfo(int *pos, int *length);
         void setModel(QAbstractItemModel *) {}
         void setSelectionModel (QItemSelectionModel *) {}
+        QSize sizeHint() const;
         HexSelectionModel *currentSelectionModel;
         ByteItemModel * currentModel;
         HexDelegate * delegate;
         int hexColumncount;
-        qint64 lastSearchIndex;
+        quint64 lastSearchIndex;
+        QByteArray lastSearch;
+        int currentVerticalHeaderWidth;
+        SearchAbstract *searchObject;
 };
 
 #endif // BYTETABLEVIEW_H

@@ -8,6 +8,7 @@ https://github.com/nccgroup/pip3line
 Released under AGPL see LICENSE for more information
 **/
 
+#include "transformabstract.h"
 #include "transformchain.h"
 
 TransformChain::TransformChain()

@@ -9,6 +9,7 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "serverabstract.h"
+#include "processingstats.h"
 #include <QObject>
 
 ServerAbstract::ServerAbstract(TransformMgmt *tFactory)
@@ -18,6 +19,13 @@ ServerAbstract::ServerAbstract(TransformMgmt *tFactory)
     separator = Processor::DEFAULT_SEPARATOR;
     encode = false;
     decode = false;
+    allowForwardingLogs = false;
+    stats.reset();
+}
+
+ServerAbstract::~ServerAbstract()
+{
+
 }
 
 void ServerAbstract::setOutput(QIODevice *out)
@@ -34,10 +42,8 @@ void ServerAbstract::setTransformations(const QString &conf)
 {
     confLocker.lock();
     tconf = conf;
-    for (int i = 0; i < clientProcessor.size(); i++) {
-        clientProcessor.at(i)->setTransformsChain(conf);
-    }
     confLocker.unlock();
+    emit newTransformChain(conf);
 }
 
 void ServerAbstract::setSeparator(char c)
@@ -55,21 +61,24 @@ void ServerAbstract::stopServer()
     for (int i = 0; i < clientProcessor.size(); i++) {
         processor = clientProcessor.at(i);
         processor->stop();
-        bool ok = processor->wait();
-        if (!ok)
+        if (!processor->wait(10000))
             logError(QObject::tr("%1 Client Processor %1 seems stuck, this may cause a crash ...").arg(getServerType()).arg((long)processor,0,16),"");
 
     }
+    stats.reset();
 
     confLocker.unlock();
 }
 
-long ServerAbstract::getStatsOut()
+ProcessingStats ServerAbstract::getStats()
 {
-    long ret = 0;
     confLocker.lock();
+    ProcessingStats ret;
+    ProcessingStats newStats;
+    ret += stats;
     for (int i = 0; i < clientProcessor.size(); i++) {
-        ret += clientProcessor.at(i)->getStatsOut();
+        newStats = clientProcessor.at(i)->getStats();
+        ret += newStats;
     }
     confLocker.unlock();
     return ret;
@@ -91,10 +100,28 @@ void ServerAbstract::setDecoding(bool flag)
 
 void ServerAbstract::logError(const QString mess, const QString id)
 {
-    emit error(mess, id);
+    confLocker.lock();
+    stats.incrErrorsCount();
+    confLocker.unlock();
+    if (allowForwardingLogs)
+        emit error(mess, id);
 }
 
 void ServerAbstract::logStatus(const QString mess, const QString id)
 {
-    emit status(mess, id);
+    confLocker.lock();
+    stats.incrStatusCount();
+    confLocker.unlock();
+    if (allowForwardingLogs)
+        emit status(mess, id);
 }
+bool ServerAbstract::getAllowForwardingLogs() const
+{
+    return allowForwardingLogs;
+}
+
+void ServerAbstract::setAllowForwardingLogs(bool value)
+{
+    allowForwardingLogs = value;
+}
+

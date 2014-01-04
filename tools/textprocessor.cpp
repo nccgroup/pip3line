@@ -34,7 +34,7 @@ void TextProcessor::run()
 
     QByteArray temp;
     QTextStream ins(in);
-    ocount = 0;
+    stats.reset();
 
     while (!ins.atEnd()) {
         temp = ins.readLine().toUtf8();

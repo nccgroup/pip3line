@@ -21,69 +21,12 @@ Released under AGPL see LICENSE for more information
 #include <QTimer>
 #include <QTextEncoder>
 #include <QTextDecoder>
-
-RenderTextView::RenderTextView(QObject *parent) :
-    QThread(parent)
-{
-    textRenderingChunkSize = 500;
-    running = false;
-}
-
-RenderTextView::~RenderTextView()
-{
-}
-
-void RenderTextView::run()
-{
-    running = true;
-    int numBlock = 0;
-    QString value;
-
-    runMutex.lock();
-    while (running) {
-        runMutex.unlock();
-
-        dataSem.acquire(1);
-        runMutex.lock();
-        if (!running)
-            break;
-        runMutex.unlock();
-        dataMutex.lock();
-        if (textViewDisplayQueue.isEmpty()) {
-            dataMutex.unlock();
-            runMutex.lock();
-            continue;
-        } else {
-            value = textViewDisplayQueue.dequeue();
-            dataMutex.unlock();
-            numBlock = (value.size() / textRenderingChunkSize) + 1;
-            emit startingRendering();
-            for (int i = 0; i < numBlock; i++) {
-                emit dataChunk(value.mid(i*textRenderingChunkSize,textRenderingChunkSize));
-            }
-            emit finishedRendering();
-        }
-        runMutex.lock();
-    }
-    runMutex.unlock();
-}
-
-void RenderTextView::stop()
-{
-    runMutex.lock();
-    running = false;
-    runMutex.unlock();
-    dataSem.release(1);
-}
-
-void RenderTextView::setDataForRendering(const QString &text)
-{
-    dataMutex.lock();
-    textViewDisplayQueue.enqueue(text);
-    dataMutex.unlock();
-    dataSem.release(1);
-}
-//======================================================================
+#include <QMenu>
+#include <QAction>
+#include "../tabs/tababstract.h"
+#include "../sources/bytesourceabstract.h"
+#include "../loggerwidget.h"
+#include "../guihelper.h"
 
 // We need to set this limit as QTextEdit has difficulties with large input
 const int TextView::MAX_TEXT_VIEW = 100000;
@@ -91,11 +34,8 @@ const QString TextView::DEFAULT_CODEC = "UTF-8";
 const QString TextView::LOGID = "TextView";
 
 TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidget *parent) :
-    QWidget(parent)
+    SingleViewAbstract(nbyteSource, nguiHelper, parent)
 {
-    guiHelper = nguiHelper;
-    logger = guiHelper->getLogger();
-    byteSource = nbyteSource;
     connect(byteSource,SIGNAL(updated(quintptr)), this, SLOT(updateText(quintptr)), Qt::UniqueConnection);
     ui = new(std::nothrow) Ui::TextView();
     if (ui == NULL) {
@@ -111,18 +51,8 @@ TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidg
     selectAllAction = NULL;
     keepOnlySelectedAction = NULL;
     currentCodec = NULL;
+    errorNotReported = true;
     ui->setupUi(this);
-
-    //qDebug() << "Created" << this;
-    renderThread = new(std::nothrow) RenderTextView(this);
-    if (renderThread != NULL) {
-        connect(renderThread, SIGNAL(startingRendering()), this, SLOT(textRenderingStarted()),Qt::QueuedConnection);
-        connect(renderThread, SIGNAL(finishedRendering()), this, SLOT(textRenderingFinished()),Qt::QueuedConnection);
-        connect(renderThread, SIGNAL(dataChunk(QString)), this, SLOT(reveceivingTextChunk(QString)),Qt::QueuedConnection);
-        renderThread->start();
-    } else {
-        qFatal("Cannot allocate memory for renderThread X{");
-    }
 
     ui->plainTextEdit->installEventFilter(this);
     connect(ui->plainTextEdit, SIGNAL(textChanged()), this, SLOT(onTextChanged()));
@@ -150,12 +80,6 @@ TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidg
 
 TextView::~TextView()
 {
-    if (renderThread != NULL) {
-        renderThread->stop();
-        renderThread->wait();
-        delete renderThread;
-        renderThread = NULL;
-    }
     delete sendToMenu;
     delete saveToFileAction;
     delete loadMenu;
@@ -175,8 +99,10 @@ void TextView::setModel(ByteSourceAbstract *dataModel)
     connect(byteSource,SIGNAL(updated(quintptr)), this, SLOT(updateText(quintptr)), Qt::UniqueConnection);
 }
 
-bool TextView::search(QString item)
+void TextView::search(QByteArray block)
 {
+    QString item = QString::fromUtf8(block.data(), block.size());
+    previousSearch = block;
     bool found = ui->plainTextEdit->find(item);
     if (!found) {
         QTextCursor cursor(ui->plainTextEdit->textCursor());
@@ -184,7 +110,8 @@ bool TextView::search(QString item)
         ui->plainTextEdit->setTextCursor(cursor);
         found = ui->plainTextEdit->find(item);
     }
-    return found;
+
+    emit searchStatus(!found);
 }
 
 void TextView::onRightClick(QPoint pos)
@@ -236,7 +163,7 @@ void TextView::onSendToTab(QAction * action)
         guiHelper->sendToNewTab(dataToSend);
     } else {
         if (sendToTabMapping.contains(action)) {
-            TransformsGui * tg = sendToTabMapping.value(action);
+            TabAbstract * tg = sendToTabMapping.value(action);
             tg->setData(dataToSend);
             tg->bringFront();
         } else {
@@ -276,7 +203,7 @@ void TextView::updateSendToMenu()
     sendToMenu->addAction(sendToNewTabAction);
     sendToMenu->addSeparator();
 
-    QList<TransformsGui *> list = guiHelper->getTabs();
+    QList<TabAbstract *> list = guiHelper->getTabs();
     for (int i = 0; i < list.size(); i++) {
         QAction * action = new(std::nothrow) QAction(list.at(i)->getName(),sendToMenu);
         if (action == NULL) {
@@ -387,7 +314,7 @@ void TextView::updateText(quintptr source)
 
     ui->plainTextEdit->blockSignals(true);
     ui->plainTextEdit->clear();
-    if (byteSource->size() > MAX_TEXT_VIEW) {
+    if (byteSource->size() > (quint64)MAX_TEXT_VIEW) {
         ui->plainTextEdit->appendPlainText("Data Too large for this view");
         ui->plainTextEdit->blockSignals(false);
         ui->plainTextEdit->setEnabled(false);
@@ -400,38 +327,32 @@ void TextView::updateText(quintptr source)
                 QTextDecoder *decoder = currentCodec->makeDecoder(QTextCodec::ConvertInvalidToNull | QTextCodec::IgnoreHeader);
                 QString textf = decoder->toUnicode(byteSource->getRawData().constData(),byteSource->size());
                 if (decoder->hasFailure()) {
-                    logger->logError(tr("invalid text decoding [%1]").arg(QString::fromUtf8(currentCodec->name())),LOGID);
-                    ui->codecsComboBox->setStyleSheet(GuiStyles::ComboBoxError);
+                    if (errorNotReported) {
+                        logger->logError(tr("invalid text decoding [%1]").arg(QString::fromUtf8(currentCodec->name())),LOGID);
+                        ui->codecsComboBox->setStyleSheet(GuiStyles::ComboBoxError);
+                        errorNotReported = false;
+                    }
                 } else {
                     ui->codecsComboBox->setStyleSheet("");
+                    errorNotReported = true;
                 }
                 delete decoder;
-                renderThread->setDataForRendering(textf);
+                ui->plainTextEdit->appendPlainText(textf);
+                updateStats();
+                ui->plainTextEdit->moveCursor(QTextCursor::Start);
+                ui->plainTextEdit->ensureCursorVisible();
+                ui->plainTextEdit->setEnabled(true);
             } else {
                 logger->logError(tr(":updatedText() currentCodec is NULL T_T"),LOGID);
             }
         } else {
-            ui->plainTextEdit->blockSignals(false);
+
             ui->plainTextEdit->setEnabled(true);
         }
     }
-}
-
-void TextView::textRenderingStarted()
-{
-    ui->plainTextEdit->setEnabled(false);
-    ui->plainTextEdit->blockSignals(true);
-    ui->plainTextEdit->clear();
-}
-
-void TextView::textRenderingFinished()
-{
-    ui->plainTextEdit->moveCursor(QTextCursor::Start);
-    ui->plainTextEdit->ensureCursorVisible();
     ui->plainTextEdit->blockSignals(false);
-    ui->plainTextEdit->setEnabled(true);
-    updateStats();
 }
+
 
 void TextView::reveceivingTextChunk(const QString &chunk)
 {
@@ -474,16 +395,18 @@ bool TextView::eventFilter(QObject *obj, QEvent *event)
                      if (keyEvent->modifiers().testFlag(Qt::ShiftModifier) && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
                          byteSource->historyForward();
                          keyEvent->accept();
+                         return true;
                      }
                      else if (keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
                          byteSource->historyBackward();
                          keyEvent->accept();
+                         return true;
                      }
                     break;
                  default:
                      return false;
              }
-             return true;
+
         } else if (event->type() == QEvent::Wheel) {
             if (ui->plainTextEdit->verticalScrollBar()->isVisible()) {
                 ui->plainTextEdit->setAttribute(Qt::WA_NoMousePropagation);
@@ -508,7 +431,7 @@ QByteArray TextView::encode(QString text)
             logger->logError(tr("Some error(s) occured during the encoding process [%1]").arg(QString::fromUtf8(currentCodec->name())),LOGID);
             ui->codecsComboBox->setStyleSheet(GuiStyles::ComboBoxError);
         } else {
-            ui->codecsComboBox->setStyleSheet("");
+            ui->codecsComboBox->setStyleSheet(qApp->styleSheet());
         }
         delete encoder;
     }  else {

@@ -9,10 +9,11 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "infodialog.h"
+#include <transformabstract.h>
 #include "ui_infodialog.h"
 
-InfoDialog::InfoDialog(TransformAbstract *ntransform, QWidget *parent) :
-    QDialog(parent)
+InfoDialog::InfoDialog(GuiHelper * guiHelper, TransformAbstract *ntransform, QWidget *parent) :
+    AppDialog(guiHelper, parent)
 {
     ui = new(std::nothrow) Ui::InfoDialog();
     if (ui == NULL) {

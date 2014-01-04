@@ -12,7 +12,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = transform
 TEMPLATE = lib
-CONFIG += release plugin
+CONFIG += debug plugin
 DEFINES += LIBTRANSFORM_LIBRARY
 
 unix {

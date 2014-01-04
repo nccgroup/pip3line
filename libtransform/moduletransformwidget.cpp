@@ -16,6 +16,7 @@ Released under AGPL see LICENSE for more information
 #include <QKeyEvent>
 #include <QHashIterator>
 #include <QMessageBox>
+#include "scripttransformabstract.h"
 #include <QDebug>
 
 ModuleTransformWidget::ModuleTransformWidget(ScriptTransformAbstract *ntransform, QWidget *parent) :
@@ -34,6 +35,11 @@ ModuleTransformWidget::ModuleTransformWidget(ScriptTransformAbstract *ntransform
     QAbstractItemModel * oldModel = ui->parameterstableView->model();
     ui->parameterstableView->setModel(model);
     oldModel->deleteLater();
+
+    ui->autoReloadCheckBox->setChecked(transform->isAutoReload());
+    // for now
+    //ui->autoReloadCheckBox->setVisible(false);
+
     connect(model, SIGNAL(parametersChanged()), this, SLOT(onParametersUpdated()));
     connect(transform, SIGNAL(confUpdated()), this, SLOT(reloadParameters()));
 
@@ -54,6 +60,8 @@ ModuleTransformWidget::ModuleTransformWidget(ScriptTransformAbstract *ntransform
     connect(ui->choosePushButton, SIGNAL(clicked()), this, SLOT(onChooseFile()));
     connect(ui->makePersistentCheckBox, SIGNAL(toggled(bool)), this, SLOT(onMakePersistent(bool)));
     connect(ui->addParamPushButton, SIGNAL(clicked()), this, SLOT(onAddParameter()));
+    connect(ui->autoReloadCheckBox, SIGNAL(toggled(bool)), SLOT(onAutoReload(bool)));
+    connect(ui->forceReloadPushButton, SIGNAL(clicked()), transform,SLOT(reloadModule()));
 }
 
 ModuleTransformWidget::~ModuleTransformWidget()
@@ -87,6 +95,11 @@ void ModuleTransformWidget::onAddParameter()
 void ModuleTransformWidget::onParametersUpdated()
 {
     transform->setParameters(model->getParameters());
+}
+
+void ModuleTransformWidget::onAutoReload(bool val)
+{
+    transform->setAutoReload(val);
 }
 
 void ModuleTransformWidget::reloadParameters()

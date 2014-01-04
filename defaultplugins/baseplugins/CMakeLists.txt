@@ -10,7 +10,7 @@
 
 message ( STATUS "Configuring the base plugin --" )
 project( baseplugins )
-cmake_minimum_required( VERSION 2.8.9 )
+cmake_minimum_required( VERSION 2.8.11 )
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DBASEPLUGINS_LIBRARY)
 
@@ -33,9 +33,11 @@ endif(WITH_QT5)
 include_directories (
 	../../libtransform/)
 
+if (WIN32)
 link_directories (
 	${PROJECT_SOURCE_DIR}/../../lib
 	)
+endif(WIN32)
 
 set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../../bin/plugins )
 
@@ -82,6 +84,8 @@ set ( baseplugins_HDRS
 	bytesinteger.h
 	ntlmssp.h
 	bytestofloat.h
+	byterot.h
+	hmactransform.h
 	confgui/xorwidget.h
 	confgui/urlencodewidget.h
 	confgui/splitwidget.h
@@ -109,6 +113,8 @@ set ( baseplugins_HDRS
 	confgui/ntlmsspwidget.h
 	confgui/numbertocharwidget.h
 	confgui/bytestofloatwdiget.h
+	confgui/byterotwidget.h
+	confgui/hmactransformwidget.h
 	)
 
 set ( baseplugins_SRCS
@@ -153,6 +159,8 @@ set ( baseplugins_SRCS
 	bytesinteger.cpp
 	ntlmssp.cpp
 	bytestofloat.cpp
+	byterot.cpp
+	hmactransform.cpp
 	confgui/xorwidget.cpp
 	confgui/urlencodewidget.cpp
 	confgui/splitwidget.cpp
@@ -180,6 +188,8 @@ set ( baseplugins_SRCS
 	confgui/ntlmsspwidget.cpp
 	confgui/numbertocharwidget.cpp
 	confgui/bytestofloatwdiget.cpp
+	confgui/byterotwidget.cpp
+	confgui/hmactransformwidget.cpp
 	)
 
 set ( baseplugins_UIS
@@ -210,6 +220,8 @@ set ( baseplugins_UIS
 	confgui/ntlmsspwidget.ui
 	confgui/numbertocharwidget.ui
 	confgui/bytestofloatwdiget.ui
+	confgui/byterotwidget.ui
+	confgui/hmactransformwidget.ui
 	)
 
 if(WITH_QT5)

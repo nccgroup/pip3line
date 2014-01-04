@@ -12,6 +12,7 @@ Released under AGPL see LICENSE for more information
 #include "ui_mainwindow.h"
 #include "debugdialog.h"
 #include <QTextStream>
+#include <QTimer>
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QVBoxLayout>
@@ -29,8 +30,32 @@ Released under AGPL see LICENSE for more information
 #include <QColorDialog>
 #include <transformabstract.h>
 #include <commonstrings.h>
+#include <QFileDialog>
+#include "tabs/generictab.h"
+#include "tabs/randomaccesstab.h"
+#include "sources/currentmemorysource.h"
+#include "sources/largefile.h"
+#include "sources/basicsource.h"
 #include "../version.h"
+#include "analysedialog.h"
+#include "massprocessingdialog.h"
+#include "regexphelpdialog.h"
+#include "loggerwidget.h"
+#include "settingsdialog.h"
+#include "downloadmanager.h"
+#include "guihelper.h"
+#include "maintabs.h"
+#include "quickviewdialog.h"
+#include "comparisondialog.h"
+#include "sources/tcpserverlistener.h"
+#include "sources/tcplistener.h"
+
 using namespace Pip3lineConst;
+
+const QString MainWindow::NEW_TRANSFORMTAB = "Transform tab";
+const QString MainWindow::NEW_FILE = "File";
+const QString MainWindow::NEW_CURRENTMEM = "Current memory";
+const QString MainWindow::NEW_BASEHEX = "Hexeditor";
 
 MainWindow::MainWindow(bool debug, QWidget *parent) :
     QMainWindow(parent)
@@ -40,13 +65,26 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     settingsDialog = NULL;
     trayIcon = NULL;
     quickView = NULL;
-    comparison = NULL;
+    comparisonView = NULL;
+    debugDialog = NULL;
     trayIconLabel = NULL;
+    newMenu = NULL;
+    blockListener = NULL;
+
+    settingsWasVisible = false;
+    quickViewWasVisible = false;
+    compareWasVisible = false;
 
     ui = new(std::nothrow) Ui::MainWindow();
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::MainWindow X{");
     }
+
+    qRegisterMetaType<Pip3lineConst::LOGLEVEL>("Pip3lineConst::LOGLEVEL");
+    qRegisterMetaType<quintptr>("quintptr");
+#if QT_VERSION >= 0x050000
+    qRegisterMetaType<qintptr>("qintptr");
+#endif
     qApp->setOrganizationName(APPNAME);
     qApp->setApplicationName(APPNAME);
 
@@ -64,9 +102,6 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
         qFatal("Cannot allocate memory for GuiHelper X{");
     }
 
-    setStyleSheet("QWidget {} ");
-
-
     buildToolBar();
 
     if (debug)
@@ -78,8 +113,6 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 //    networkProxy.setHostName("127.0.0.1");
 //    networkProxy.setPort(8080);
 //    networkManager.setProxy(networkProxy);
-
-
 
 
 
@@ -98,12 +131,37 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     if (settings->value(SETTINGS_AUTO_UPDATE, true).toBool()) {
         checkForUpdates();
     }
+    qApp->setStyleSheet("TextCell {background: white}");
+   // blockListener = new(std::nothrow) UdpListener(this);
+    blockListener = new(std::nothrow) TcpServerListener();
+    if (blockListener == NULL) {
+        qFatal("Cannot allocate memory for BlocksSource X{");
+    }
+
+    // by default everything is base64 encoded, to avoid parsing issues
+    blockListener->setBase64Applied(true);
+
+    connect(blockListener, SIGNAL(blockReceived(QByteArray)), mainTabs, SLOT(newTabTransform(QByteArray)),Qt::QueuedConnection);
+    connect(blockListener,SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
+    connect(blockListener, SIGNAL(status(QString,QString)), logger, SLOT(logStatus(QString,QString)));
+    QTimer::singleShot(0,blockListener,SLOT(startListening()));
+
+    connect(guiHelper,SIGNAL(raiseWindowRequest()), SLOT(showWindow()));
+
+//  qApp->setStyleSheet("* {color : green; background: black}");
 }
 
 MainWindow::~MainWindow()
 {
+    //qDebug() << "Destroying main window";
+    if (blockListener != NULL) {
+        blockListener->stopListening();
+        delete blockListener;
+    }
+    delete debugDialog;
+    delete newMenu;
     delete quickView;
-    delete comparison;// these two first to avoid weird bugs
+    delete comparisonView;// these two first to avoid weird bugs
     delete mainTabs;
     delete trayIconMenu;
     logger = NULL; // no need to delete, already done by the main tab gui
@@ -121,37 +179,62 @@ MainWindow::~MainWindow()
 
 void MainWindow::buildToolBar()
 {
-//    QPushButton * newPushButton = new(std::nothrow) QPushButton("New",this);
-//    if (newPushButton == NULL) {
-//        qFatal("Cannot allocate memory for newPushButton X{");
-//    }
-
-//   // newPushButton->setMenu();
-
-//    ui->mainToolBar->insertWidget(ui->actionNew_Tab,newPushButton);
-
-
- 
-    QComboBox * filterComboBox = new(std::nothrow) QComboBox();
-    if (filterComboBox == NULL) {
-        qFatal("Cannot allocate memory for filterComboBox X{");
+    QPushButton * newPushButton = new(std::nothrow) QPushButton(QIcon(":/Images/icons/document-new-3.png"),"",this);
+    if (newPushButton == NULL) {
+        qFatal("Cannot allocate memory for newPushButton X{");
     }
 
-    filterComboBox->setFrame(false);
+    newPushButton->setToolTip(tr("Special bytes sources"));
 
-    filterComboBox->installEventFilter(guiHelper);
-    guiHelper->buildFilterComboBox(filterComboBox);
-    ui->mainToolBar->addWidget(filterComboBox);
+    newMenu = new(std::nothrow) QMenu();
+    if (newMenu == NULL) {
+        qFatal("Cannot allocate memory for newPushButton X{");
+    }
+
+    connect(ui->actionNewDefault, SIGNAL(triggered()), SLOT(onNewDefault()));
+
+    QAction * action = new(std::nothrow) QAction(NEW_TRANSFORMTAB, newMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for QAction NEW_DEFAULT X{");
+    }
+    newMenu->addAction(action);
+
+    action = new(std::nothrow) QAction(NEW_BASEHEX, newMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for QAction NEW_BASEHEX X{");
+    }
+    newMenu->addAction(action);
+
+    action = new(std::nothrow) QAction(NEW_FILE, newMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for QAction NEW_FILE X{");
+    }
+    newMenu->addAction(action);
+
+    action = new(std::nothrow) QAction(NEW_CURRENTMEM, newMenu);
+    if (action == NULL) {
+        qFatal("Cannot allocate memory for QAction NEW_CURRENTMEM X{");
+    }
+    newMenu->addAction(action);
+
+    newPushButton->setMenu(newMenu);
+
+    newPushButton->setFlat(true);
+    connect(newMenu, SIGNAL(triggered(QAction*)), SLOT(onNewAction(QAction*)));
+
+    ui->mainToolBar->insertWidget(ui->mainToolBar->actions().at(1),newPushButton );
+   // ui->mainToolBar->insertSeparator(ui->action_Analyse);
 
     connect(ui->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
 
     connect(ui->actionHelp_with_RegExp, SIGNAL(triggered()), this, SLOT(onHelpWithRegExp()));
     connect(ui->actionAbout_Pip3line, SIGNAL(triggered()), this, SLOT(onAboutPip3line()));
     connect(ui->actionAbout_Qt, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
-    connect(ui->actionPip3line_settings, SIGNAL(triggered()), this, SLOT(onSettingsDialogOpen()));
-    connect(ui->actionMagic, SIGNAL(triggered()), this, SLOT(onQuickView()));
+    connect(ui->actionPip3line_settings, SIGNAL(toggled(bool)), this, SLOT(onSettingsDialogOpen(bool)));
+    connect(ui->actionMagic, SIGNAL(toggled(bool)), this, SLOT(onQuickView(bool)));
     connect(ui->actionDebug_dialog, SIGNAL(triggered()), this, SLOT(onDebug()));
-    connect(ui->actionCompare, SIGNAL(triggered()), this, SLOT(onCompare()));
+    connect(ui->actionCompare, SIGNAL(toggled(bool)), this, SLOT(onCompare(bool)));
+    connect(ui->action_Analyse, SIGNAL(toggled(bool)), SLOT(onAnalyse(bool)));
 
 }
 
@@ -170,32 +253,13 @@ void MainWindow::initializeLibTransform()
 
 void MainWindow::loadFile(QString fileName)
 {
+    qDebug() << "loading file" << fileName;
     mainTabs->loadFile(fileName);
-}
-
-void MainWindow::onAnalyse()
-{
-    if (!analyseDialog) {
-        analyseDialog = new(std::nothrow) AnalyseDialog(this);
-        if (analyseDialog == NULL) {
-            qFatal("Cannot allocate memory for analyseDialog X{");
-            return;
-        }
-    }
-
-    if (!analyseDialog->isVisible()) {
-        QRect scr = QApplication::desktop()->screenGeometry();
-        analyseDialog->move(scr.center() - rect().center() );
-
-        analyseDialog->show();
-        analyseDialog->raise();
-        analyseDialog->activateWindow();
-    }
 }
 
 void MainWindow::onAboutPip3line()
 {
-    AboutDialog dialog(this);
+    AboutDialog dialog(guiHelper, this);
     dialog.exec();
 }
 
@@ -214,21 +278,24 @@ void MainWindow::onHelpWithRegExp()
     regexphelpDialog->activateWindow();
 }
 
-void MainWindow::onSettingsDialogOpen()
+void MainWindow::onSettingsDialogOpen(bool checked)
 {
-    if (settingsDialog == NULL) {
-        settingsDialog = new(std::nothrow) SettingsDialog(guiHelper, this);
+    if (checked) {
         if (settingsDialog == NULL) {
-            qFatal("Cannot allocate memory for settingsDialog X{");
-            return;
-        }
-        else
+            settingsDialog = new(std::nothrow) SettingsDialog(guiHelper, this);
+            if (settingsDialog == NULL) {
+                qFatal("Cannot allocate memory for settingsDialog X{");
+                return;
+            }
             connect(settingsDialog, SIGNAL(updateCheckRequested()), this, SLOT(checkForUpdates()));
-    }
+            settingsDialog->attachAction(ui->actionPip3line_settings);
+        }
 
-    settingsDialog->show();
-    settingsDialog->raise();
-    settingsDialog->activateWindow();
+        settingsDialog->show();
+        settingsDialog->raise();
+    } else if (settingsDialog != NULL) {
+        settingsDialog->hide();
+    }
 }
 
 void MainWindow::checkForUpdates()
@@ -249,24 +316,33 @@ void MainWindow::checkForUpdates()
 void MainWindow::processingCheckForUpdate(DownloadManager *dm)
 {
     QString data = QString::fromUtf8(dm->getData());
-
     QString message = "Unknown";
-    QRegExp versionRegExp("#define VERSION_STRING \"([0-9]\\.[0-9]\\.?[0-9]?)\"");
+
+    QRegExp versionRegExp("^([0-9]{1,2})\\.([0-9]{1,2})\\.?([0-9]{0,2})");
     if (data.isEmpty()) {
         message = tr("Empty network response, cannot check for new Pip3line version");
         logger->logWarning(message);
     } else {
 
         int pos = versionRegExp.indexIn(data,0);
-        qDebug() << "Version? " << versionRegExp.cap(1);
+
         if (pos != -1) {
-            float last = versionRegExp.cap(1).mid(0,3).toFloat();
-            float current = QString(VERSION_STRING).mid(0,3).toFloat();
-            if (last > current) {
-                message = tr("Current: %1\nLatest: %2\n\nNew version of Pip3line available at\n \nhttps://code.google.com/p/pip3line/downloads/list").arg(VERSION_STRING).arg(versionRegExp.cap(1));
+            uint major = versionRegExp.cap(1).toUInt();
+            uint minor = versionRegExp.cap(2).toUInt();
+            uint rev = 0;
+            if (versionRegExp.captureCount() > 2)
+                rev = versionRegExp.cap(3).toUInt();
+
+            qDebug() << tr("Remote Version %1.%2.%3").arg(major).arg(minor).arg(rev);
+            qDebug() << tr("Current Version %1.%2.%3").arg(VERSION_MAJOR).arg(VERSION_MINOR).arg(VERSION_REV);
+
+            if (major > VERSION_MAJOR ||
+                    (major == VERSION_MAJOR && minor > VERSION_MINOR) ||
+                    (major == VERSION_MAJOR && minor == VERSION_MINOR && rev > VERSION_REV)) {
+                message = tr("Current: %1\nLatest: %2.%3.%4\n\nNew version of Pip3line available at\n \nhttps://code.google.com/p/pip3line/downloads/list").arg(QString(VERSION_STRING)).arg(major).arg(minor).arg(rev);
                 QMessageBox::warning(this,tr("New update"),message,QMessageBox::Ok);
             } else {
-                message = tr("Latest version of Pip3line in use (%1), everything is fine").arg(VERSION_STRING);
+                message = tr("Latest version of Pip3line in use (%1), everything is fine").arg(QString(VERSION_STRING));
                 logger->logStatus(message);
 
             }
@@ -295,25 +371,11 @@ void MainWindow::processingUrlDownload(DownloadManager *dm)
     showWindow();
 }
 
-void MainWindow::on_actionNew_Tab_triggered()
-{
-    mainTabs->newTabTransform();
-}
-
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     bool minimize = settings->value(SETTINGS_MINIMIZE_TO_TRAY, true).toBool();
     if (minimize && trayIcon != NULL) {
-        if (quickView != NULL) {
-            quickViewWasVisible = quickView->isVisible();
-            if (quickViewWasVisible)
-                quickView->hide();
-        }
-        if (settingsDialog != NULL) {
-            settingsWasVisible = settingsDialog->isVisible();
-            if (settingsWasVisible)
-                settingsDialog->hide();
-        }
+        guiHelper->goIntoHidding();
         hide();
         event->ignore();
     } else {
@@ -338,14 +400,25 @@ void MainWindow::createTrayIcon()
 
 void MainWindow::showWindow()
 {
-    showNormal();
-    activateWindow();
-    if (quickView != NULL && quickViewWasVisible)
-        quickView->show();
+    if (!isActiveWindow()) {
+        showNormal();
+        activateWindow();
+    }
 
-    if (settingsDialog != NULL && settingsWasVisible)
-        settingsDialog->show();
+}
 
+void MainWindow::hideEvent(QHideEvent *event)
+{
+    savedPos = pos();
+    QMainWindow::hideEvent(event);
+}
+
+void MainWindow::showEvent(QShowEvent *event)
+{
+    if (!savedPos.isNull())
+        move(savedPos);
+    guiHelper->isRising();
+    QMainWindow::showEvent(event);
 }
 
 void MainWindow::updateTrayIcon()
@@ -399,13 +472,78 @@ void MainWindow::updateTrayIcon()
 void MainWindow::onDebug()
 {
     qDebug() << "Debugging";
-    DebugDialog * dialog = new(std::nothrow) DebugDialog(this);
-    if (dialog == NULL) {
-        qFatal("Cannot allocate memory for DebugDialog X{");
-        return;
+    if (debugDialog == NULL) {
+        debugDialog = new(std::nothrow) DebugDialog(guiHelper, this);
+        if (debugDialog == NULL) {
+            qFatal("Cannot allocate memory for DebugDialog X{");
+            return;
+        }
+        connect(debugDialog,SIGNAL(destroyed()), SLOT(onDebugDestroyed()));
     }
 
-    dialog->show();
+    debugDialog->show();
+}
+
+void MainWindow::onDebugDestroyed()
+{
+    debugDialog = NULL;
+}
+
+void MainWindow::onNewAction(QAction *action)
+{
+    if (action->text() == NEW_FILE) {
+        QString fileName = QFileDialog::getOpenFileName(this,tr("Choose file to load from"));
+        if (!fileName.isEmpty()) {
+            LargeFile *fs = new(std::nothrow) LargeFile();
+            if (fs == NULL) {
+                qFatal("Cannot allocate memory for FileSource X{");
+            }
+            connect(fs,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+            fs->fromLocalFile(fileName);
+            TabAbstract *newTab = new(std::nothrow) RandomAccessTab(fs, guiHelper,this);
+            if (newTab == NULL) {
+                qFatal("Cannot allocate memory for RandomAccessTab X{");
+            }
+            QFileInfo finfo(fileName);
+            newTab->setName(finfo.fileName());
+            mainTabs->integrateTab(newTab);
+        }
+    } else if (action->text() == NEW_TRANSFORMTAB) {
+        mainTabs->newTabTransform();
+    } else if (action->text() == NEW_CURRENTMEM) {
+        CurrentMemorysource *source = new(std::nothrow) CurrentMemorysource();
+        if (source == NULL) {
+            qFatal("Cannot allocate memory for CurrentMemorysource X{");
+        }
+        connect(source,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+
+        RandomAccessTab *raTab = new(std::nothrow) RandomAccessTab(source,guiHelper,mainTabs);
+        if (raTab == NULL) {
+            qFatal("Cannot allocate memory for RandomAccessTab X{");
+        }
+        raTab->setName("Current memory");
+
+        mainTabs->integrateTab(raTab);
+    } else if (action->text() == NEW_BASEHEX) {
+        BasicSource * bs = new(std::nothrow) BasicSource();
+        if (bs == NULL) {
+            qFatal("Cannot allocate memory for BasicSearch X{");
+        }
+        connect(bs,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+
+        GenericTab *tab = new(std::nothrow) GenericTab(bs,guiHelper,mainTabs);
+        if (tab == NULL) {
+            qFatal("Cannot allocate memory for GenericTab X{");
+        }
+
+        mainTabs->integrateTab(tab);
+
+    }
+}
+
+void MainWindow::onNewDefault()
+{
+    mainTabs->newTabTransform();
 }
 
 void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
@@ -467,33 +605,62 @@ void MainWindow::onDataFromURL()
     }
 }
 
-void MainWindow::onQuickView()
+void MainWindow::onQuickView(bool checked)
 {
-    if (quickView == NULL) {
-        quickView = new(std::nothrow) QuickViewDialog(guiHelper, this);
+    if (checked) {
         if (quickView == NULL) {
-            qFatal("Cannot allocate memory for QuickViewDialog X{");
-            return;
+            quickView = new(std::nothrow) QuickViewDialog(guiHelper, this);
+            if (quickView == NULL) {
+                qFatal("Cannot allocate memory for QuickViewDialog X{");
+                return;
+            }
+            connect(guiHelper, SIGNAL(newSelection(QByteArray)), quickView, SLOT(receivingData(QByteArray)));
+            quickView->attachAction(ui->actionMagic);
         }
-        connect(guiHelper, SIGNAL(newSelection(QByteArray)), quickView, SLOT(receivingData(QByteArray)));
-    }
 
-    quickView->show();
-    quickView->raise();
+        quickView->show();
+        quickView->raise();
+    } else if (quickView != NULL) {
+        quickView->hide();
+    }
 }
 
-void MainWindow::onCompare()
+void MainWindow::onCompare(bool checked)
 {
-    if (comparison == NULL) {
-        comparison= new(std::nothrow) ComparisonDialog(guiHelper, this);
-        if (comparison == NULL) {
-            qFatal("Cannot allocate memory for ComparisonDialog X{");
-            return;
+    if (checked) {
+        if (comparisonView == NULL) {
+            comparisonView= new(std::nothrow) ComparisonDialog(guiHelper, this);
+            if (comparisonView == NULL) {
+                qFatal("Cannot allocate memory for ComparisonDialog X{");
+                return;
+            }
+            comparisonView->attachAction(ui->actionCompare);
+            comparisonView->adjustSize();
         }
+        comparisonView->show();
+        comparisonView->raise();
+    } else if (comparisonView != NULL) {
+        comparisonView->hide();
     }
+}
 
-    comparison->show();
-    comparison->raise();
+void MainWindow::onAnalyse(bool checked)
+{
+    if (checked) {
+        if (!analyseDialog) {
+            analyseDialog = new(std::nothrow) AnalyseDialog(guiHelper,this);
+            if (analyseDialog == NULL) {
+                qFatal("Cannot allocate memory for analyseDialog X{");
+                return;
+            }
+            analyseDialog->attachAction(ui->action_Analyse);
+        }
+
+        analyseDialog->show();
+        analyseDialog->raise();
+    } else if (analyseDialog != NULL) {
+        analyseDialog->hide();
+    }
 }
 
 void MainWindow::on_actionLogs_triggered()

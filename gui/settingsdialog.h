@@ -11,23 +11,23 @@ Released under AGPL see LICENSE for more information
 #ifndef SETTINGSDIALOG_H
 #define SETTINGSDIALOG_H
 
-#include <QDialog>
-#include <QSettings>
-#include <transformmgmt.h>
+#include "appdialog.h"
 #include <QHash>
 #include <QModelIndex>
-#include <QListWidgetItem>
-#include "guihelper.h"
 
 namespace Ui {
 class SettingsDialog;
 }
 
-class SettingsDialog : public QDialog
+class QSettings;
+class TransformMgmt;
+class QListWidgetItem;
+
+class SettingsDialog : public AppDialog
 {
         Q_OBJECT
     public:
-        explicit SettingsDialog(GuiHelper *helper, QWidget *parent = 0);
+        explicit SettingsDialog(GuiHelper *guiHelper, QWidget *parent = 0);
         ~SettingsDialog();
         void setVersionUpdateMessage(QString mess);
     signals:
@@ -41,6 +41,7 @@ class SettingsDialog : public QDialog
         void updateSavedMarkingColors();
         void updateImportExportFuncs();
         void updateMisc();
+        void updateFilter();
         void onPluginClicked(QModelIndex index);
         void onSavedClicked(QListWidgetItem*item);
         void onDeleteSaved(const QString &name);
@@ -65,7 +66,6 @@ class SettingsDialog : public QDialog
         QHash<QString, int> stackedList;
         Ui::SettingsDialog *ui;
         QSettings *settings;
-        GuiHelper *helper;
 };
 
 #endif // SETTINGSDIALOG_H

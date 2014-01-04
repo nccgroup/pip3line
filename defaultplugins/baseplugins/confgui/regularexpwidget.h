@@ -37,6 +37,7 @@ class RegularExpWidget : public QWidget
     private:
         Ui::RegularExpWidget *ui;
         RegularExp *transform;
+        bool eventFilter(QObject *o, QEvent *e);
 };
 
 #endif // REGULAREXPWIDGET_H

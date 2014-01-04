@@ -17,6 +17,7 @@ Released under AGPL see LICENSE for more information
 #include <QHash>
 #include "modulesmanagement.h"
 #include "libtransform_global.h"
+class QWidget;
 
 class LIBTRANSFORMSHARED_EXPORT ScriptTransformAbstract : public TransformAbstract
 {
@@ -35,6 +36,10 @@ class LIBTRANSFORMSHARED_EXPORT ScriptTransformAbstract : public TransformAbstra
         QString getScriptDescr() const;
         QHash<QByteArray, QByteArray> getParameters() const;
         void setParameters(QHash<QByteArray, QByteArray> newParams);
+        void setAutoReload(bool val);
+        bool isAutoReload() const;
+    protected Q_SLOTS:
+        virtual bool reloadModule() = 0;
     protected:
         Q_DISABLE_COPY(ScriptTransformAbstract)
         QWidget * requestGui(QWidget * parent);
@@ -46,6 +51,7 @@ class LIBTRANSFORMSHARED_EXPORT ScriptTransformAbstract : public TransformAbstra
         ModulesManagement * moduleManagement;
         ModulesManagement::ModuleType type;
         QHash<QByteArray, QByteArray> parameters;
+        bool autoReload;
 };
 
 #endif // SCRIPTTRANSFORMABSTRACT_H

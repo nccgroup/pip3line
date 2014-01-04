@@ -33,6 +33,7 @@ class XorWidget : public QWidget
     private:
         Ui::XorWidget *ui;
         Xor *transform;
+        bool eventFilter(QObject *o, QEvent *e);
 };
 
 #endif // XORWIDGET_H

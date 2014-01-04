@@ -9,14 +9,14 @@
 
 QT       += core gui xml network
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
+CONFIG += debug WITH_THREAD
 TARGET = pip3line
 TEMPLATE = app
 
 INCLUDEPATH +="../libtransform"
 
 unix {
-    LIBS += -L"../bin" -ltransform
+    LIBS += -L"../bin" -ltransform -lpcap
 }
 
 win32 {
@@ -33,42 +33,63 @@ SOURCES += main.cpp\
     analysedialog.cpp \
     regexphelpdialog.cpp \
     loggerwidget.cpp \
-    customdialogdockwidget.cpp \
-    ../tools/textprocessor.cpp \
-    ../tools/processor.cpp \
-    ../tools/binaryprocessor.cpp \
-    views/bytetableview.cpp \
-    views/byteitemmodel.cpp \
     infodialog.cpp \
     massprocessingdialog.cpp \
-    ../tools/tcpserver.cpp \
-    ../tools/streamprocessor.cpp \
     screeniodevice.cpp \
-    ../tools/pipeserver.cpp \
     settingsdialog.cpp \
     downloadmanager.cpp \
     pluginconfwidget.cpp \
-    transformsgui.cpp \
     guihelper.cpp \
     maintabs.cpp \
-    ../tools/serverabstract.cpp \
+    debugdialog.cpp \
     floatingdialog.cpp \
     quickviewdialog.cpp \
     quickviewitem.cpp \
     quickviewitemconfig.cpp \
-    hexwidget.cpp \
+    textinputdialog.cpp \
+    comparisondialog.cpp \
     newbytedialog.cpp \
-    debugdialog.cpp \
+    ../tools/tcpserver.cpp \
+    ../tools/streamprocessor.cpp \
+    ../tools/textprocessor.cpp \
+    ../tools/processor.cpp \
+    ../tools/binaryprocessor.cpp \
+    ../tools/serverabstract.cpp \
+    ../tools/pipeserver.cpp \
     ../tools/centralprocessor.cpp \
     ../tools/transformrequest.cpp \
+    tabs/tababstract.cpp \
+    tabs/generictab.cpp \
+    tabs/transformsgui.cpp \
+    tabs/randomaccesstab.cpp \
     sources/bytesourceabstract.cpp \
     sources/basicsource.cpp \
+    sources/filewidget.cpp \
+    sources/sourcemanager.cpp \
+    sources/pcapsource.cpp \
+    sources/currentmemorysource.cpp \
+    sources/largerandomaccesssource.cpp \
     views/hexview.cpp \
-    textinputdialog.cpp \
     views/textview.cpp \
-    sources/filesource.cpp \
-    views/doubleviewwidget.cpp \
-    comparisondialog.cpp
+    views/singleviewabstract.cpp \
+    views/bytetableview.cpp \
+    views/byteitemmodel.cpp \
+    shared/hexwidget.cpp \
+    shared/offsetgotowidget.cpp \
+    shared/searchwidget.cpp \
+    shared/readonlybutton.cpp \
+    shared/bytesourceguibutton.cpp \
+    shared/clearallmarkingsbutton.cpp \
+    appdialog.cpp \
+    sources/memorywidget.cpp \
+    ../tools/processingstats.cpp \
+    shared/detachtabbutton.cpp \
+    sources/largefile.cpp \
+    sources/blockssource.cpp \
+    sources/udplistener.cpp \
+    sources/tcpserverlistener.cpp \
+    sources/searchabstract.cpp \
+    sources/tcplistener.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -77,73 +98,97 @@ HEADERS  += mainwindow.h \
     analysedialog.h \
     regexphelpdialog.h \
     loggerwidget.h \
-    customdialogdockwidget.h \
-    ../tools/textprocessor.h \
-    ../tools/processor.h \
-    ../tools/binaryprocessor.h \
-    views/bytetableview.h \
-    views/byteitemmodel.h \
     infodialog.h \
     massprocessingdialog.h \
-    ../tools/tcpserver.h \
-    ../tools/streamprocessor.h \
     screeniodevice.h \
-    ../tools/pipeserver.h \
-    ../version.h \
+    crossplatform.h \
+    comparisondialog.h \
+    textinputdialog.h \
     settingsdialog.h \
     downloadmanager.h \
     pluginconfwidget.h \
-    transformsgui.h \
     guihelper.h \
     maintabs.h \
-    ../tools/serverabstract.h \
     floatingdialog.h \
     quickviewdialog.h \
     quickviewitem.h \
     quickviewitemconfig.h \
-    hexwidget.h \
     newbytedialog.h \
     debugdialog.h \
+    ../version.h \
+    ../tools/textprocessor.h \
+    ../tools/processor.h \
+    ../tools/binaryprocessor.h \
+    ../tools/tcpserver.h \
+    ../tools/streamprocessor.h \
+    ../tools/pipeserver.h \
+    ../tools/serverabstract.h \
     ../tools/centralprocessor.h \
     ../tools/transformrequest.h \
+    tabs/tababstract.h \
+    tabs/generictab.h \
+    tabs/randomaccesstab.h \
+    tabs/transformsgui.h \
+    sources/sourcemanager.h \
+    sources/pcapsource.h \
+    sources/currentmemorysource.h \
+    sources/largerandomaccesssource.h \
+    sources/filewidget.h \
     sources/bytesourceabstract.h \
     sources/basicsource.h \
     views/hexview.h \
-    textinputdialog.h \
     views/textview.h \
-    sources/filesource.h \
-    crossplatform.h \
-    views/doubleviewwidget.h \
-    comparisondialog.h
+    views/singleviewabstract.h \
+    views/bytetableview.h \
+    views/byteitemmodel.h \
+    shared/offsetgotowidget.h \
+    shared/searchwidget.h \
+    shared/readonlybutton.h \
+    shared/hexwidget.h \
+    shared/bytesourceguibutton.h \
+    shared/clearallmarkingsbutton.h \
+    appdialog.h \
+    sources/memorywidget.h \
+    ../tools/processingstats.h \
+    shared/detachtabbutton.h \
+    sources/largefile.h \
+    sources/blockssource.h \
+    sources/udplistener.h \
+    sources/tcpserverlistener.h \
+    sources/searchabstract.h \
+    sources/tcplistener.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \
+    comparisondialog.ui \
     aboutdialog.ui \
     messagedialog.ui \
     regexphelpdialog.ui \
     analysedialog.ui \
     loggerwidget.ui \
-    customdialogdockwidget.ui \
     infodialog.ui \
     massprocessingdialog.ui \
     settingsdialog.ui \
     pluginconfwidget.ui \
-    transformsgui.ui \
+    textinputdialog.ui \
     floatingdialog.ui \
     quickviewdialog.ui \
     quickviewitem.ui \
     quickviewitemconfig.ui \
-    hexwidget.ui \
     newbytedialog.ui \
     debugdialog.ui \
     views/hexview.ui \
-    textinputdialog.ui \
     views/textview.ui \
-    views/doubleviewwidget.ui \
-    comparisondialog.ui
+    tabs/generictab.ui \
+    tabs/randomaccesstab.ui \
+    tabs/transformsgui.ui \
+    shared/hexwidget.ui \
+    sources/filewidget.ui \
+    sources/memorywidget.ui
 
 OTHER_FILES += icons/pip3line.png \
-    win.rc
+    win.rc \
+    release.txt
 
 RESOURCES += \
     gui_res.qrc

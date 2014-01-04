@@ -9,7 +9,7 @@
 QT       += svg gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TEMPLATE = lib
-CONFIG += plugin release no_keywords
+CONFIG += plugin debug no_keywords
 
 # Comment this out if you want to compile the 2.7 version
 #CONFIG += CONF_PYTHON_3
@@ -19,7 +19,7 @@ CONF_PYTHON_3 {
     DEFINES += BUILD_PYTHON_3
     TARGET = python3plugin
     unix {
-        LIBS += -lpython3.2
+        LIBS += -lpython3.3
     }
 
     win32 {
