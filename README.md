@@ -15,11 +15,12 @@ Raw bytes manipulation utility, able to apply well known and less well known tra
 
 http://nccgroup.github.io/pip3line/index.html
 
-[Download]
+[Releases notice]
+
+https://github.com/nccgroup/pip3line/releases
+
+[Windows Binaries Download]
 
 https://code.google.com/p/pip3line/downloads/list
-
-
-
 
 
