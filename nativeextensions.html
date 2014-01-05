@@ -25,8 +25,9 @@
         <p class="header">Documentation</p>
         <ul>
           <li class="download"><a class="buttons" href="screenshots.html">Screenshots</a></li>
-          <li class="download"><a class="buttons" href="nativeextensions.html">Native plugin API</a></li>
+          <li class="download"><a class="buttons" href="nativeextensions.html">Native plugins</a></li>
           <li class="download"><a class="buttons" href="pythonplugins.html">Python plugins</a></li>
+          <li class="download"><a class="buttons" href="burpplugin.html">Burp plugin</a></li>
           <li class="download"><a class="buttons" href="shortcuts.html">Shortcuts list</a></li>
         </ul>
         <p class="header">Repository</p>
@@ -49,14 +50,16 @@
 	<li>Having a good basic knowledge on dynamic library development in C/C++</li>
 	<li>Using QtCreator makes it easier, but that's ultimately optional. I guess anyone mastering libraries development would only need notepad.</li>
 	</ul>
-
+	<h3>Using QtCreator</h3>
+	<p>If you are using creator make sure to create a new C++ library project , and <strong>not a Qt Plugin project</strong><br/> 
+	<pre><code>New File or Project->Libraries->C++ library</pre></code></p>
 	<h3>Base principles</h3>
 
-	<p>The plugin itself is a factory for TransformAbstract objects.</p>
+	<p>The plugin itself is a factory for <em>TransformAbstract</em> objects.</p>
 
 	<p>The programme loading the plugin will use the root class (the one the one that implement the <em>TransformFactoryPluginInterface</em> interface) to retrieve instances of transformations objects.</p>
 
-	<p>To send error messages to the GUI just use the signals <em>error(message,source)</em> and <em>warning(message,sources)</em> or the <em>Pip3lineCallback</em> object (logError/logWarning/logStatus)</p>
+	<p>To send error messages to the GUI just use the signals <em>error(message,source)</em> and <em>warning(message,sources)</em> or the <em>Pip3lineCallback</em> object (<em>logError()</em>/<em>logWarning()</em>/<em>logStatus()</em>)</p>
 
 	<p>The individual panels will only display the last messages but all messages will appears in the logs panel.</p>
 

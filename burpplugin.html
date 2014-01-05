@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Pip3line - The Swiss army knife of byte manipulation - download</title>
+    <title>Pip3line - The Swiss army knife of byte manipulation</title>
 
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
@@ -27,44 +27,32 @@
           <li class="download"><a class="buttons" href="screenshots.html">Screenshots</a></li>
           <li class="download"><a class="buttons" href="nativeextensions.html">Native plugins</a></li>
           <li class="download"><a class="buttons" href="pythonplugins.html">Python plugins</a></li>
-	  <li class="download"><a class="buttons" href="burpplugin.html">Burp plugin</a></li>
+          <li class="download"><a class="buttons" href="burpplugin.html">Burp plugin</a></li>
           <li class="download"><a class="buttons" href="shortcuts.html">Shortcuts list</a></li>
         </ul>
         <p class="header">Repository</p>
         <ul>
           <li><a class="buttons github" href="https://github.com/nccgroup/pip3line" target="_blank">View On GitHub</a></li>
         </ul>
-        <p class="header">This project is maintained by <a class="header name" href="https://github.com/metrodango">metrodango</a></p>
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/metrodango">Gabriel Caudrelier</a></p>
 
 
       </header>
       <section>
-      <h3>Windows Binary</h3>
-
-        <p>A set of Windows binaries packages are available <a href="https://code.google.com/p/pip3line/downloads/list" >HERE</a></p>
-        <p>The bundled Python 2.7/3.x plugins need Python 2.7/3.3 (x86 or x64 version) to be installed. See <a href="http://www.python.org/getit/">http://www.python.org/getit/</a></p>
-	<p>
-	If you don't want to install the Python interpreters, and want to suppress the error messages, delete the plugins files in %application dir%\plugins\.
+	<h2>The integrated Burp plugin</h2>
+	<p>Pip3line comes with a burp plugin wich integrate Pip3line in Burp. It uses network TCP to communicate with the Pip3line process.
 	</p>
-	<p>
-	This binary also comes with a version of OpenSSL and Distorm compiled with VC2010/VC2012
-	</p>
-	<p>
-	The VC2010/VC2012 redistributables are not bundled anymore, if the application is complaining about a missing msvc* library, install the MS package corresponding to your version:
-	<ul>
-	  <li><a href="http://www.microsoft.com/download/en/details.aspx?id=8328">VC2010 (x86)</a></li>
-	  <li><a href="http://www.microsoft.com/download/details.aspx?id=30679">VC2012 (x64)</a></li>
-	</ul>
-	</p>
-
-      <h3>Source archive</h3>
-	<p>A Source archive can be downloaded from the Github release page <a href="https://github.com/nccgroup/pip3line/releases" >HERE</a></p>
-        
-
-
+	<p>This first means an instance of Pip3line needs to be running for the Burp plugin to work</p>
+	<h3>Context menu "send to pip3line" action</h3>
+	<p>The plugin creates a new action in the Burp context menu called whenever right-clicking on a HTTP request or response</p>
+	<img class="screenshots" src="images/burp_sendto_pip3line.png">
+	<p>This will send either the current selection or the entire request/response if there is no selection to the Pip3line process</p>
+	<h3>Intruder processor</h3>
+	<p>the plugin also register as an Intruder payload processor, which uses the Mass processing functionality of Pip3line.</p>
+	<img class="screenshots" src="images/burp_payload_processing.png">
       </section>
       <footer>
-        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> based on the Dinky theme</small></p>
       </footer>
     </div>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
