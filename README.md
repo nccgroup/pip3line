@@ -23,4 +23,11 @@ https://github.com/nccgroup/pip3line/releases
 
 https://code.google.com/p/pip3line/downloads/list
 
+[Python plugins]
+
+http://nccgroup.github.io/pip3line/pythonplugins.html
+
+[Native plugins]
+
+http://nccgroup.github.io/pip3line/nativeextensions.html
 
