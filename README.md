@@ -21,7 +21,7 @@ https://github.com/nccgroup/pip3line/releases
 
 [Windows Binaries Download]
 
-https://code.google.com/p/pip3line/downloads/list
+http://sourceforge.net/projects/pip3line/files/
 
 [Python plugins]
 
