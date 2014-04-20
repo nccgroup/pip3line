@@ -14,7 +14,7 @@ IF "%1"=="2010" SET ANGLEUSE=true
 
 SET VSVERSION=%1
 REM Default Qt dir
-SET "BASE_DIR_QT=C:\Qt\Qt5.2.0\5.2.0"
+SET "BASE_DIR_QT=C:\Qt\Qt5.2.1\5.2.1"
 REM this variable is set for the MSVC2010/OpenGL version of the Qt binaries
 REM to be changed if necessary
 
@@ -50,6 +50,7 @@ copy %QT_LIBS%"\bin\Qt5Network.dll"
 copy %QT_LIBS%"\bin\Qt5Svg.dll"
 copy %QT_LIBS%"\bin\Qt5Widgets.dll"
 copy %QT_LIBS%"\bin\Qt5XmlPatterns.dll"
+copy %QT_LIBS%"\bin\Qt5Concurrent.dll"
 copy %QT_LIBS%"\bin\icudt51.dll"
 copy %QT_LIBS%"\bin\icuin51.dll"
 copy %QT_LIBS%"\bin\icuuc51.dll"

@@ -27,6 +27,7 @@ Released under AGPL see LICENSE for more information
 #include "../loggerwidget.h"
 #include "../guihelper.h"
 #include "../crossplatform.h"
+#include <transformabstract.h>
 
 const QString HexView::NEW_BYTE_ACTION = "New Byte(s)";
 const QString HexView::BYTES_LE_ACTION = "Little endian";
@@ -203,8 +204,6 @@ void HexView::onRightClick(QPoint pos)
         ui->saveSelectedToFileAction->setEnabled(true);
     }
     ui->newByteArrayAction->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_RESET) && !byteSource->isReadonly());
-    insertAfterMenu->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_RESIZE) && !byteSource->isReadonly());
-    insertBeforeMenu->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_RESIZE) && !byteSource->isReadonly());
     loadMenu->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_RESET) && !byteSource->isReadonly());
 
     if (byteSource->size() <= 0) {
@@ -219,8 +218,8 @@ void HexView::onRightClick(QPoint pos)
         ui->saveToFileAction->setEnabled(true);
         saveToFileMenu->setEnabled(true);
         copyCurrentOffsetMenu->setEnabled(true);
-        insertAfterMenu->setEnabled(true);
-        insertBeforeMenu->setEnabled(true);
+        insertAfterMenu->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_RESIZE) && !byteSource->isReadonly());
+        insertBeforeMenu->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_RESIZE) && !byteSource->isReadonly());
     }
     ui->importFileAction->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_LOADFILE));
 
@@ -286,8 +285,6 @@ void HexView::updateImportExportMenus()
         }
         replaceMenu->addAction(action);
     }
-
-
 
     insertAfterMenu->clear();
     action = new(std::nothrow) QAction(NEW_BYTE_ACTION, insertAfterMenu);
@@ -648,9 +645,9 @@ bool HexView::goTo(quint64 offset, bool absolute, bool negative, bool select)
     return hexTableView->goTo(offset,absolute, negative, select);
 }
 
-void HexView::search(QByteArray item)
+void HexView::search(QByteArray item, QBitArray mask)
 {
-    hexTableView->search(item);
+    hexTableView->search(item, mask);
 }
 
 void HexView::searchAgain()

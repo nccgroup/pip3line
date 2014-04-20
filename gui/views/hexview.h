@@ -11,6 +11,7 @@ Released under AGPL see LICENSE for more information
 #ifndef HEXVIEW_H
 #define HEXVIEW_H
 
+#include <QBitArray>
 #include <QHash>
 
 #include "singleviewabstract.h"
@@ -39,7 +40,7 @@ class HexView : public SingleViewAbstract
     public slots:
         void onClearAllMArkings();
         bool goTo(quint64 offset, bool absolute,bool negative, bool select = false);
-        void search(QByteArray item);
+        void search(QByteArray item, QBitArray mask);
         void searchAgain();
     private slots:
         void updateStats();

@@ -7,7 +7,7 @@
 # Released under AGPL see LICENSE for more information
 
 
-QT       += svg
+QT       += svg concurrent
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = transform
@@ -32,7 +32,8 @@ SOURCES += transformmgmt.cpp \
     modulesmanagement.cpp \
     moduletransformwidget.cpp \
     scripttransformabstract.cpp \
-    deleteablelistitem.cpp
+    deleteablelistitem.cpp \
+    threadedprocessor.cpp
 
 HEADERS += \
     transformmgmt.h \
@@ -48,7 +49,8 @@ HEADERS += \
     modulesmanagement.h \
     moduletransformwidget.h \
     scripttransformabstract.h \
-    deleteablelistitem.h
+    deleteablelistitem.h \
+    threadedprocessor.h
 
 FORMS += \
     modulesmanagementwidget.ui \

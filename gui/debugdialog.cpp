@@ -17,6 +17,7 @@ Released under AGPL see LICENSE for more information
 #include <QEvent>
 #include <QKeyEvent>
 #include <QAction>
+#include <transformmgmt.h>
 #include "guihelper.h"
 #include "views/hexview.h"
 #include "sources/basicsource.h"
@@ -157,7 +158,11 @@ bool DebugDialog::eventFilter(QObject *o, QEvent *event)
 {
     if (o == ui->addressLineEdit && event->type() == QEvent::KeyPress) {
 
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
+        if (keyEvent == NULL) {
+            qWarning() << "[DebugDialog]NULL KeyEvent";
+            return false;
+        }
         if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return) {
             qDebug() << "enter pressed";
             onLoad();

@@ -6,7 +6,7 @@
 #
 # Released under AGPL see LICENSE for more information
 
-QT       += svg gui
+QT       += gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TEMPLATE = lib
 CONFIG += plugin debug no_keywords
@@ -20,6 +20,7 @@ CONF_PYTHON_3 {
     TARGET = python3plugin
     unix {
         LIBS += -lpython3.3
+        INCLUDEPATH +="/usr/include/python3.3/"
     }
 
     win32 {
@@ -30,6 +31,7 @@ CONF_PYTHON_3 {
     TARGET = python27plugin
     unix {
         LIBS += -lpython2.7
+        INCLUDEPATH ="/usr/include/python2.7/" INCLUDEPATH
     }
 
     win32 {
@@ -50,13 +52,16 @@ INCLUDEPATH += ../../libtransform/
 DESTDIR = ../../bin/plugins
 
 DEFINES += PYTHONPLUGIN_LIBRARY
+DEFINES += CONF_PYTHON_3
 
 SOURCES += pythonplugin.cpp \
-    pythontransform.cpp
+    pythontransform.cpp \
+    pythonmodules.cpp
 
 HEADERS += pythonplugin.h\
         pythonplugin_global.h \
-    pythontransform.h
+    pythontransform.h \
+    pythonmodules.h
 
 OTHER_FILES += \
     pythonplugin.json

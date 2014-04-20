@@ -24,9 +24,11 @@ class QWidget;
 class OffsetsRange
 {
     public:
+        static const QString HEXFORMAT;
         explicit OffsetsRange(quint64 lowerVal, quint64 upperVal, QString description = QString());
         OffsetsRange(const OffsetsRange& other);
         OffsetsRange &operator=(const OffsetsRange &other);
+        virtual ~OffsetsRange();
         bool isInRange(int value);
         bool isInRange(quint64 value);
         QString getDescription() const ;
@@ -39,14 +41,20 @@ class OffsetsRange
         void setLowerVal(quint64 val);
         quint64 getUpperVal() const;
         void setUpperVal(quint64 val);
-        bool operator<(const OffsetsRange& other) const;
+        virtual bool operator<(const OffsetsRange& other) const;
         bool sameMarkings(const OffsetsRange& other) const;
+        static QString offsetToString(quint64 val);
+        static bool lessThanFunc(OffsetsRange * or1, OffsetsRange *or2);
+        quint64 getSize() const;
+        void setSize(const quint64 &value);
     protected:
         QString description;
         quint64 lowerVal;
         quint64 upperVal;
+        quint64 size;
         QColor foregroundColor;
         QColor backgroundColor;
+
     friend class ByteSourceAbstract;
     friend class ComparableRange;
 };
@@ -58,6 +66,7 @@ class ComparableRange
         OffsetsRange *getRange() const;
         void setRange(OffsetsRange *value);
         bool operator<(const ComparableRange& other) const;
+        bool operator==(const ComparableRange& other) const;
     private:
         OffsetsRange *range;
     friend class ByteSourceAbstract;
@@ -146,6 +155,7 @@ class ByteSourceAbstract : public QObject
 
         virtual quint64 lowByte();
         virtual quint64 highByte();
+        virtual int textOffsetSize();
 
     public slots:
         virtual bool historyForward();
@@ -154,11 +164,13 @@ class ByteSourceAbstract : public QObject
         virtual void setViewSize(int size);
         void clearAllMarkings();
         void mark(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor = QColor(), QString toolTip = QString());
-
+        // use the next function with caution as it does not send updates signals
+        void markNoUpdate(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor = QColor(), QString toolTip = QString());
     private slots:
         void onGuiDestroyed();
     signals:
         void updated(quintptr source);
+        void minorUpdate(quint64,quint64);
         void log(QString mess, QString source, Pip3lineConst::LOGLEVEL level);
         void nameChanged(QString newName);
         void sizeChanged();
@@ -184,6 +196,7 @@ class ByteSourceAbstract : public QObject
         void historyAddReplace(quint64 offset, QByteArray before, QByteArray after);
         void historyAdd(HistItem item);
         void writeToFile(QString destFilename, QByteArray data);
+        void clearAllMarkingsNoUpdate();
         bool _readonly;
         static const quintptr INVALID_SOURCE;
         quint32 capabilities;

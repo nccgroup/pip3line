@@ -13,6 +13,7 @@ Released under AGPL see LICENSE for more information
 #include <QTextStream>
 #include <QLabel>
 #include <QDebug>
+#include <pip3linecallback.h>
 #include "../../version.h"
 #include <openssl/evp.h>
 #include <openssl/crypto.h>

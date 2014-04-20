@@ -71,6 +71,7 @@ void ByteSourceGuiButton::refreshState()
 void ByteSourceGuiButton::onGuiDelete()
 {
     gui = NULL;
+    localAction->setChecked(false);
 }
 
 void ByteSourceGuiButton::onToggle(bool enabled)
@@ -83,10 +84,11 @@ void ByteSourceGuiButton::onToggle(bool enabled)
                     qFatal("Cannot allocate memory for FloatingDialog X{");
                 }
                 gui->setParent(guidia);
+
                 guidia->attachAction(localAction);
                 guidia->setWindowTitle(byteSource->description());
-                guidia->setAllowReject(false);
-                guidia->resize(400,300);
+                guidia->setAllowReject(true);
+                guidia->resize(gui->sizeHint());
                 guidia->raise();
                 guidia->show();
                 connect(gui, SIGNAL(destroyed()), SLOT(onGuiDelete()));

@@ -11,9 +11,6 @@ Released under AGPL see LICENSE for more information
 #ifndef GUIHELPER_H
 #define GUIHELPER_H
 
-#include "loggerwidget.h"
-#include <transformmgmt.h>
-#include <QNetworkAccessManager>
 #include <QByteArray>
 #include <QObject>
 #include <QHash>
@@ -24,13 +21,7 @@ Released under AGPL see LICENSE for more information
 #include <QColor>
 #include <QSet>
 #include <QMultiMap>
-#include <QMutex>
 #include <QMenu>
-#include "sources/bytesourceabstract.h"
-#include <transformabstract.h>
-#include "tabs/tababstract.h"
-#include "textinputdialog.h"
-#include "../tools/centralprocessor.h"
 
 namespace GuiStyles {
     static const QString LineEditError = "QLineEdit { background-color: #FFB1B2; }";
@@ -42,6 +33,15 @@ namespace GuiStyles {
 
 class TransformsGui;
 class QSettings;
+class TransformAbstract;
+class TabAbstract;
+class ByteSourceAbstract;
+class ThreadedProcessor;
+class QNetworkAccessManager;
+class LoggerWidget;
+class TransformMgmt;
+class TransformRequest;
+class TextInputDialog;
 
 class GuiHelper : public QObject
 {
@@ -54,8 +54,6 @@ class GuiHelper : public QObject
         LoggerWidget *getLogger();
         TransformMgmt *getTransformFactory();
         QNetworkAccessManager *getNetworkManager();
-
-        void processTransform(TransformRequest * request);
 
         void sendNewSelection(const QByteArray &selection);
 
@@ -106,8 +104,8 @@ class GuiHelper : public QObject
 
         void goIntoHidding();
         void isRising();
-
         QSet<QString> getTypesBlacklist() const;
+        ThreadedProcessor *getCentralTransProc() const;
 
     public slots:
         void raisePip3lineWindow();
@@ -157,7 +155,7 @@ class GuiHelper : public QObject
         QSet<QString> typesBlacklist;
         QHash<QString, QColor> markingColors;
         QHash<QString , TransformAbstract *> importExportFunctions;
-        CentralProcessor * centralTransProc;
+        ThreadedProcessor * centralTransProc;
         int offsetDefaultBase;
 };
 

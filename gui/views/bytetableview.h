@@ -25,6 +25,7 @@ Released under AGPL see LICENSE for more information
 #include <QSize>
 #include <QValidator>
 #include <QLabel>
+#include <QBitArray>
 
 class SearchAbstract;
 
@@ -134,7 +135,7 @@ class ByteTableView : public QTableView
         void markSelected(const QColor &color, QString text = QString());
         void clearMarkOnSelected();
         bool hasSelection();
-        void search(QByteArray item);
+        void search(QByteArray item, QBitArray mask);
         void searchAgain();
         static const int MAXCOL;
         static const int MINCOL;
@@ -146,7 +147,6 @@ class ByteTableView : public QTableView
         void setColumnCount(int val);
         void gotoSearch(quint64 soffset, quint64 eoffset);
         bool goTo(quint64 offset, bool absolute,bool negative, bool select = false);
-        void resizeVerticalHeaders();
     signals:
         void newSelection();
         void error(QString mess, QString source);
@@ -172,6 +172,7 @@ class ByteTableView : public QTableView
         int hexColumncount;
         quint64 lastSearchIndex;
         QByteArray lastSearch;
+        QBitArray lastMask;
         int currentVerticalHeaderWidth;
         SearchAbstract *searchObject;
 };

@@ -23,6 +23,8 @@ namespace Ui {
 class QuickViewItem;
 }
 
+class TransformRequest;
+
 class QuickViewItem : public QWidget
 {
         Q_OBJECT
@@ -39,6 +41,7 @@ class QuickViewItem : public QWidget
         void mouseDoubleClickEvent (QMouseEvent *event);
     signals:
         void askForDeletion(QuickViewItem *);
+        void sendRequest(TransformRequest *);
     private:
         Q_DISABLE_COPY(QuickViewItem)
         bool setXmlConf(const QString &conf);

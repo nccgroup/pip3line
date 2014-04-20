@@ -39,6 +39,8 @@ class OffsetGotoWidget : public QLineEdit
     private slots:
         void onGoto(QString offsetString, bool select);
     private:
+        static const QString TOOLTIP_TEXT;
+        static const QString PLACEHOLDER_TEXT;
         void keyPressEvent(QKeyEvent * event);
         void focusInEvent(QFocusEvent * event);
         GuiHelper *guiHelper;

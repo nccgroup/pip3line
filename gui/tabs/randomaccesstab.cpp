@@ -1,3 +1,13 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
 #include "randomaccesstab.h"
 #include "ui_randomaccesstab.h"
 #include "../shared/offsetgotowidget.h"
@@ -45,7 +55,7 @@ RandomAccessTab::RandomAccessTab(ByteSourceAbstract *nbyteSource, GuiHelper *gui
     searchWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
 
     ui->mainLayout->insertWidget( 1,searchWidget);
-    connect(searchWidget, SIGNAL(searchRequest(QByteArray,bool)), SLOT(onSearch(QByteArray,bool)));
+    connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
 
     hexView->installEventFilter(this);
     hexView->getHexTableView()->verticalScrollBar()->setVisible(true);
@@ -168,9 +178,9 @@ void RandomAccessTab::integrateByteSource()
     ui->nextPushButton->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_HISTORY));
 }
 
-void RandomAccessTab::onSearch(QByteArray item, bool)
+void RandomAccessTab::onSearch(QByteArray item, QBitArray mask, bool)
 {
-    hexView->search(item);
+    hexView->search(item, mask);
 }
 
 void RandomAccessTab::onGotoOffset(quint64 offset, bool absolute,bool negative, bool select)
@@ -182,7 +192,7 @@ void RandomAccessTab::onGotoOffset(quint64 offset, bool absolute,bool negative, 
     }
 }
 
-void RandomAccessTab::log(QString mess, QString , LOGLEVEL level)
+void RandomAccessTab::log(QString mess, QString , Pip3lineConst::LOGLEVEL level)
 {
     QColor color = Qt::black;
     if (level == Pip3lineConst::LERROR)

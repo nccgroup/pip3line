@@ -14,6 +14,20 @@ Released under AGPL see LICENSE for more information
 #include "../guihelper.h"
 
 const QRegExp OffsetGotoWidget::offsetRegexp = QRegExp("^([=+-])?(0x|[oxn])?([0-9a-fA-F]{0,20})$");
+const QString OffsetGotoWidget::TOOLTIP_TEXT = QObject::tr("<html><head/><body><p>First character defines relativity:<br/>"
+                                                                  "'=' =&gt; absolute offset (default)<br/>"
+                                                                  "+ =&gt; positive relative offset<br/>"
+                                                                  "- =&gt; negative relative offset</p>"
+                                                                  "<p>Second character defines the format:<br/>"
+                                                                  "x/0x = hexadecimal number<br/>"
+                                                                  "o = octal number<br/>"
+                                                                  "n = decimal number<br/>"
+                                                                  "Default is configured from the  global settings</p>"
+                                                                  "<p>The range validity is between 0 and unsigned INT64_MAX</p>"
+                                                                  "<p>Pressing enter/return will go to the offset<br/>"
+                                                                  "shift+enter will also select everything since the last position</p></body></html>"
+                                                                  );
+const QString OffsetGotoWidget::PLACEHOLDER_TEXT = QObject::tr("Offset (ctrl+g)");
 
 OffsetValidator::OffsetValidator(QObject *parent) :
     QValidator(parent)
@@ -59,20 +73,8 @@ OffsetGotoWidget::OffsetGotoWidget(GuiHelper *nguiHelper, QWidget *parent) :
     }
     setValidator(validator);
   //  setMaximumWidth(100);
-    setPlaceholderText(tr("Offset (ctrl+g)"));
-    setToolTip(tr("<html><head/><body><p>First character defines relativity:<br/>"
-                  "'=' =&gt; absolute offset (default)<br/>"
-                  "+ =&gt; positive relative offset<br/>"
-                  "- =&gt; negative relative offset</p>"
-                  "<p>Second character defines the format:<br/>"
-                  "x/0x = hexadecimal number<br/>"
-                  "o = octal number<br/>"
-                  "n = decimal number<br/>"
-                  "Default is configured from the  global settings</p>"
-                  "<p>The range validity is between 0 and signed INT64_MAX</p>"
-                  "<p>Pressing enter/return will go to the offset<br/>"
-                  "shift+enter will also select everything since the last position</p></body></html>"
-                  ));
+    setPlaceholderText(PLACEHOLDER_TEXT);
+    setToolTip(TOOLTIP_TEXT);
 }
 
 void OffsetGotoWidget::onGoto(QString offsetString, bool select)

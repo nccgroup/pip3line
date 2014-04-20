@@ -11,6 +11,7 @@ Released under AGPL see LICENSE for more information
 #ifndef SINGLEVIEWABSTRACT_H
 #define SINGLEVIEWABSTRACT_H
 
+#include <QBitArray>
 #include <QWidget>
 
 class ByteSourceAbstract;
@@ -24,7 +25,7 @@ class SingleViewAbstract : public QWidget
         explicit SingleViewAbstract(ByteSourceAbstract *dataModel,GuiHelper *guiHelper, QWidget *parent = 0);
         virtual ~SingleViewAbstract();
     public slots:
-        virtual void search(QByteArray item) = 0;
+        virtual void search(QByteArray item, QBitArray mask) = 0;
         virtual void searchAgain();
     signals:
         void askForFileLoad();
@@ -33,6 +34,7 @@ class SingleViewAbstract : public QWidget
         GuiHelper * guiHelper;
         LoggerWidget *logger;
         QByteArray previousSearch;
+        QBitArray previousMask;
         
 };
 

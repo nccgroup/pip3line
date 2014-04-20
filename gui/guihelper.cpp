@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QNetworkAccessManager>
 #include <QApplication>
 #include <QMutexLocker>
 #include <QDebug>
@@ -17,9 +18,16 @@ Released under AGPL see LICENSE for more information
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
+#include <transformabstract.h>
 #include <QXmlStreamWriter>
 #include "guihelper.h"
+#include "tabs/tababstract.h"
+#include "sources/bytesourceabstract.h"
 #include "newbytedialog.h"
+#include "loggerwidget.h"
+#include "textinputdialog.h"
+#include <transformmgmt.h>
+#include <threadedprocessor.h>
 
 using namespace Pip3lineConst;
 
@@ -82,19 +90,14 @@ GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nm
     }
 
     loadImportExportFunctions();
-    centralTransProc = new(std::nothrow) CentralProcessor();
+    centralTransProc = new(std::nothrow) ThreadedProcessor();
     if (centralTransProc == NULL) {
         qFatal("Cannot allocate memory for action CentralProcessor X{");
-        return;
     }
-    centralTransProc->start();
 }
 
 GuiHelper::~GuiHelper()
 {
-    centralTransProc->stop();
-    if (!centralTransProc->wait(10000))
-		qCritical() << "Could not stop the central processor";
     delete centralTransProc;
     centralTransProc = NULL;
     saveImportExportFunctions();
@@ -116,11 +119,6 @@ TransformMgmt *GuiHelper::getTransformFactory()
 QNetworkAccessManager *GuiHelper::getNetworkManager()
 {
     return networkManager;
-}
-
-void GuiHelper::processTransform(TransformRequest *request)
-{
-    centralTransProc->addToProcessingQueue(request);
 }
 
 void GuiHelper::sendNewSelection(const QByteArray &selection)
@@ -156,7 +154,9 @@ QList<TabAbstract *> GuiHelper::getTabs()
 void GuiHelper::onTabDeleted()
 {
     TabAbstract * tg = static_cast<TabAbstract *>(sender());
-    if (!tabs.remove(tg)) {
+    if (tg == NULL) {
+        logger->logError(tr("NULL Deleted Tab"), LOGID);
+    } else if (!tabs.remove(tg)) {
         logger->logError(tr("Deleted Tab not found"), LOGID);
     } else {
         updateSortedTabs();
@@ -450,6 +450,11 @@ void GuiHelper::deleteImportExportFuncs()
         importExportFunctions.clear();
     }
 }
+ThreadedProcessor *GuiHelper::getCentralTransProc() const
+{
+    return centralTransProc;
+}
+
 QSet<QString> GuiHelper::getTypesBlacklist() const
 {
     return typesBlacklist;

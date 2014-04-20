@@ -17,6 +17,9 @@ Released under AGPL see LICENSE for more information
 #include <QModelIndex>
 #include <QAtomicInt>
 #include <commonstrings.h>
+#include <QIODevice>
+#include <QBitArray>
+#include <QList>
 
 class QTimerEvent;
 
@@ -24,19 +27,25 @@ class FoundOffsetsModel : public QAbstractListModel
 {
         Q_OBJECT
     public:
+        struct ItemFound {
+                quint64 startOffset;
+                quint64 endOffset;
+        };
+
         explicit FoundOffsetsModel(QObject * parent = 0);
         ~FoundOffsetsModel();
         int rowCount ( const QModelIndex & parent = QModelIndex() ) const;
         QVariant data ( const QModelIndex & index, int role = Qt::DisplayRole ) const;
         QVariant headerData ( int section, Qt::Orientation orientation, int role = Qt::DisplayRole ) const;
         quint64 getStartingOffset(const QModelIndex & index);
-        quint64 getEndOffset(const QModelIndex & index);
-        quint64 getEndOffset(const quint64 startOffset);
+        static bool lessThanFoundOffset(ItemFound i1, ItemFound i2);
     public slots:
         void clear();
         void addOffset(quint64 soffset, quint64 endoffset);
+        void addOffset(ItemFound item);
+        void addOffsets(QList<ItemFound> list);
     private:
-        QMap<quint64, quint64> offsets;
+        QList<ItemFound> items;
 };
 
 class SearchAbstract : public QThread
@@ -45,31 +54,25 @@ class SearchAbstract : public QThread
     public:
         SearchAbstract(QObject *parent = 0);
         ~SearchAbstract();
-        virtual void initialize();
-
         bool getStopAtFirst() const;
         void setStopAtFirst(bool value);
-
         quint64 getStartOffset() const;
         void setStartOffset(const quint64 &value);
-
         quint64 getEndOffset() const;
         void setEndOffset(const quint64 &value);
-
         QByteArray getSearchItem() const;
-        void setSearchItem(const QByteArray &value);
-
-        bool getProcessStatsInternally() const;
-        void setProcessStatsInternally(bool value);
-
+        void setSearchItem(const QByteArray &value, QBitArray bitmask = QBitArray());
+        void setProcessStatsInternally(bool process);
     public slots:
         void startSearch();
         void startThreadedSearch();
         void stopSearch();
+
     protected slots:
         virtual void processStats(quint64 val);
         void onChildFinished();
         void registerSearchObject(SearchAbstract * sobj);
+        bool fastSearch(QIODevice *device, qint64 startOffset, qint64 endOffset);
     signals:
         void itemFound(quint64 soffset,quint64 eoffset);
         void errorStatus(bool val);
@@ -81,20 +84,21 @@ class SearchAbstract : public QThread
     protected:
         virtual void internalStart() = 0;
         virtual void internalThreadedStart();
-        void timerEvent(QTimerEvent *event);
         bool singleSearch;
         quint64 soffset;
         quint64 eoffset;
         QByteArray sitem;
+        char *mask;
         QMutex stopMutex;
         bool stopped;
-        bool processStatsInternally;
         QHash<SearchAbstract *, quint64> threads;
         quint64 oldStats;
         quint64 statsSize;
-        int timer;
         int threadCount;
         bool threadedSearch;
+        int BufferSize;
+        int statsStep;
+
 };
 
 #endif // SEARCHABSTRACT_H

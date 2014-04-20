@@ -38,11 +38,13 @@ class LIBTRANSFORMSHARED_EXPORT ScriptTransformAbstract : public TransformAbstra
         void setParameters(QHash<QByteArray, QByteArray> newParams);
         void setAutoReload(bool val);
         bool isAutoReload() const;
-    protected Q_SLOTS:
-        virtual bool reloadModule() = 0;
+    public Q_SLOTS:
+        virtual bool loadModule() = 0; // we don't need to pass force reload
+
     protected:
         Q_DISABLE_COPY(ScriptTransformAbstract)
         QWidget * requestGui(QWidget * parent);
+
         static const QString PROP_SCRIPT;
         static const QString PROP_MODULE_NAME;
         static const QString PROP_MODULE_PARAMS;

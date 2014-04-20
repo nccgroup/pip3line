@@ -307,7 +307,7 @@ void TransformMgmt::unloadTransforms() {
 }
 
 TransformAbstract * TransformMgmt::getTransform(QString name) {
-
+//    qDebug() << "Trying to load" << name;
     TransformAbstract * ta = NULL;
     listLocker.lock();
     if (!cycleSem.tryAcquire()) {
@@ -334,6 +334,7 @@ TransformAbstract * TransformMgmt::getTransform(QString name) {
             }
         }
     }else {
+        qDebug() << transformNameList;
         listLocker.unlock();
         emit error(tr("No transformation named \"%1\" was found in the current plugins and the persistent storage").arg(name),id);
     }

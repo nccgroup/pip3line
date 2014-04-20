@@ -1,3 +1,13 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
 #include "searchwidget.h"
 #include "../sources/bytesourceabstract.h"
 #include "../guihelper.h"
@@ -10,7 +20,21 @@
 #include <QFocusEvent>
 #include <QPushButton>
 #include <QDebug>
+#include <QToolTip>
+#include <QEvent>
 
+const QColor SearchLine::LOADING_COLOR = QColor(60, 177, 250);
+const QString SearchLine::FIND_PLACEHOLDER_TEXT = QObject::tr("find (ctrl+f)");
+const QString SearchLine::PLACEHOLDER_DISABLED_TEXT = QObject::tr("Search not implemented for this source :(");
+const QString SearchLine::TOOLTIP_TEXT = QObject::tr("<html><head/><body><p>Default search will be based on the current view:<br/>"
+                                                       "Text view (if present) =&gt; normal text search</p>"
+                                                       "Hexa view =&gt; search in the hex view from an hexadecimal value</p>"
+                                                       "<p>Otherwise one can force the conversion with the following shortcuts:<br/>"
+                                                       "shift + enter =&gt; hexadecimal search<br/>"
+                                                       "alt + enter =&gt; UTF-8 search<br/>"
+                                                       "ctrl + enter =&gt; UTF-16 search<br/>"
+                                                       "ctrl + n =&gt; redo last search</p>"
+                                                       "<p>When using shortcut the view will switch to hexadecimal</p></body></html>");
 
 SearchLine::SearchLine(ByteSourceAbstract *source, QWidget *parent) :
     QLineEdit(parent)
@@ -18,24 +42,15 @@ SearchLine::SearchLine(ByteSourceAbstract *source, QWidget *parent) :
     progress = 0;
     sourceSize = 0;
     setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Preferred);
-    SearchAbstract *sObject = source->getSearchObject();
+    sObject = source->getSearchObject();
     if (sObject == NULL) {
-        setPlaceholderText(tr("Search"));
-        setToolTip(tr("<html><head/><body><p>Search not implemented for this source</p></body></html>"));
+        setPlaceholderText(PLACEHOLDER_DISABLED_TEXT);
         setEnabled(false);
     } else {
-        setPlaceholderText(tr("find (ctrl+f)"));
-        setToolTip(tr("<html><head/><body><p>Default search will be based on the current view:<br/>"
-                      "Text view (if present) =&gt; normal text search</p>"
-                      "Hexa view =&gt; search in the hex view from an hexadecimal value</p>"
-                      "<p>Otherwise one can force the conversion with the following shortcuts:<br/>"
-                      "shift + enter =&gt; hexadecimal search<br/>"
-                      "alt + enter =&gt; UTF-8 search<br/>"
-                      "ctrl + enter =&gt; UTF-16 search<br/>"
-                      "ctrl + n =&gt; redo last search</p>"
-                      "<p>When using shortcut the view will switch to hexadecimal</p></body></html>"));
+        setPlaceholderText(FIND_PLACEHOLDER_TEXT);
+        setToolTip(TOOLTIP_TEXT);
+        sObject->setProcessStatsInternally(true);
         connect(sObject, SIGNAL(errorStatus(bool)), SLOT(setError(bool)),Qt::QueuedConnection);
-        connect(sObject, SIGNAL(progressUpdate(quint64)),sObject, SLOT(processStats(quint64)),Qt::DirectConnection);
         connect(sObject, SIGNAL(progressStatus(double)), SLOT(updateProgress(double)),Qt::QueuedConnection);
         connect(source,SIGNAL(updated(quintptr)), SLOT(onSourceUpdated(quintptr)), Qt::QueuedConnection);
         sourceSize = source->size();
@@ -44,7 +59,7 @@ SearchLine::SearchLine(ByteSourceAbstract *source, QWidget *parent) :
 
 SearchLine::~SearchLine()
 {
-
+    sObject = NULL;
 }
 
 void SearchLine::setError(bool val)
@@ -54,25 +69,27 @@ void SearchLine::setError(bool val)
     else
         setStyleSheet(qApp->styleSheet());
     progress = 0;
-    repaint();
+    update();
 }
 
 void SearchLine::updateProgress(double val)
 {
-    progress = val;
-
-    repaint();
+    if (!isEnabled()) { // it means that we are searching ..
+        progress = val;
+        update();
+    } // ignore the update otherwise, it should be an old signal kicking in
 }
 
 void SearchLine::onSearchStarted()
 {
-    setEnabled(false);
+   setDisabled(true);
 }
 
 void SearchLine::onSearchEnded()
 {
-    setEnabled(true);
+    setDisabled(false);
     progress = 0;
+    update();
     setFocus();
 }
 
@@ -102,12 +119,10 @@ void SearchLine::paintEvent(QPaintEvent *event)
         initStyleOption(&lenap);
         QRect backgroundRect = style()->subElementRect(QStyle::SE_LineEditContents, &lenap, this);
 
-        QColor loadingColor = QColor(60, 177, 250);
-
         int mid = backgroundRect.width() * progress;
         QLinearGradient gradient(10,10,backgroundRect.width(),10);
 
-        gradient.setColorAt(0, loadingColor);
+        gradient.setColorAt(0, LOADING_COLOR);
         gradient.setColorAt(1, QColor::fromRgb(211, 235, 250));
         painter.setBrush(gradient);
         painter.setPen(Qt::transparent);
@@ -164,7 +179,7 @@ SearchWidget::SearchWidget(ByteSourceAbstract * source, QWidget *parent) :
     SearchAbstract *sObject = source->getSearchObject();
     if (sObject != NULL) {
         connect(stopPushButton, SIGNAL(clicked()), sObject, SLOT(stopSearch()), Qt::DirectConnection);
-        connect(stopPushButton, SIGNAL(clicked()), SLOT(onStopClicked()), Qt::QueuedConnection);
+        connect(stopPushButton, SIGNAL(clicked()), SIGNAL(stopSearch()), Qt::QueuedConnection);
         connect(sObject, SIGNAL(searchStarted()), SLOT(onSearchStarted()), Qt::QueuedConnection);
         connect(sObject, SIGNAL(searchEnded()), SLOT(onSearchEnded()), Qt::QueuedConnection);
     }
@@ -206,7 +221,7 @@ void SearchWidget::onSearchEnded()
     lineEdit->onSearchEnded();
 }
 
-void SearchWidget::updateProgress(quint64 val)
+void SearchWidget::updateStatusProgress(double val)
 {
     lineEdit->updateProgress(val);
 }
@@ -216,16 +231,11 @@ void SearchWidget::clearSearch()
     lineEdit->clear();
 }
 
-void SearchWidget::onStopClicked()
-{
-   // qDebug() << "stopped clicked";
-    emit stopSearch();
-}
-
 void SearchWidget::onSearch(QString val, int modifiers)
 {
    // qDebug() << "Searching for " << val;
     QByteArray searchItem;
+    QBitArray mask;
     lineEdit->setError(false);
 
     if (!val.isEmpty()) {
@@ -246,15 +256,35 @@ void SearchWidget::onSearch(QString val, int modifiers)
         } else if (modifiers & Qt::AltModifier) {
             searchItem = val.toUtf8();
         } else {
-            searchItem = QByteArray::fromHex(val.toUtf8());
+            QString HEXCHAR = "abcdef1234567890ABCDEF";
+            QChar maskChar = QChar('X');
+            mask.resize(val.size()/2);
+            int i = 0;
+            while (i < val.size() -1 ) { // this is fine, we konw that val.size() > 0
+                    if (HEXCHAR.contains(val.at(i)) && HEXCHAR.contains(val.at(i+1))) { // check if valid hexa value
+                        mask.setBit(i/2); // this should work with Qt, as the array should be expanded automatically
+                        searchItem.append(QByteArray::fromHex(QString(val.at(i)).append(val.at(i+1)).toUtf8()));
+                        i += 2;
+                        continue;
+                    } else if (val.at(i).toUpper() == maskChar && val.at(i+1).toUpper() == maskChar){ // check if this is a mask character
+                        searchItem.append('\0');
+                        mask.setBit(i/2, false); // idem
+                        i += 2;
+                        continue;
+                    } // otherwise discard the first character
+                i++;
+            }
             if (!(modifiers & Qt::ShiftModifier))
                 couldBeText = true;
+
+            // need to "trim" the item based on the mask (don't need start or end masked)
         }
 
         if (!searchItem.isEmpty()) {
-            emit searchRequest(searchItem,couldBeText);
+            emit searchRequest(searchItem, mask, couldBeText);
         }
     }
 
 }
+
 

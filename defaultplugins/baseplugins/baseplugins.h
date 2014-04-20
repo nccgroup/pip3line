@@ -13,7 +13,8 @@ Released under AGPL see LICENSE for more information
 
 #include "baseplugins_global.h"
 #include <transformfactoryplugininterface.h>
-#include <pip3linecallback.h>
+
+class Pip3lineCallback;
 
 class BASEPLUGINSSHARED_EXPORT BasePlugins : public QObject, public TransformFactoryPluginInterface {
         Q_OBJECT

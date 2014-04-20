@@ -14,49 +14,51 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QStyleFactory>
 #include <QObject>
+#include <QStyle>
 #include <QTimer>
 
 
 #define DEBUG_CMD "--debug"
 #define FILE_CMD "--file"
 
-#if QT_VERSION >= 0x050000
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <QByteArray>
+#include <QDateTime>
 #include <commonstrings.h>
 #include <QDir>
-#include <QDateTime>
-#include <QMutex>
-
+#include <QByteArray>
 FILE * _logFile = NULL; // logFile
 
+#if QT_VERSION >= 0x050000
 void myMessageOutput(QtMsgType type, const QMessageLogContext &, const QString &msg)
 {
-    QByteArray localMsg = msg.toUtf8();
-    QByteArray currentTime = QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8();
+        const char *localMsg = msg.toUtf8().constData();
+#else
+void myMessageOutput(QtMsgType type, const char *localMsg)
+{
+#endif
+    const char * currentTime = QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8().constData();
 
     switch (type) {
     case QtDebugMsg:
-        fprintf(stderr, "%s Debug: %s\n",currentTime.constData(), localMsg.constData());
+        fprintf(stderr, "%s Debug: %s\n",currentTime, localMsg);
         if (_logFile != NULL)
-            fprintf(_logFile, "%s Debug: %s\n",currentTime.constData(), localMsg.constData());
+            fprintf(_logFile, "%s Debug: %s\n",currentTime, localMsg);
         break;
     case QtWarningMsg:
-        fprintf(stderr, "%s Warning: %s\n",currentTime.constData(), localMsg.constData());
+        fprintf(stderr, "%s Warning: %s\n",currentTime, localMsg);
         if (_logFile != NULL)
-            fprintf(_logFile, "%s Warning: %s\n",currentTime.constData(), localMsg.constData());
+            fprintf(_logFile, "%s Warning: %s\n",currentTime, localMsg);
         break;
     case QtCriticalMsg:
-        fprintf(stderr, "%s Critical: %s\n",currentTime.constData(), localMsg.constData());
+        fprintf(stderr, "%s Critical: %s\n",currentTime, localMsg);
         if (_logFile != NULL)
-            fprintf(_logFile, "%s Critical: %s\n",currentTime.constData(), localMsg.constData());
+            fprintf(_logFile, "%s Critical: %s\n",currentTime, localMsg);
         break;
     case QtFatalMsg:
-        fprintf(stderr, "%s Fatal: %s\n",currentTime.constData(), localMsg.constData());
+        fprintf(stderr, "%s Fatal: %s\n",currentTime, localMsg);
         if (_logFile != NULL) {
-            fprintf(_logFile, "%s Fatal: %s\n",currentTime.constData(), localMsg.constData());
+            fprintf(_logFile, "%s Fatal: %s\n",currentTime, localMsg);
             fclose (_logFile);
             _logFile = NULL;
         }
@@ -66,15 +68,12 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &, const QString &
 		fflush(_logFile);
 	}
 }
-#endif
-
-
 
 #ifdef Q_OS_LINUX
 #include <signal.h>
 
 void termSignalHandler(int signal) {
-    qWarning() <<"Received signal " << signal;
+    qDebug() <<"Received signal " << signal;
     QTimer::singleShot(0,QCoreApplication::instance(),SLOT(quit()));
 }
 
@@ -104,13 +103,13 @@ int main(int argc, char *argv[])
     setup_unix_signal_handlers();
 #endif
 
-#if QT_VERSION >= 0x050000
     QStringList pathlist = QCoreApplication::libraryPaths();
     qDebug() << pathlist;
-	
+#if QT_VERSION >= 0x050000
     // Fixing the qt5 plugin mess
     pathlist << ".";
     QCoreApplication::setLibraryPaths(pathlist);
+#endif
 
     // Creating the QT log file
 
@@ -141,12 +140,16 @@ int main(int argc, char *argv[])
             qWarning("Cannot open log file for writing");
 #endif
         } else {
+#if QT_VERSION >= 0x050000
             qInstallMessageHandler(myMessageOutput);
+#else
+            qInstallMsgHandler(myMessageOutput);
+#endif
         }
     }
 
 
-#endif
+
 
 #ifdef Q_OS_WIN
     // forcing style on windows. can be overwritten at runtime
@@ -166,13 +169,16 @@ int main(int argc, char *argv[])
     // Qt initialisation
     QApplication a(argc, argv);
     a.setStyleSheet("QWidget{ selection-background-color: blue}");
-	qWarning() << "App started";
+    qDebug() << "App started" << qgetenv("LD_LIBRARY_PATH");;
+    QStyle *currentStyle = QApplication::style();
+    qDebug() << "Style" << currentStyle << currentStyle->objectName();
 
-    // Cleaning the PATH to avoid library corruption whenever loading plugins
+    // Cleaning the PATH on Windows to avoid library corruption whenever loading plugins
     qputenv("PATH", QByteArray());
 
 #ifdef Q_OS_UNIX
     qputenv("LD_PRELOAD", QByteArray());
+
 #endif
 
     QStringList list = QApplication::arguments();
@@ -195,8 +201,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    QApplication::setQuitOnLastWindowClosed(false);
-
     int ret = 0;
     MainWindow * w = new(std::nothrow) MainWindow(debugging);
     if (w != NULL) {
@@ -210,12 +214,11 @@ int main(int argc, char *argv[])
 
         delete w;
     }
-#if QT_VERSION >= 0x050000
+
     if (_logFile != NULL) {
         fclose (_logFile);
         _logFile = NULL;
     }
-#endif
 
     return ret;
 }

@@ -30,8 +30,8 @@ class BasicSource : public ByteSourceAbstract
         BasicSource(QObject *parent = 0);
         ~BasicSource();
         QString description();
-        QString name();
-        void setData(QByteArray data, quintptr source = INVALID_SOURCE);
+        virtual QString name();
+        virtual void setData(QByteArray data, quintptr source = INVALID_SOURCE);
         QByteArray getRawData();
         quint64 size();
         QByteArray extract(quint64 offset, int length);
@@ -42,10 +42,10 @@ class BasicSource : public ByteSourceAbstract
         void clear(quintptr source = INVALID_SOURCE);
         int getViewOffset(quint64 realoffset);
 
-        int preferredTabType();
+        virtual int preferredTabType();
         bool isOffsetValid(quint64 offset);
 
-        bool isReadableText();
+        virtual bool isReadableText();
 
     private:
         Q_DISABLE_COPY(BasicSource)

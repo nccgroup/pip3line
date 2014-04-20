@@ -1,3 +1,13 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
 #include "memorywidget.h"
 #include "currentmemorysource.h"
 #include <QPoint>
@@ -25,7 +35,7 @@ MemoryWidget::MemoryWidget(CurrentMemorysource *source, QWidget *parent) :
         qFatal("Cannot allocate memory for SearchWidget X{");
     }
     ui->memLayout->insertWidget(0, searchWidget);
-    connect(searchWidget, SIGNAL(searchRequest(QByteArray,bool)), SLOT(onSearch(QByteArray,bool)));
+    connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
 
     ui->mappingsTableWidget->verticalHeader()->setDefaultSectionSize(25);
 
@@ -52,6 +62,11 @@ MemoryWidget::~MemoryWidget()
 void MemoryWidget::setProcSelection(bool val)
 {
     ui->procSelectWidget->setVisible(val);
+}
+
+QSize MemoryWidget::sizeHint() const
+{
+    return QSize(800,500);
 }
 
 void MemoryWidget::onDoubleClick(QModelIndex index)
@@ -94,7 +109,7 @@ void MemoryWidget::contextMenuAction(QAction *action)
     msource->setStartingOffset(offset);
 }
 
-void MemoryWidget::onSearch(QByteArray item, bool maybetext)
+void MemoryWidget::onSearch(QByteArray item, QBitArray mask, bool maybetext)
 {
     //todo
 }

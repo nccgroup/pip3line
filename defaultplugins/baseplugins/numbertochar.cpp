@@ -19,6 +19,7 @@ const char NumberToChar::DEFAULT_SEPARATOR = '_';
 NumberToChar::NumberToChar()
 {
     separator = DEFAULT_SEPARATOR;
+    signedShort = true;
 }
 
 NumberToChar::~NumberToChar()
@@ -39,23 +40,34 @@ void NumberToChar::transform(const QByteArray &input, QByteArray &output)
 {
     bool ok;
     if (wayValue == TransformAbstract::INBOUND) {
+
         QByteArray num;
         for (int i = 0; i < input.size(); i++) {
-            if (input.at(i) ==  '-' || (input.at(i) > 47 && input.at(i) < 58)) {
+            if ((signedShort && input.at(i) ==  '-') || (input.at(i) > 47 && input.at(i) < 58)) {
                 num.append(input.at(i));
             }
             else {
+                if (signedShort) {
                 int val;
                 val = num.toInt(&ok);
+
                 if (ok && !(val <  SCHAR_MIN || val > SCHAR_MAX )) {
                     output.append((char)val);
+                } else {
+                    emit error(tr("Invalid number"),id);
+                }
+
                 }
                 num.clear();
             }
         }
     } else {
         for (int i = 0; i < input.size(); i++) {
-            output.append(QByteArray::number((int)input.at(i))).append(separator);
+            if (signedShort)
+                output.append(QByteArray::number((qint8)input.at(i)));
+            else
+                output.append(QByteArray::number((quint8)input.at(i)));
+            output.append(separator);
         }
         output.chop(1);
     }

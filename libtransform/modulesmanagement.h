@@ -30,14 +30,18 @@ class LIBTRANSFORMSHARED_EXPORT ModulesManagement : public QObject
         struct ModuleProperties {
                 QString fileName;
                 ModuleType type;
+                bool autoReload;
         };
-        explicit ModulesManagement(const QString &langName, const QString &extension, const QString & baseDir, const QStringList &initialPaths, Pip3lineCallback *callback);
+        explicit ModulesManagement(const QString &langName, const QString &extension, const QString & baseDir, Pip3lineCallback *callback);
         ~ModulesManagement();
+
         QStringList getPathsList();
         QStringList getModulesList();
         QStringList getRegisteredModule();
 
         QString addModule(QString fileName, ModulesManagement::ModuleType type = TRANSIENT);
+        virtual bool unloadModules(QString identifier) = 0;
+        virtual void unloadModules() = 0;
 
         bool setType(const QString &name, ModulesManagement::ModuleType type);
         void removeModule(const QString &name);
@@ -52,19 +56,15 @@ class LIBTRANSFORMSHARED_EXPORT ModulesManagement : public QObject
         QString getExtension() const;
         QString getLangName() const;
 
+        QString getModuleNameFromFile(QString fileName);
+
         QWidget *getGui(QWidget * parent);
 
     Q_SIGNALS:
         void pathsUpdated();
         void modulesUpdated();
-    private Q_SLOTS:
-        void onGuiDelete();
-    private:
-        Q_DISABLE_COPY(ModulesManagement)
-        static const QString SETTINGS_USER_MODULES_LIST;
-
-        void savePersistentModules();
-
+    protected:
+        bool initialize(const QStringList &initialPaths);
         QHash<QString, int> modulesPaths;
         QHash<QString,ModuleProperties> modulesList;
         QString moduleExtension;
@@ -72,6 +72,12 @@ class LIBTRANSFORMSHARED_EXPORT ModulesManagement : public QObject
         QString baseModulesDirName;
         ModulesManagementWidget *gui;
         QString langName;
+    private Q_SLOTS:
+        void onGuiDelete();
+    private:
+        Q_DISABLE_COPY(ModulesManagement)
+        static const QString SETTINGS_USER_MODULES_LIST;
+        void savePersistentModules();
 };
 
 #endif // MODULESMANAGEMENT_H

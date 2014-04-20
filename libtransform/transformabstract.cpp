@@ -119,7 +119,10 @@ bool TransformAbstract::setConfiguration(QHash<QString, QString> propertiesList)
 
 void TransformAbstract::setWay(TransformAbstract::Way nway)
 {
-    wayValue = nway;
+    if (wayValue != nway) {
+        wayValue = nway;
+        Q_EMIT confUpdated();
+    }
 }
 
 TransformAbstract::Way TransformAbstract::way()

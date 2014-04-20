@@ -1,13 +1,27 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
 #ifndef SEARCHWIDGET_H
 #define SEARCHWIDGET_H
 
 #include <QLineEdit>
 #include <QWidget>
+#include <QColor>
+#include <QBitArray>
 
 class GuiHelper;
 class ByteSourceAbstract;
 class QFocusEvent;
 class QPushButton;
+class QEvent;
+class SearchAbstract;
 
 class SearchLine : public QLineEdit
 {
@@ -30,6 +44,11 @@ class SearchLine : public QLineEdit
         void keyPressEvent(QKeyEvent * event);
         double progress;
         quint64 sourceSize;
+        static const QString FIND_PLACEHOLDER_TEXT;
+        static const QString TOOLTIP_TEXT;
+        static const QString PLACEHOLDER_DISABLED_TEXT;
+        static const QColor LOADING_COLOR;
+        SearchAbstract *sObject;
 };
 
 class SearchWidget : public QWidget
@@ -44,14 +63,14 @@ class SearchWidget : public QWidget
         void setError(bool val);
         void onSearchStarted();
         void onSearchEnded();
-        void updateProgress(quint64 val);
+        void updateStatusProgress(double val);
         void clearSearch();
+
     private slots:
-        void onStopClicked();
         void onSearch(QString val, int modifiers);
 
     signals:
-        void searchRequest(QByteArray data, bool couldBeText);
+        void searchRequest(QByteArray data,QBitArray mask, bool couldBeText);
         void stopSearch();
     private:
         SearchLine * lineEdit;

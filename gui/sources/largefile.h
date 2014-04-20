@@ -25,10 +25,8 @@ class FileSearch : public SearchAbstract {
     private:
         void internalStart();
         void internalThreadedStart();
-        bool fastSearch(QFile * file, char * readbuffer, char * mask, qint64 searchSize, qint64 startOffset, qint64 endOffset);
-        static const int STATSBLOCK;
         QString filename;
-        static const int BufferSize;
+        static const quint32 MIN_SIZE_FOR_THREADS;
 };
 
 class LargeFile : public LargeRandomAccessSource

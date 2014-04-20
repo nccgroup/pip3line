@@ -13,13 +13,12 @@ Released under AGPL see LICENSE for more information
 
 #include <QtPlugin>
 
-#include "transformabstract.h"
-
 QT_BEGIN_NAMESPACE
 class QString;
 class QStringList;
 class QWidget;
 class Pip3lineCallback;
+class TransformAbstract;
 
 class TransformFactoryPluginInterface
 {

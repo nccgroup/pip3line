@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "floatingdialog.h"
 #include "ui_floatingdialog.h"
+#include <QCloseEvent>
 #include <QDebug>
 
 FloatingDialog::FloatingDialog(GuiHelper * guiHelper, QWidget * widget, QWidget *parent) :
@@ -24,13 +25,11 @@ FloatingDialog::FloatingDialog(GuiHelper * guiHelper, QWidget * widget, QWidget 
     setModal(false);
     ui->verticalLayout->addWidget(widget);
     widget->setVisible(true);
-    qDebug() << "Created " << this;
 }
 
 FloatingDialog::~FloatingDialog()
 {
     delete ui;
-    qDebug() << "Destroyed " << this;
 }
 
 void FloatingDialog::setAllowReject(bool val)
@@ -42,6 +41,8 @@ void FloatingDialog::closeEvent(QCloseEvent *event)
 {
     if (allowReject) {
         reject();
-        QDialog::closeEvent(event);
     }
+    emit hiding();
+    event->accept();
+
 }

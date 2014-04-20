@@ -52,14 +52,18 @@ class ByteItemModel : public QAbstractTableModel
         bool historyForward();
         bool historyBackward();
 
+        int getTextOffsetSize() const;
+
     signals:
         void error(QString message);
         void warning(QString message);
     public slots:
         void receivedSourceUpdate(quintptr viewSource);
+        void receivedMinorSourceupdate(quint64 start, quint64 end); // updates for markings mostly (no impact on data)
     private:
         Q_DISABLE_COPY(ByteItemModel)
         int hexColumncount;
+        int textOffsetSize;
         ByteSourceAbstract * byteSource;
 };
 

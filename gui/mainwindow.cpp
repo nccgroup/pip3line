@@ -70,6 +70,7 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     trayIconLabel = NULL;
     newMenu = NULL;
     blockListener = NULL;
+    trayIconMenu = NULL;
 
     settingsWasVisible = false;
     quickViewWasVisible = false;
@@ -254,7 +255,8 @@ void MainWindow::initializeLibTransform()
 void MainWindow::loadFile(QString fileName)
 {
     qDebug() << "loading file" << fileName;
-    mainTabs->loadFile(fileName);
+    newFileTab(fileName);
+    //mainTabs->loadFile(fileName);
 }
 
 void MainWindow::onAboutPip3line()
@@ -387,14 +389,26 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::createTrayIcon()
 {
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
+        QApplication::setQuitOnLastWindowClosed(false);
         trayIconMenu = new(std::nothrow) QMenu(this);
         if (trayIconMenu == NULL) {
             qFatal("Cannot allocate memory for trayIconMenu X{");
             return;
         }
         updateTrayIcon();
+        trayIcon = new(std::nothrow) QSystemTrayIcon(this);
+        if (trayIcon == NULL) {
+            qFatal("Cannot allocate memory for trayIcon X{");
+            return;
+        }
+        trayIcon->setIcon(QIcon(":/Images/icons/pip3line.png"));
+        trayIcon->setContextMenu(trayIconMenu);
+        connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
+                     this, SLOT(iconActivated(QSystemTrayIcon::ActivationReason)));
         connect(guiHelper, SIGNAL(importExportUpdated()), this, SLOT(updateTrayIcon()));
         trayIcon->show();
+    } else {
+        qCritical() << tr("No System tray seems to be available, disabling tray Icon menu functionality");
     }
 }
 
@@ -421,9 +435,30 @@ void MainWindow::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
 }
 
+void MainWindow::newFileTab(QString fileName)
+{
+    LargeFile *fs = new(std::nothrow) LargeFile();
+    if (fs == NULL) {
+        qFatal("Cannot allocate memory for FileSource X{");
+    }
+    connect(fs,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+    if (!fileName.isEmpty()) {
+        fs->fromLocalFile(fileName);
+    }
+    TabAbstract *newTab = new(std::nothrow) RandomAccessTab(fs, guiHelper,this);
+    if (newTab == NULL) {
+        qFatal("Cannot allocate memory for RandomAccessTab X{");
+    }
+    if (!fileName.isEmpty()) {
+        newTab->setName(QFileInfo(fileName).fileName());
+    }
+
+    mainTabs->integrateTab(newTab);
+}
+
 void MainWindow::updateTrayIcon()
 {
-    if (QSystemTrayIcon::isSystemTrayAvailable()) {
+    if (trayIconMenu != NULL) {
         trayIconMenu->clear();
         trayIconLabel = new(std::nothrow) QAction(tr("Import from clipboard as"), trayIconMenu);
         if (trayIconLabel == NULL) {
@@ -455,17 +490,8 @@ void MainWindow::updateTrayIcon()
         trayIconMenu->addAction(ui->actionGet_data_from_URL);
         connect(ui->actionGet_data_from_URL, SIGNAL(triggered()), this, SLOT(onDataFromURL()));
         trayIconMenu->addSeparator();
-
         trayIconMenu->addAction(ui->actionExit);
-        trayIcon = new(std::nothrow) QSystemTrayIcon(this);
-        if (trayIcon == NULL) {
-            qFatal("Cannot allocate memory for trayIcon X{");
-            return;
-        }
-        trayIcon->setIcon(QIcon(":/Images/icons/pip3line.png"));
-        trayIcon->setContextMenu(trayIconMenu);
-        connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
-                     this, SLOT(iconActivated(QSystemTrayIcon::ActivationReason)));
+
     }
 }
 
@@ -494,19 +520,7 @@ void MainWindow::onNewAction(QAction *action)
     if (action->text() == NEW_FILE) {
         QString fileName = QFileDialog::getOpenFileName(this,tr("Choose file to load from"));
         if (!fileName.isEmpty()) {
-            LargeFile *fs = new(std::nothrow) LargeFile();
-            if (fs == NULL) {
-                qFatal("Cannot allocate memory for FileSource X{");
-            }
-            connect(fs,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
-            fs->fromLocalFile(fileName);
-            TabAbstract *newTab = new(std::nothrow) RandomAccessTab(fs, guiHelper,this);
-            if (newTab == NULL) {
-                qFatal("Cannot allocate memory for RandomAccessTab X{");
-            }
-            QFileInfo finfo(fileName);
-            newTab->setName(finfo.fileName());
-            mainTabs->integrateTab(newTab);
+            newFileTab(fileName);
         }
     } else if (action->text() == NEW_TRANSFORMTAB) {
         mainTabs->newTabTransform();
@@ -535,6 +549,7 @@ void MainWindow::onNewAction(QAction *action)
         if (tab == NULL) {
             qFatal("Cannot allocate memory for GenericTab X{");
         }
+        tab->setName("");
 
         mainTabs->integrateTab(tab);
 

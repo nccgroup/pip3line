@@ -11,11 +11,14 @@ Released under AGPL see LICENSE for more information
 #include "largefile.h"
 #include "filewidget.h"
 #include "../crossplatform.h"
+#if QT_VERSION >= 0x050000
+#include <QtConcurrent>
+#endif
+#include <QtConcurrentRun>
 #include <QDebug>
 #include <string.h>
 
-const int FileSearch::STATSBLOCK = 4096;
-const int FileSearch::BufferSize = 4096;
+const quint32 FileSearch::MIN_SIZE_FOR_THREADS = 0x4000000;
 
 FileSearch::FileSearch(QString fileName, QObject *parent) : SearchAbstract(parent), filename(fileName)
 {
@@ -74,7 +77,7 @@ void FileSearch::internalStart()
     if (curOffset > fileSize - searchSize) { // if we are at the end of the file and there is not enough data to compare, go back to beginning
         if (singleSearch)
             curOffset = 0;
-        else {
+        else { // this is the case where we don't loop and so return error
             emit errorStatus(true);
             file.close();
             return;
@@ -82,44 +85,18 @@ void FileSearch::internalStart()
 
     }
 
-
-    if (!file.seek(curOffset)) {
-        emit log(tr("Error while seeking: %1").arg(file.errorString()),this->metaObject()->className(), Pip3lineConst::LERROR);
-        file.close();
-        emit errorStatus(true);
-        return;
-    }
-
     //qDebug() << "from" << curOffset << eOffset;
 
     statsSize = (quint64)file.size();
-    char * readbuffer = new(std::nothrow) char[BufferSize];
-    if (readbuffer == NULL) {
-        qFatal("Cannot allocate memory for the wind buffer X{");
-        return;
-    }
+    statsStep = (quint64)((double)statsSize * 0.001); // setting stats steps at 1% of the total size
 
-    char * mask = new(std::nothrow) char[searchSize];
-    if (readbuffer == NULL) {
-        qFatal("Cannot allocate memory for the wind buffer X{");
-        return;
-    }
-
-    for (int i = 0; i < searchSize;i++) {
-        mask[i] = '\xFF';
-    }
-
-    bool found = fastSearch(&file,readbuffer,mask,searchSize,curOffset, eOffset);
+    bool found = fastSearch(&file,curOffset, eOffset);
     if (!found && looping && curOffset + searchSize + 1 < fileSize) // trying again if looping is authorized
     {
-        found = fastSearch(&file,readbuffer,mask,searchSize,0, curOffset + searchSize + 1);
+        found = fastSearch(&file,0, curOffset + searchSize + 1);
     }
 
     emit errorStatus(!found);
-
-
-    delete [] readbuffer;
-    delete [] mask;
     file.close();
  //   qDebug() << "End of file search";
 }
@@ -131,9 +108,15 @@ void FileSearch::internalThreadedStart()
     QFileInfo info(filename);
     SearchAbstract * sobj = NULL;
     quint64 fsize = info.size();
-    qDebug() << "Source size" << fsize;
-    quint64 blocksize = fsize / (quint64)threadCount;
-    timer = startTimer(400);
+    statsSize = fsize;
+    quint64 blocksize = 0;
+
+    if (fsize < MIN_SIZE_FOR_THREADS)
+        threadCount = 1;
+    else
+        threadCount = QThread::idealThreadCount();
+
+    blocksize = fsize / (quint64)threadCount;
     int i = 0;
     for (i = 0; i < threadCount - 1; i++) {
         sobj = new (std::nothrow) FileSearch(info.absoluteFilePath());
@@ -141,91 +124,18 @@ void FileSearch::internalThreadedStart()
             registerSearchObject(sobj);
             sobj->setStartOffset(i * blocksize);
             sobj->setEndOffset((i+1) * blocksize + sitem.size());
-            QTimer::singleShot(0,sobj,SLOT(startSearch()));
+            QtConcurrent::run(sobj, &SearchAbstract::startSearch);
         }
     }
+
+    // last block which is usually smaller (limited by file size)
     sobj = new (std::nothrow) FileSearch(info.absoluteFilePath());
     if (sobj != NULL) {
         registerSearchObject(sobj);
         sobj->setStartOffset(i * blocksize);
         sobj->setEndOffset(fsize);
-        QTimer::singleShot(0,sobj,SLOT(startSearch()));
+        QtConcurrent::run(sobj, &SearchAbstract::startSearch);
     }
-}
-
-bool FileSearch::fastSearch(QFile *file, char *readbuffer, char *mask, qint64 searchSize, qint64 startOffset, qint64 endOffset)
-{
-    bool found = false;
-    if (startOffset == endOffset)
-        return true;
-
-    qint64 cursorTravel= 0;
-    qint64 nextStat = STATSBLOCK;
-    int len = searchSize -1;
-    char * value = sitem.data();
-    qint64 curOffset = startOffset;
-
-    if (!file->seek(curOffset)) {
-        emit log(tr("Error while seeking: %1").arg(file->errorString()),this->metaObject()->className(), Pip3lineConst::LERROR);
-        return found;
-    }
-
-    while (true)
-    {
-        qint64 bRead;
-        // Visual Studio is going to complain here because I am using memmove ...
-        memmove(readbuffer, readbuffer + BufferSize - len, len);
-        bRead = file->read(readbuffer + len, BufferSize - len);
-
-        if (bRead < 0)
-        {
-            emit log(tr("Error while reading the file: %1").arg(file->errorString()),this->metaObject()->className(), Pip3lineConst::LERROR);
-            return found;
-        } else if (bRead == 0) // end of file ... hopefully
-            return found;
-
-        int off, i;
-        for (off = curOffset ? 0 : len; off < bRead; ++off)
-        {
-            for (i = 0; i <= len; ++i)
-                if ((readbuffer[off + i] & mask[i]) != value[i])
-                        break;
-            if (i > len)
-            {
-                emit itemFound(curOffset + (quint64)off - (quint64)len,curOffset + (quint64)off);
-             //   qDebug() << "found" << curOffset;
-                if (!found) {
-                    if (singleSearch)
-                        return true;
-                    else
-                        found = true;
-                }
-            }
-            // updating stats
-            cursorTravel++;
-            if (cursorTravel > nextStat) {
-                if (processStatsInternally)
-                    emit progressStatus((double) cursorTravel / (double) statsSize);
-                else
-                    emit progressUpdate((quint64)cursorTravel);
-
-                nextStat += STATSBLOCK;
-            }
-
-            if (startOffset + cursorTravel > endOffset) // end of the travel
-                return found;
-        }
-
-        curOffset += bRead;
-        stopMutex.lock();
-        if (stopped) {
-            stopMutex.unlock();
-            break;
-        }
-        stopMutex.unlock();
-    }
-
-    return found;
 }
 
 const int LargeFile::BLOCKSIZE = 1024;
@@ -314,7 +224,7 @@ void LargeFile::fromLocalFile(QString fileName, quint64 startOffset)
         if (fileSize < MAX_COMPARABLE_SIZE) {
             capabilities = capabilities | CAP_COMPARE;
         } else {
-            emit log(tr("File is too large to be used as a comparable sample in its entirety. Selection comparison will still work, however."),metaObject()->className(),Pip3lineConst::LWARNING);
+            emit log(tr("File is too large to be used as a comparable sample in its entirety. Comparison with selected bytes will still work however."),metaObject()->className(),Pip3lineConst::LWARNING);
         }
         refreshData(false);
         // file watcher
@@ -401,6 +311,7 @@ bool LargeFile::tryMoveView(int sizeToMove)
         return false;
     }
     currentStartingOffset = newOffset;
+    //qDebug() << "tryMoveView currentStartingOffset" << newOffset;
     dataChunk = temp;
     emit updated(INVALID_SOURCE);
     emit sizeChanged();

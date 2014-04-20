@@ -38,7 +38,7 @@ Released under AGPL see LICENSE for more information
 #include <QValidator>
 #include <QFileDialog>
 #include <QTextCodec>
-#include "../tools/transformrequest.h"
+#include <threadedprocessor.h>
 #include "sources/basicsource.h"
 #include "crossplatform.h"
 #include "shared/offsetgotowidget.h"
@@ -98,6 +98,8 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
     connect(transformFactory, SIGNAL(transformsUpdated()),this, SLOT(buildSelectionArea()), Qt::QueuedConnection);
     connect(guiHelper, SIGNAL(filterChanged()), this, SLOT(buildSelectionArea()));
 
+    connect(this, SIGNAL(sendRequest(TransformRequest*)), guiHelper->getCentralTransProc(), SLOT(processRequest(TransformRequest*)), Qt::QueuedConnection);
+
  //   qDebug() << "Created" << this;
 }
 
@@ -147,7 +149,7 @@ void TransformWidget::configureViewArea() {
     searchWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     searchWidget->setStopVisible(false);
     ui->toolsLayout->addWidget(searchWidget);
-    connect(searchWidget, SIGNAL(searchRequest(QByteArray,bool)), SLOT(onSearch(QByteArray,bool)));
+    connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
     connect(textView, SIGNAL(searchStatus(bool)), searchWidget,SLOT(setError(bool)));
 
     gotoWidget = new OffsetGotoWidget(guiHelper, this);
@@ -240,6 +242,9 @@ void TransformWidget::integrateTransform()
 {
     if (currentTransform != NULL) {
         ui->descriptionLabel->setText(currentTransform->description());
+        // need to grab the errors before getting the gui, in case the gui configuration generates some
+        connect(currentTransform, SIGNAL(error(QString,QString)), this, SLOT(logError(QString)));
+        connect(currentTransform, SIGNAL(warning(QString,QString)), this, SLOT(logWarning(QString)));
 
         settingsTab = currentTransform->getGui(this);
         if (settingsTab != NULL) {
@@ -248,9 +253,6 @@ void TransformWidget::integrateTransform()
 
         configureDirectionBox();
         connect(currentTransform,SIGNAL(confUpdated()),this,SLOT(updatingFromTransform()), Qt::QueuedConnection);
-        connect(currentTransform, SIGNAL(error(QString,QString)), this, SLOT(logError(QString)));
-        connect(currentTransform, SIGNAL(warning(QString,QString)), this, SLOT(logWarning(QString)));
-
         ui->deleteButton->setEnabled(true);
         ui->infoPushButton->setEnabled(true);
         emit transformChanged();
@@ -292,7 +294,7 @@ void TransformWidget::refreshOutput()
             }
 
             connect(tr,SIGNAL(finishedProcessing(QByteArray,Messages)), this, SLOT(processingFinished(QByteArray,Messages)));
-            guiHelper->processTransform(tr);
+            emit sendRequest(tr);
         }
     }
 }
@@ -330,7 +332,7 @@ void TransformWidget::on_encodeRadioButton_toggled(bool checked)
 {
     if (checked && currentTransform != NULL) {
         currentTransform->setWay(TransformAbstract::INBOUND);
-        refreshOutput();
+//        refreshOutput();
     }
 }
 
@@ -338,12 +340,12 @@ void TransformWidget::on_decodeRadioButton_toggled(bool checked)
 {
     if (checked && currentTransform != NULL) {
         currentTransform->setWay(TransformAbstract::OUTBOUND);
-        refreshOutput();
+//        refreshOutput();
     }
 }
 
 void TransformWidget::updatingFrom() {
-    TransformWidget* src = static_cast<TransformWidget*>(sender());
+    TransformWidget* src = dynamic_cast<TransformWidget*>(sender());
     input(src->output());
 }
 
@@ -626,13 +628,13 @@ void TransformWidget::on_clearDataPushButton_clicked()
     byteSource->clear();
 }
 
-void TransformWidget::onSearch(QByteArray item, bool couldBeText)
+void TransformWidget::onSearch(QByteArray item, QBitArray mask, bool couldBeText)
 {
     if (ui->tabWidget->currentWidget() == textView && couldBeText) {
         textView->search(searchWidget->text().toUtf8());
     } else {
         ui->tabWidget->setCurrentWidget(hexView);
-        hexView->search(item);
+        hexView->search(item, mask);
     }
 }
 

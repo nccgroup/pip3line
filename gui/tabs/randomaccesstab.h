@@ -1,8 +1,19 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
 #ifndef RANDOMACCESSTAB_H
 #define RANDOMACCESSTAB_H
 
 #include "tababstract.h"
 #include <commonstrings.h>
+#include <QBitArray>
 
 namespace Ui {
 class RandomAccessTab;
@@ -35,7 +46,7 @@ class RandomAccessTab : public TabAbstract
 
     private slots:
         void fileLoadRequest();
-        void onSearch(QByteArray item, bool);
+        void onSearch(QByteArray item, QBitArray mask,  bool);
         void onGotoOffset(quint64 offset, bool absolute, bool negative, bool select);
         void log(QString mess,QString source,Pip3lineConst::LOGLEVEL level);
         void onCloseLogView();

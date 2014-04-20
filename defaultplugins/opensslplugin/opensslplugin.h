@@ -14,7 +14,6 @@ Released under AGPL see LICENSE for more information
 #include "opensslplugin_global.h"
 #include <transformfactoryplugininterface.h>
 #include <QMutex>
-#include <pip3linecallback.h>
 
 class OPENSSLPLUGINSHARED_EXPORT OpensslPlugin : public QObject, public TransformFactoryPluginInterface
 {

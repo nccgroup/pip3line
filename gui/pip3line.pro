@@ -7,16 +7,18 @@
 # Released under AGPL see LICENSE for more information
 
 
-QT       += core gui xml network
+QT       += core gui xml network concurrent
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += debug WITH_THREAD
+
 TARGET = pip3line
 TEMPLATE = app
+
 
 INCLUDEPATH +="../libtransform"
 
 unix {
-    LIBS += -L"../bin" -ltransform -lpcap
+    LIBS += -L"../bin" -ltransform
 }
 
 win32 {
@@ -56,8 +58,6 @@ SOURCES += main.cpp\
     ../tools/binaryprocessor.cpp \
     ../tools/serverabstract.cpp \
     ../tools/pipeserver.cpp \
-    ../tools/centralprocessor.cpp \
-    ../tools/transformrequest.cpp \
     tabs/tababstract.cpp \
     tabs/generictab.cpp \
     tabs/transformsgui.cpp \
@@ -66,7 +66,6 @@ SOURCES += main.cpp\
     sources/basicsource.cpp \
     sources/filewidget.cpp \
     sources/sourcemanager.cpp \
-    sources/pcapsource.cpp \
     sources/currentmemorysource.cpp \
     sources/largerandomaccesssource.cpp \
     views/hexview.cpp \
@@ -89,7 +88,9 @@ SOURCES += main.cpp\
     sources/udplistener.cpp \
     sources/tcpserverlistener.cpp \
     sources/searchabstract.cpp \
-    sources/tcplistener.cpp
+    sources/tcplistener.cpp \
+    sources/intercepsource.cpp \
+    sources/networkconfwidget.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -123,14 +124,11 @@ HEADERS  += mainwindow.h \
     ../tools/streamprocessor.h \
     ../tools/pipeserver.h \
     ../tools/serverabstract.h \
-    ../tools/centralprocessor.h \
-    ../tools/transformrequest.h \
     tabs/tababstract.h \
     tabs/generictab.h \
     tabs/randomaccesstab.h \
     tabs/transformsgui.h \
     sources/sourcemanager.h \
-    sources/pcapsource.h \
     sources/currentmemorysource.h \
     sources/largerandomaccesssource.h \
     sources/filewidget.h \
@@ -156,7 +154,9 @@ HEADERS  += mainwindow.h \
     sources/udplistener.h \
     sources/tcpserverlistener.h \
     sources/searchabstract.h \
-    sources/tcplistener.h
+    sources/tcplistener.h \
+    sources/intercepsource.h \
+    sources/networkconfwidget.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \
@@ -184,7 +184,8 @@ FORMS    += mainwindow.ui \
     tabs/transformsgui.ui \
     shared/hexwidget.ui \
     sources/filewidget.ui \
-    sources/memorywidget.ui
+    sources/memorywidget.ui \
+    sources/networkconfwidget.ui
 
 OTHER_FILES += icons/pip3line.png \
     win.rc \

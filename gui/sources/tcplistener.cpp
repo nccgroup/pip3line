@@ -81,9 +81,16 @@ void TcpListener::startListening()
 
 void TcpListener::stopListening()
 {
+    if (socket != NULL) {
+        socket->disconnectFromHost();
+    }
     delete socket;
     socket = NULL;
     qDebug() << tr("End of client processing %1:%2").arg(remotePeerAddress.toString()).arg(remotePort);
+    if (!tempData.isEmpty()) {
+        processBlock(tempData);
+        tempData.clear();
+    }
     emit finished();
 }
 

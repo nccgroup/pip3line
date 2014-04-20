@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = baseplugins
 TEMPLATE = lib
-CONFIG += plugin release
+CONFIG += plugin debug
 
 unix {
     LIBS += -L"../../bin/" -ltransform

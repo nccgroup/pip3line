@@ -99,10 +99,11 @@ void TextView::setModel(ByteSourceAbstract *dataModel)
     connect(byteSource,SIGNAL(updated(quintptr)), this, SLOT(updateText(quintptr)), Qt::UniqueConnection);
 }
 
-void TextView::search(QByteArray block)
+void TextView::search(QByteArray block, QBitArray)
 {
     QString item = QString::fromUtf8(block.data(), block.size());
     previousSearch = block;
+    previousMask = QBitArray(); // disabled for text search
     bool found = ui->plainTextEdit->find(item);
     if (!found) {
         QTextCursor cursor(ui->plainTextEdit->textCursor());

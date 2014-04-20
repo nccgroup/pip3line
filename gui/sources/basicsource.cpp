@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "basicsource.h"
 #include <QDebug>
+#include <QBuffer>
 #include <QTime>
 
 BasicSearch::BasicSearch(QByteArray *data, QObject *parent) : SearchAbstract(parent)
@@ -28,54 +29,50 @@ void BasicSearch::internalStart()
          emit log(tr("Null search data"), this->metaObject()->className(),Pip3lineConst::LERROR);
         return;
     }
-    int smallOffset = 0;
+    qint64 curOffset = 0;
+    qint64 dataSize = sdata->size();
+    qint64 itemSize = sitem.size();
 
-    if (soffset > INT_MAX || soffset > (quint64)sdata->size()) {
-        emit log(tr("Offset too large"), this->metaObject()->className(),Pip3lineConst::LERROR);
+    if (itemSize > dataSize) {
+        emit errorStatus(true);
+        return;
+    }
+
+
+    if (soffset > INT_MAX || soffset > (quint64)dataSize) {
+        emit log(tr("Start offset too large"), this->metaObject()->className(),Pip3lineConst::LERROR);
         emit errorStatus(true);
         return;
     } else {
-        smallOffset = (int)soffset;
+        curOffset = (qint64)soffset;
     }
+
+    if (eoffset > INT_MAX || eoffset > (quint64)dataSize) {
+        emit log(tr("End offset too large"), this->metaObject()->className(),Pip3lineConst::LERROR);
+        emit errorStatus(true);
+        return;
+    }
+
+    qint64 eOffset = eoffset;
+    if (curOffset >= eOffset || eOffset > dataSize - itemSize) { // setting to the end for both case
+        eOffset = dataSize - itemSize;
+    } else {
+        eOffset = eoffset - itemSize;
+    }
+
+
 
     qDebug() << "Searching " << soffset;
-    int ret = -1;
-    int soffset = smallOffset;
-    ret = sdata->indexOf(sitem,smallOffset);
-    bool foundItem = false;
-    if (ret >= 0) {
-        emit itemFound(quint64(ret),quint64(ret + sitem.size() - 1));
-        foundItem = true;
-    } else if (soffset > 0) {
-        smallOffset = 0;
-    }
+    QBuffer buffer;
+    buffer.setBuffer(sdata);
+    buffer.open(QIODevice::ReadOnly);
 
-    if (!(foundItem && singleSearch)) {
-        bool loopNotDone = true;
-        while (true) {
-            ret = sdata->indexOf(sitem,smallOffset);
-            if (ret < 0) { // not found
-                if (smallOffset == soffset || soffset == 0) // if we are at the start of the block of data end the search
-                    break;
-                else if (loopNotDone) {
-                    // if we haven't started from the beginning and current offset is different from starting offset
-                    // then we go back to beginning and continue the search (setting the loop flag to avoid infinite loop)
-                    smallOffset = 0;
-                    loopNotDone = false;
-                }
-                else // default end the loop
-                    break;
-            } else {
-                emit itemFound(quint64(ret),quint64(ret + sitem.size() - 1));
-                foundItem = true;
-                if (singleSearch)
-                    break;
-                else
-                    smallOffset = ++ret;
-            }
-        }
+    bool foundItem = fastSearch(&buffer,curOffset, eOffset);
+    if (!foundItem && singleSearch && curOffset + itemSize + 1 < dataSize) // trying again if looping is authorized
+    {
+        foundItem = fastSearch(&buffer,0, curOffset + itemSize + 1);
     }
-
+   buffer.close();
    emit errorStatus(!foundItem);
 
 }

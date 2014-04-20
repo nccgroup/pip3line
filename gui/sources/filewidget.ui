@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
+ <comment>
+ * Released as open source by NCC Group Plc - http://www.nccgroup.com/
+ *
+ * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+ *
+ * https://github.com/nccgroup/pip3line
+ *
+ * Released under AGPL see LICENSE for more information
+</comment>
  <class>FileWidget</class>
  <widget class="QWidget" name="FileWidget">
   <property name="geometry">
@@ -103,7 +112,7 @@
     <widget class="QListView" name="itemsFoundListView"/>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="resultWidget" native="true">
      <layout class="QFormLayout" name="formLayout_2">
       <item row="0" column="0">
        <widget class="QLabel" name="label">
@@ -115,7 +124,7 @@
       <item row="0" column="1">
        <widget class="QLabel" name="resultLabel">
         <property name="text">
-         <string>TextLabel</string>
+         <string>Searching</string>
         </property>
        </widget>
       </item>

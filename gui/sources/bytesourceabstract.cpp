@@ -17,15 +17,21 @@ Released under AGPL see LICENSE for more information
 
 const quintptr ByteSourceAbstract::INVALID_SOURCE = 0;
 
-
+const QString OffsetsRange::HEXFORMAT = "0x%1";
 
 
 // utility class used to store ranges of quint64 and associated data
 OffsetsRange::OffsetsRange(quint64 nlowerVal, quint64 nupperVal, QString ndescription)
 {
-    lowerVal = nlowerVal;
-    upperVal = nupperVal;
+    if (nlowerVal < nupperVal) {
+        lowerVal = nlowerVal;
+        upperVal = nupperVal;
+    } else {
+        lowerVal = nupperVal;
+        upperVal = nlowerVal;
+    }
     description = ndescription;
+    size = upperVal - lowerVal + 1;
 }
 
 OffsetsRange::OffsetsRange(const OffsetsRange &other)
@@ -41,6 +47,11 @@ OffsetsRange &OffsetsRange::operator=(const OffsetsRange &other)
     this->lowerVal = other.lowerVal;
     this->upperVal = other.upperVal;
     return *this;
+}
+
+OffsetsRange::~OffsetsRange()
+{
+
 }
 
 bool OffsetsRange::isInRange(int value)
@@ -116,6 +127,26 @@ bool OffsetsRange::sameMarkings(const OffsetsRange &other) const
     return (backgroundColor == other.backgroundColor) && (foregroundColor == other.foregroundColor) && (description == other.description);
 }
 
+QString OffsetsRange::offsetToString(quint64 val)
+{
+    return HEXFORMAT.arg(val,16,16,QChar('0'));
+}
+
+bool OffsetsRange::lessThanFunc(OffsetsRange *or1, OffsetsRange *or2)
+{
+    return or1->upperVal < or2->lowerVal;
+}
+quint64 OffsetsRange::getSize() const
+{
+    return size;
+}
+
+void OffsetsRange::setSize(const quint64 &value)
+{
+    size = value;
+}
+
+
 ComparableRange::ComparableRange(OffsetsRange *pointer)
 {
     range = pointer;
@@ -133,6 +164,11 @@ void ComparableRange::setRange(OffsetsRange *value)
 bool ComparableRange::operator<(const ComparableRange &other) const
 {
     return range->upperVal < other.range->lowerVal;
+}
+
+bool ComparableRange::operator==(const ComparableRange &other) const
+{
+    return range == other.range;
 }
 
 
@@ -282,8 +318,8 @@ SearchAbstract *ByteSourceAbstract::getSearchObject(QObject * parent, bool singl
     if (singleton) {
         if (searchObj == NULL) {
             searchObj = requestSearchObject(parent);
-            if (searchObj != NULL)
-                searchObj->initialize();
+//            if (searchObj != NULL)
+//                searchObj->initialize();
         }
         return searchObj;
     }
@@ -300,6 +336,12 @@ void ByteSourceAbstract::viewMark(int start, int end, const QColor &bgcolor, con
 }
 
 void ByteSourceAbstract::mark(quint64 start, quint64 end, const QColor &bgcolor, const QColor &fgColor, QString toolTip)
+{
+    markNoUpdate(start,end,bgcolor,fgColor, toolTip);
+    emit updated(INVALID_SOURCE);
+}
+
+void ByteSourceAbstract::markNoUpdate(quint64 start, quint64 end, const QColor &bgcolor, const QColor &fgColor, QString toolTip)
 {
     // stupidity protection
     if (start > end) {
@@ -423,9 +465,8 @@ void ByteSourceAbstract::mark(quint64 start, quint64 end, const QColor &bgcolor,
     }
 
 
-    qDebug() << "Markings ranges" << userMarkingsRanges.size();
+   // qDebug() << "Markings ranges" << userMarkingsRanges.size();
     cachedMarkingRange = NULL;
-    emit updated(INVALID_SOURCE);
 }
 
 void ByteSourceAbstract::viewClearMarking(int start, int end)
@@ -490,6 +531,12 @@ void ByteSourceAbstract::clearMarking(quint64 start, quint64 end)
 
 void ByteSourceAbstract::clearAllMarkings()
 {
+    clearAllMarkingsNoUpdate();
+    emit updated(INVALID_SOURCE);
+}
+
+void ByteSourceAbstract::clearAllMarkingsNoUpdate()
+{
     QMapIterator<ComparableRange, Markings> i(userMarkingsRanges);
     while(i.hasNext()) {
         i.next();
@@ -497,7 +544,6 @@ void ByteSourceAbstract::clearAllMarkings()
     }
     userMarkingsRanges.clear();
     cachedMarkingRange = NULL;
-    emit updated(INVALID_SOURCE);
 }
 
 bool ByteSourceAbstract::hasMarking() const
@@ -608,6 +654,11 @@ quint64 ByteSourceAbstract::lowByte()
 quint64 ByteSourceAbstract::highByte()
 {
     return size() - 1;
+}
+
+int ByteSourceAbstract::textOffsetSize()
+{
+    return QString::number(size(),16).size();
 }
 
 bool ByteSourceAbstract::tryMoveUp(int )

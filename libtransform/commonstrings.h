@@ -13,7 +13,7 @@ Released under AGPL see LICENSE for more information
 #include <QString>
 #include <QByteArray>
 
-#define LIB_TRANSFORM_VERSION 12
+#define LIB_TRANSFORM_VERSION 13
 
 namespace Pip3lineConst {
     // Default types

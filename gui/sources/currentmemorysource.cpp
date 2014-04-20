@@ -14,7 +14,7 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QFile>
 #include "memorywidget.h"
-
+#include <QSysInfo>
 #ifdef Q_OS_LINUX
 #include <unistd.h>
 #include <errno.h>
@@ -93,6 +93,12 @@ QString MemRange::toString()
 
 }
 
+bool MemRange::operator<(const MemRange &other) const
+{
+        qDebug() << "MemRange Comparison";
+    return upperVal < other.lowerVal;
+}
+
 #if defined(Q_OS_WIN)
 bool MemRange::getCopy() const
 {
@@ -106,6 +112,8 @@ void MemRange::setCopy(bool value)
 #endif
 
 
+const QFont MemRangeModel::RegularFont = QFont("Courier New",10,2);
+const QStringList MemRangeModel::headers = QStringList() << "Start" << "End" << "Permissions" << "Size" << "Description" ;
 MemRangeModel::MemRangeModel(QObject *parent) :
     QAbstractListModel(parent)
 {
@@ -171,7 +179,7 @@ int MemRangeModel::columnCount(const QModelIndex &parent) const
     if (parent.isValid()) {
         return 0;
     }
-    return 4;
+    return 5;
 }
 
 QVariant MemRangeModel::data(const QModelIndex &index, int role) const
@@ -184,23 +192,32 @@ QVariant MemRangeModel::data(const QModelIndex &index, int role) const
         if (i < ranges.size()) {
             switch (index.column()) {
                 case 0:
-                    return QString::number(ranges.at(i)->getLowerVal(),16);
+                return OffsetsRange::offsetToString(ranges.at(i)->getLowerVal());
                 case 1:
-                    return QString::number(ranges.at(i)->getUpperVal(),16);
+                    return OffsetsRange::offsetToString(ranges.at(i)->getUpperVal());
                 case 2:
-                    return QString("%1%2%3%4")
-                              .arg(ranges.at(i)->isRead()?"r":"-")
-                              .arg(ranges.at(i)->isWrite()?"w":"-")
-                              .arg(ranges.at(i)->isExec()?"x":"-")
-                              .arg(ranges.at(i)->isPriv()?"p":"-");
+                return QString("%1%2%3%4")
+                          .arg(ranges.at(i)->isRead()?"r":"-")
+                          .arg(ranges.at(i)->isWrite()?"w":"-")
+                          .arg(ranges.at(i)->isExec()?"x":"-")
+                          .arg(ranges.at(i)->isPriv()?"p":"-");
                 case 3:
+                        return QString::number(ranges.at(i)->getSize());
+                case 4:
                     return ranges.at(i)->getDescription();
             }
         }
     } else if (role == Qt::BackgroundRole && index.row() == currentMemRow) {
         return QVariant(QColor(236,242,118));
-    } else if (role == Qt::TextAlignmentRole && index.column() < 3) {
-        return Qt::AlignCenter;
+    } else if (role == Qt::TextAlignmentRole && index.column() < headers.size()) {
+        if (index.column() < 2)
+            return QVariant(Qt::AlignLeft | Qt::AlignVCenter);
+        else if (index.column() == 3)
+            return QVariant(Qt::AlignRight | Qt::AlignVCenter);
+        else
+            return Qt::AlignCenter;
+    } else if (role == Qt::FontRole) {
+        return RegularFont;
     }
     return QVariant();
 }
@@ -211,16 +228,7 @@ QVariant MemRangeModel::headerData(int section, Qt::Orientation orientation, int
         return QVariant();
 
     if (orientation == Qt::Horizontal) {
-        switch (section) {
-            case 0:
-                return QString("Start");
-            case 1:
-                return QString("End");
-            case 2:
-                return QString("Permissions");
-            case 3:
-                return QString ("Description");
-        }
+        return headers.at(section);
     }
     return QVariant();
 }
@@ -238,7 +246,7 @@ void MemRangeModel::addRange(MemRange *range)
 {
     beginInsertRows(QModelIndex(),ranges.size(),ranges.size());
     ranges.append(range);
-    qSort(ranges);
+    qSort(ranges.begin(),ranges.end(), OffsetsRange::lessThanFunc);
     endInsertRows();
 }
 
@@ -285,6 +293,10 @@ QString CurrentMemorysource::name()
 
 quint64 CurrentMemorysource::size()
 {
+    qDebug() << "Wordsize = " << QSysInfo::WordSize;
+    if (QSysInfo::WordSize == 32)
+        return ULONG_MAX;
+
     return ULONG_LONG_MAX;
 }
 

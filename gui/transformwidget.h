@@ -13,6 +13,7 @@ Released under AGPL see LICENSE for more information
 
 #include <QWidget>
 #include <QByteArray>
+#include <QBitArray>
 #include <QTableWidgetItem>
 #include <QMenu>
 #include <QColor>
@@ -36,6 +37,7 @@ class OffsetGotoWidget;
 class SearchWidget;
 class ClearAllMarkingsButton;
 class ByteTableView;
+class TransformRequest;
 
 namespace Ui {
 class TransformWidget;
@@ -65,6 +67,7 @@ class TransformWidget : public QWidget
         void status(const QString, const QString);
         void deletionRequest(TransformWidget *);
         void tryNewName(QString name);
+        void sendRequest(TransformRequest *);
     public slots:
         void input(QByteArray inputdata);
         void updatingFrom();
@@ -90,7 +93,7 @@ class TransformWidget : public QWidget
         void on_deleteButton_clicked();
         void on_infoPushButton_clicked();
         void on_clearDataPushButton_clicked();
-        void onSearch(QByteArray item, bool couldBeText);
+        void onSearch(QByteArray item, QBitArray mask, bool couldBeText);
         void onGotoOffset(quint64 offset, bool absolute, bool negative, bool select);
 
     private:

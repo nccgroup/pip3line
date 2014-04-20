@@ -15,6 +15,7 @@ scripts/__pycache__/*
 *.pyc
 *.jar
 unittests/unittests-build-*
+unittests/build-*
 pip3line.kdev4
 extras/burp_plugin/bin
 *.jardesc

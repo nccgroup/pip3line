@@ -16,8 +16,12 @@ Released under AGPL see LICENSE for more information
 #include <QKeyEvent>
 #include <QHashIterator>
 #include <QMessageBox>
+#include <QMenu>
+#include <QModelIndex>
 #include "scripttransformabstract.h"
 #include <QDebug>
+
+const QString ModuleTransformWidget::MENU_DELETE = QObject::tr("Delete");
 
 ModuleTransformWidget::ModuleTransformWidget(ScriptTransformAbstract *ntransform, QWidget *parent) :
     QWidget(parent)
@@ -27,21 +31,35 @@ ModuleTransformWidget::ModuleTransformWidget(ScriptTransformAbstract *ntransform
         qFatal("Cannot allocate memory for Ui::ModuleTransformWidget X{");
     }
     transform = ntransform;
+    tableMenu = NULL;
+    reloadingParams = false;
     ui->setupUi(this);
+
+#if QT_VERSION >= 0x050000
+    ui->parameterstableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->parameterstableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+#else
+    ui->parameterstableView->verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->parameterstableView->horizontalHeader()->setResizeMode(QHeaderView::Fixed);
+#endif
+
+    ui->parameterstableView->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->parameterstableView, SIGNAL(customContextMenuRequested(QPoint)), SLOT(customMenuRequested(QPoint)));
+
     model  = new(std::nothrow) ParametersItemModel();
     if (model == NULL) {
         qFatal("Cannot allocate memory for ParametersItemModel X{");
     }
     QAbstractItemModel * oldModel = ui->parameterstableView->model();
     ui->parameterstableView->setModel(model);
-    oldModel->deleteLater();
+    delete oldModel;
 
     ui->autoReloadCheckBox->setChecked(transform->isAutoReload());
     // for now
     //ui->autoReloadCheckBox->setVisible(false);
 
     connect(model, SIGNAL(parametersChanged()), this, SLOT(onParametersUpdated()));
-    connect(transform, SIGNAL(confUpdated()), this, SLOT(reloadParameters()));
+    connect(transform, SIGNAL(confUpdated()), this, SLOT(reloadConf()));
 
     ui->parameterstableView->installEventFilter(this);
     ui->fileLineEdit->setText(transform->getModuleFileName());
@@ -61,11 +79,13 @@ ModuleTransformWidget::ModuleTransformWidget(ScriptTransformAbstract *ntransform
     connect(ui->makePersistentCheckBox, SIGNAL(toggled(bool)), this, SLOT(onMakePersistent(bool)));
     connect(ui->addParamPushButton, SIGNAL(clicked()), this, SLOT(onAddParameter()));
     connect(ui->autoReloadCheckBox, SIGNAL(toggled(bool)), SLOT(onAutoReload(bool)));
-    connect(ui->forceReloadPushButton, SIGNAL(clicked()), transform,SLOT(reloadModule()));
+    connect(ui->forceReloadPushButton, SIGNAL(clicked()), transform,SLOT(loadModule()));
+
 }
 
 ModuleTransformWidget::~ModuleTransformWidget()
 {
+    delete tableMenu;
     delete ui;
 }
 
@@ -102,7 +122,30 @@ void ModuleTransformWidget::onAutoReload(bool val)
     transform->setAutoReload(val);
 }
 
-void ModuleTransformWidget::reloadParameters()
+void ModuleTransformWidget::customMenuRequested(QPoint pos)
+{
+    QModelIndex index= ui->parameterstableView->indexAt(pos);
+    if (index.isValid()) {
+        if (tableMenu == NULL) {
+        tableMenu = new QMenu(this);
+        tableMenu->addAction(new QAction(MENU_DELETE, tableMenu));
+        connect(tableMenu, SIGNAL(triggered(QAction*)), SLOT(onMenuAction(QAction*)));
+        }
+        tableMenu->popup(ui->parameterstableView->mapToGlobal(pos));
+    }
+}
+
+void ModuleTransformWidget::onMenuAction(QAction *action)
+{
+    if (action->text().compare(MENU_DELETE) == 0) {
+        QModelIndexList list = ui->parameterstableView->selectionModel()->selectedRows();
+        if (list.size() >= 1) {
+            model->removeRows(list.at(0).row(),1, list.at(0).parent());
+        }
+    }
+}
+
+void ModuleTransformWidget::reloadConf()
 {
     model->setParameters(transform->getParameters());
 }
@@ -233,22 +276,25 @@ void ParametersItemModel::addBlankRow()
     endResetModel();
 }
 
-bool ParametersItemModel::removeRows(int row, int count, const QModelIndex &)
+bool ParametersItemModel::removeRows(int row, int count, const QModelIndex & parent)
 {
-    if (row >= parametersNames.size()) {
+    if (row >= parametersNames.size() // valid row ?
+            || count < 1 // valid row count ?
+            || parametersNames.size() - count < row) // no overflow ??
+    {
             return false;
     }
 
-    beginResetModel();
+    beginRemoveRows(parent,row, row + count - 1);
 
-    if (count > 1) {
-        qWarning() << "More than one row selected for deletion, removing only the first one.";
+    if (count > 1) { // this should never happen due to the selection policy.. but who knows
+        qWarning() << "T_T More than one row selected for deletion, removing only the first one.";
     }
 
     parametersNames.removeAt(row);
     parametersValues.removeAt(row);
 
-    endResetModel();
+    endRemoveRows();
 
     return true;
 }

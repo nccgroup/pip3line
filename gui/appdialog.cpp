@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "appdialog.h"
 #include "guihelper.h"
+#include "loggerwidget.h"
 #include <QDebug>
 
 AppDialog::AppDialog(GuiHelper * nguiHelper, QWidget *parent) :

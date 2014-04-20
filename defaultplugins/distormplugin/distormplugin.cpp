@@ -11,7 +11,7 @@ Released under AGPL see LICENSE for more information
 #include "distormplugin.h"
 #include "../../version.h"
 #include "distormtransf.h"
-
+#include <pip3linecallback.h>
 #include <QLabel>
 
 DistormPlugin::DistormPlugin()

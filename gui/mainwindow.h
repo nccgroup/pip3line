@@ -77,6 +77,8 @@ class MainWindow : public QMainWindow
         void hideEvent(QHideEvent * event);
         void showEvent(QShowEvent * event);
 
+        void newFileTab(QString fileName);
+
         static const QString NEW_TRANSFORMTAB;
         static const QString NEW_FILE;
         static const QString NEW_CURRENTMEM;
@@ -105,7 +107,6 @@ class MainWindow : public QMainWindow
         bool compareWasVisible;
         QNetworkProxy networkProxy;
         QPoint savedPos;
-      //  QPushButton *newPushButton;
         BlocksSource * blockListener;
 };
 

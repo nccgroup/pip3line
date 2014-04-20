@@ -23,6 +23,7 @@ ByteItemModel::ByteItemModel(ByteSourceAbstract * nbyteSource,  QObject *parent)
 {
     hexColumncount = 16;
     byteSource = NULL;
+    textOffsetSize = 0;
     setSource(nbyteSource);
     //qDebug() << "Created: " << this;
 }
@@ -43,8 +44,10 @@ void ByteItemModel::setSource(ByteSourceAbstract *nbyteSource)
         disconnect(byteSource, SIGNAL(updated(quintptr)), this, SLOT(receivedSourceUpdate(quintptr)));
     beginResetModel();
     byteSource = nbyteSource;
+    textOffsetSize = byteSource->textOffsetSize();
     endResetModel();
     connect(byteSource, SIGNAL(updated(quintptr)), this, SLOT(receivedSourceUpdate(quintptr)));
+    connect(byteSource, SIGNAL(minorUpdate(quint64,quint64)), this, SLOT(receivedMinorSourceupdate(quint64,quint64)));
 }
 
 ByteSourceAbstract *ByteItemModel::getSource() const
@@ -161,7 +164,7 @@ QVariant ByteItemModel::headerData(int section, Qt::Orientation orientation, int
             return QVariant();
     } else {
         if (section < rowCount())
-            return QString("0x%1").arg((section * hexColumncount) + byteSource->startingRealOffset(),0,16);
+            return QString("0x%1").arg((section * hexColumncount) + byteSource->startingRealOffset(),textOffsetSize,16,QChar('0'));
         else
             return QVariant();
     }
@@ -294,8 +297,18 @@ void ByteItemModel::receivedSourceUpdate(quintptr viewSource)
 {
     if (viewSource != (quintptr) this) {
         beginResetModel();
+        textOffsetSize = byteSource->textOffsetSize();
         endResetModel();
     }
+}
+
+void ByteItemModel::receivedMinorSourceupdate(quint64 start, quint64 end)
+{
+    emit dataChanged(createIndex(start),createIndex(end));
+}
+int ByteItemModel::getTextOffsetSize() const
+{
+    return textOffsetSize;
 }
 
 bool ByteItemModel::historyForward()

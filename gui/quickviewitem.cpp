@@ -12,8 +12,11 @@ Released under AGPL see LICENSE for more information
 #include <QMutexLocker>
 #include <QXmlStreamReader>
 #include <QTimer>
+#include <QMouseEvent>
+#include "loggerwidget.h"
 #include <QDebug>
 #include "ui_quickviewitem.h"
+#include <threadedprocessor.h>
 
 const QString QuickViewItem::LOGID = "QuickView";
 
@@ -37,6 +40,9 @@ QuickViewItem::QuickViewItem(GuiHelper *nguiHelper, QWidget *parent, const QStri
 
     if (!xmlconfig.isEmpty())
         setXmlConf(xmlconfig);
+
+    ThreadedProcessor * proc = guiHelper->getCentralTransProc();
+    connect(this, SIGNAL(sendRequest(TransformRequest *)), proc, SLOT(processRequest(TransformRequest*)), Qt::QueuedConnection);
 }
 
 QuickViewItem::~QuickViewItem()
@@ -93,7 +99,7 @@ void QuickViewItem::processData(const QByteArray &data)
         }
 
         connect(tr,SIGNAL(finishedProcessing(QByteArray,Messages)), this, SLOT(processingFinished(QByteArray,Messages)));
-        guiHelper->processTransform(tr);
+        emit sendRequest(tr);
     }
 
 }

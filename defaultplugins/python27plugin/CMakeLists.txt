@@ -27,17 +27,51 @@ else(WITH_QT5)
 	include ( ${QT_USE_FILE} )
 endif(WITH_QT5)
 
-if(WIN32)
-	set (PYTHON_INCLUDE_DIRS C:\\Python27\\include)
-	set (PYTHON_LIBRARY C:\\Python27\\libs )
-endif(WIN32)
+# hardcoded paths, in case none are supplied or found
+
+if (WIN32)
+  set (PYTHON27_HARDCODED_INCLUDE C:\\Python27\\include)
+  set (PYTHON27_HARDCODED_LIBS C:\\Python27\\libs\\)
+else()
+  set (PYTHON27_HARDCODED_INCLUDE "/usr/include/python2.7")
+  set (PYTHON27_HARDCODED_LIBS "/usr/lib/libpython2.7.so")
+  set (PYTHON27_HARDCODED_LIBS_UBUNTU
+	  "/usr/lib/x86_64-linux-gnu/libpython2.7.so")
+endif()
+	
+if (NOT PYTHON27_INCLUDE_DIRS OR NOT PYTHON27_LIBRARIES)
+  message ( WARNING "Python 2.7 paths haven't been found or supplied, trying hardcoded values" )
+  if ( EXISTS ${PYTHON27_HARDCODED_INCLUDE})
+    set (PYTHON_INCLUDE_DIRS ${PYTHON27_HARDCODED_INCLUDE})
+  else()
+    message ( FATAL_ERROR "No Python 2.7 include found" )
+  endif()
+  
+  if ( EXISTS ${PYTHON27_HARDCODED_LIBS})
+    set (PYTHON_LIBRARIES ${PYTHON27_HARDCODED_LIBS})
+  else()
+    if ( EXISTS ${PYTHON27_HARDCODED_LIBS_UBUNTU} )
+      set (PYTHON_LIBRARIES ${PYTHON27_HARDCODED_LIBS_UBUNTU} )
+    else()
+      message ( FATAL_ERROR "No Python 2.7 libraries found, Even hardcoded
+      ones" )
+    endif()
+  endif()
+else()
+    set (PYTHON_INCLUDE_DIRS  ${PYTHON27_INCLUDE_DIRS})
+    set (PYTHON_LIBRARIES ${PYTHON27_LIBRARIES})
+endif()
 
 include_directories (
+	SYSTEM
 	${PYTHON_INCLUDE_DIRS}
+	)
+
+include_directories (
 	../../libtransform/)
 
 link_directories (
-	${PYTHON_LIBRARY}
+	${PYTHON_LIBRARIES}
 	${PROJECT_SOURCE_DIR}/../../lib
 	)
 
@@ -47,11 +81,13 @@ set ( pythonplugin_HDRS
 	../pythonplugin/pythonplugin_global.h
 	../pythonplugin/pythontransform.h
 	../pythonplugin/pythonplugin.h
+	../pythonplugin/pythonmodules.h
 	)
 
 set ( pythonplugin_SRCS
 	../pythonplugin/pythontransform.cpp
 	../pythonplugin/pythonplugin.cpp
+	../pythonplugin/pythonmodules.cpp
 	)
 
 if(WIN32)

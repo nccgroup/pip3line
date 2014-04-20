@@ -25,14 +25,14 @@ HEADERS += distormplugin.h\
     distormtransf.h
 
 unix {
-    LIBS += -L"../../bin/" -ltransform -L"../../../distorm/trunk/build/lib/distorm3/" -ldistorm3
+    LIBS += -L"../../bin/" -ltransform -L"../../../distorm/build/lib/distorm3/" -ldistorm3
 }
 
 win32 {
-    LIBS += -L"../../lib/" -ltransform -L"../../../distorm/trunk/" -ldistorm
+    LIBS += -L"../../lib/" -ltransform -L"../../../distorm/" -ldistorm
 }
 
-INCLUDEPATH += ../../libtransform/ ../../../distorm/trunk/include/
+INCLUDEPATH += ../../libtransform/ ../../../distorm/include/
 DESTDIR = ../../bin/plugins
 
 OTHER_FILES += \

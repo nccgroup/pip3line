@@ -21,6 +21,7 @@ if(WITH_QT5)
 	find_package(Qt5Widgets)
 	find_package(Qt5Core)
 	find_package(Qt5Svg)
+	find_package(Qt5Concurrent)
 else(WITH_QT5)	
 	find_package ( Qt4 REQUIRED QtCore QtGui QtSvg)
 	include ( ${QT_USE_FILE} )
@@ -41,6 +42,7 @@ set ( transform_HDRS
 	moduletransformwidget.h
 	scripttransformabstract.h
 	deleteablelistitem.h
+	threadedprocessor.h
 	)
 
 set ( transform_SRCS
@@ -54,6 +56,7 @@ set ( transform_SRCS
 	moduletransformwidget.cpp
 	scripttransformabstract.cpp
 	deleteablelistitem.cpp
+	threadedprocessor.cpp
 	)
 
 set ( transform_UIS
@@ -72,7 +75,7 @@ endif(WITH_QT5)
 add_library ( transform SHARED ${transform_SRCS} ${RSCS} ${UIS} )
 
 if(WITH_QT5)
-	qt5_use_modules(transform Widgets Svg)
+	qt5_use_modules(transform Widgets Svg Concurrent)
 else(WITH_QT5)
 	target_link_libraries ( transform  ${QT_LIBRARIES} )
 endif(WITH_QT5)

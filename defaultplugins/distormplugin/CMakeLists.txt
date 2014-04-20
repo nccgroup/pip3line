@@ -51,6 +51,8 @@ if (WIN32)
 		${DISTORM3_LIB_PATH}
 		..\\..\\..\\distorm
 		)
+elseif(UNIX)
+	link_directories ( ../../../distorm/make/linux )
 endif ()
 
 set ( EXTERN_LIBS transform distorm3 )

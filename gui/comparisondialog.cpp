@@ -16,6 +16,7 @@ Released under AGPL see LICENSE for more information
 #include "sources/bytesourceabstract.h"
 #include "tabs/tababstract.h"
 #include "views/bytetableview.h"
+#include "loggerwidget.h"
 #include "guihelper.h"
 #include <QColorDialog>
 #include <QPixmap>
@@ -80,7 +81,7 @@ void CompareWorker::compare()
             deleteLater();
             return;
         }
-        if (i > 0 && i % progressMark == 0) {
+        if (i > 0 && progressMark > 0 && i % progressMark == 0) {
             emit progress((int)(float)(i) * ((float)100/(float)compSize));
         }
     }
@@ -291,7 +292,11 @@ void ComparisonDialog::onTabSelection(int index)
 
 void ComparisonDialog::onTabEntriesChanged()
 {
-    TabAbstract *tab = static_cast<TabAbstract *>(sender());
+    TabAbstract *tab = dynamic_cast<TabAbstract *>(sender());
+    if (tab == NULL) {
+        qWarning() << "[ComparisonDialog::onTabEntriesChanged] NULL tab";
+    }
+
     int index = tabs.indexOf(tab);
     if (index != -1) {
         if (ui->tabAComboBox->currentIndex() == index) {

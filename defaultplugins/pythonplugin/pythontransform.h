@@ -13,22 +13,15 @@ Released under AGPL see LICENSE for more information
 
 #include <scripttransformabstract.h>
 
-#ifdef Q_OS_LINUX
-#ifdef BUILD_PYTHON_3
-#include <python3.3/Python.h>
-#else
-#include <python2.7/Python.h>
-#endif // BUILD_PYTHON_X
-#elif defined Q_OS_WIN
-#include <Python.h>
-#endif
+class PythonModules;
+typedef struct _object PyObject;
 
 class PythonTransform : public ScriptTransformAbstract
 {
         Q_OBJECT
     public:
         static const QString id;
-        explicit PythonTransform(ModulesManagement * mmanagement, const QString &name = QString());
+        explicit PythonTransform(PythonModules * mmanagement, const QString &name = QString());
         ~PythonTransform();
 
         QString description() const;
@@ -38,21 +31,19 @@ class PythonTransform : public ScriptTransformAbstract
         bool setModuleFile(const QString &fileName);
         QString inboundString() const;
         QString outboundString() const;
-    private Q_SLOTS:
-        bool reloadModule();
-    Q_SIGNALS:
-        void pythonError();
+    public Q_SLOTS:
+        bool loadModule();
     private:
         Q_DISABLE_COPY(PythonTransform)
+        bool loadModuleAttributes();
         static const char * MAIN_FUNCTION_NAME;
         static const char * ISTWOWAY_ATTR_NAME;
         static const char * INBOUND_ATTR_NAME;
         static const char * PARAMS_ATTR_NAME;
         static const char * PARAMS_NAMES_ATTR_NAME;
-        bool loadModule();
-        bool checkPyError();
         PyObject * pModule;
         bool twoWays;
+        PythonModules * pythonmgm;
 };
 
 #endif // PYTHONTRANSFORM_H

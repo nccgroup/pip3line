@@ -87,14 +87,14 @@ void TcpServerListener::startListening()
         workerThread->quit();
         serverThread->quit();
     } else {
-        qWarning() << tr("Tcp server started %1:%2").arg(listeningAddress.toString()).arg(port);
+        qDebug() << tr("Tcp server started %1:%2").arg(listeningAddress.toString()).arg(port);
     }
 }
 
 void TcpServerListener::stopListening()
 {
     if (server != NULL && server->isListening()) {
-       qWarning() << tr("Stopping TCP Server %1:%2").arg(listeningAddress.toString()).arg(port);
+       qDebug() << tr("Stopping TCP Server %1:%2").arg(listeningAddress.toString()).arg(port);
        server->close();
        for (int i = 0; i < clients.size(); i++)
            QTimer::singleShot(0,clients.at(i),SLOT(stopListening()));
@@ -105,9 +105,10 @@ void TcpServerListener::stopListening()
 
 void TcpServerListener::clientFinished()
 {
-    TcpListener * client = static_cast<TcpListener *>(sender());
-
-    if (clients.contains(client)) {
+    TcpListener * client = dynamic_cast<TcpListener *>(sender());
+    if (client == NULL) {
+        qWarning() << "[TcpServerListener] NULL client finished";
+    } else if (clients.contains(client)) {
         clients.removeAll(client);
        // qWarning() << "Client finished" << client;
     }
@@ -168,7 +169,7 @@ void TcpServerListener::setListeningAddress(const QHostAddress &value)
 {
     if (value != listeningAddress) {
         if (server != NULL && server->isListening()) {
-            qWarning() << "The new address will be used once the server is restarted";
+            qDebug() << "The new address will be used once the server is restarted";
         }
 
         listeningAddress = value;

@@ -25,6 +25,8 @@ Released under AGPL see LICENSE for more information
 #include <QSettings>
 #include <QStandardItemModel>
 #include <QDebug>
+#include "loggerwidget.h"
+
 using namespace Pip3lineConst;
 
 const QString SettingsDialog::LOGID = "SettingsDialog";

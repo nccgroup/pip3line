@@ -13,7 +13,6 @@ Released under AGPL see LICENSE for more information
 
 #include "distorm_global.h"
 #include <transformfactoryplugininterface.h>
-#include <pip3linecallback.h>
 
 class DISTORMSHARED_EXPORT DistormPlugin : public QObject, public TransformFactoryPluginInterface
 {

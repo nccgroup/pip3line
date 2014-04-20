@@ -23,7 +23,7 @@ ReadOnlyButton::ReadOnlyButton(ByteSourceAbstract *bytesource, QWidget *parent) 
 {
     byteSource = bytesource;
     setCheckable(true);
-    setMaximumWidth(30);
+    setMaximumWidth(50);
     setFlat(true);
     refreshStateValue();
     connect(this, SIGNAL(toggled(bool)), SLOT(onToggle(bool)));

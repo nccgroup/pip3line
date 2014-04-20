@@ -37,6 +37,7 @@ class NumberToChar : public TransformAbstract
     private:
         static const char DEFAULT_SEPARATOR;
         char separator;
+        bool signedShort;
 };
 
 #endif // NUMBERTOCHAR_H

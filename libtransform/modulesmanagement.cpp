@@ -19,7 +19,7 @@ Released under AGPL see LICENSE for more information
 
 const QString ModulesManagement::SETTINGS_USER_MODULES_LIST = "UserModulesList";
 
-ModulesManagement::ModulesManagement(const QString &nlangName, const QString &extension, const QString & baseDir, const QStringList &initialPaths, Pip3lineCallback *ncallback)
+ModulesManagement::ModulesManagement(const QString &nlangName, const QString &extension, const QString & baseDir, Pip3lineCallback *ncallback)
 {
     gui = NULL;
     langName = nlangName;
@@ -27,12 +27,20 @@ ModulesManagement::ModulesManagement(const QString &nlangName, const QString &ex
     callback = ncallback;
     baseModulesDirName = baseDir;
     moduleExtension = extension;
+}
 
+ModulesManagement::~ModulesManagement()
+{
+    delete gui;
+}
+
+bool ModulesManagement::initialize(const QStringList &initialPaths)
+{
     QStringList dirList = callback->pip3lineDirs();
     for (int i = 0; i < dirList.size(); i++) {
         QDir dir(dirList.at(i));
-        if (dir.cd(baseDir)) {
-            qDebug() << "Found " << nlangName << " plugin directory: " << dir.absolutePath();
+        if (dir.cd(baseModulesDirName)) {
+            qDebug() << "Found " << langName << " plugin directory: " << dir.absolutePath();
             modulesPaths.insert(dir.absolutePath(), -1);
         }
     }
@@ -62,11 +70,8 @@ ModulesManagement::ModulesManagement(const QString &nlangName, const QString &ex
     }
 
     savePersistentModules(); // to remove any erronous module from the persistent storage
-}
 
-ModulesManagement::~ModulesManagement()
-{
-    delete gui;
+    return true;
 }
 
 QStringList ModulesManagement::getPathsList()
@@ -93,7 +98,7 @@ QStringList ModulesManagement::getRegisteredModule()
 
 bool ModulesManagement::setType(const QString &name, ModulesManagement::ModuleType type)
 {
-    qDebug() << "[ModulesManagement::setType] " << name << type;
+//    qDebug() << "[ModulesManagement::setType] " << name << type;
     if (modulesList.contains(name)) {
         if (type == AUTO) {
             callback->logError(tr("[ModulesManagement::setType] - Cannot change the type to AUTO for %1 -_-").arg(name));
@@ -187,6 +192,23 @@ QString ModulesManagement::getLangName() const
     return langName;
 }
 
+QString ModulesManagement::getModuleNameFromFile(QString fileName)
+{
+    QString moduleName;
+    QFileInfo file(fileName);
+    if (file.exists()) {
+        moduleName = file.fileName();
+        if (moduleExtension.size() > 0)
+         moduleName.chop(moduleExtension.size());
+        else
+            callback->logError(tr("[ModulesManagement::getModuleNameFromFile] Module extension is undefined T_T"));
+    }  else {
+        callback->logError(tr("[ModulesManagement::getModuleNameFromFile] File %1 does not exist").arg(fileName));
+    }
+
+    return moduleName;
+}
+
 QWidget *ModulesManagement::getGui(QWidget *parent)
 {
     if (gui == NULL) {
@@ -200,14 +222,14 @@ QWidget *ModulesManagement::getGui(QWidget *parent)
 
 QString ModulesManagement::addModule(QString fileName, ModulesManagement::ModuleType type)
 {
-    qDebug() << "[ModulesManagement::addModule]" << fileName;
+//    qDebug() << "[ModulesManagement::addModule]" << fileName;
     QString moduleName;
     QFileInfo file(fileName);
     if (file.exists()) {
         moduleName = file.fileName();
         moduleName.chop(moduleExtension.size());
         if (modulesList.contains(moduleName)) {
-            callback->logWarning(tr("[ModulesManagement::addModule] A module named \"%1\" was already loaded, skipping.").arg(moduleName));
+         //   qDebug() << QString("[ModulesManagement::addModule] A module named \"%1\" was already loaded, skipping.").arg(moduleName);
         } else {
             QString path = file.absolutePath();
             if (!modulesPaths.contains(path)) {
@@ -219,8 +241,8 @@ QString ModulesManagement::addModule(QString fileName, ModulesManagement::Module
             ModuleProperties prop;
             prop.fileName = fileName;
             prop.type = type;
+            prop.autoReload = true;
             modulesList.insert(moduleName,prop);
-            qDebug() << "[ModulesManagement::addModule]" << modulesList.keys();
             if (type == PERSISTENT)
                 savePersistentModules();
             emit modulesUpdated();
@@ -229,8 +251,6 @@ QString ModulesManagement::addModule(QString fileName, ModulesManagement::Module
     } else {
         callback->logError(tr("[ModulesManagement::addModule] File %1 does not exist").arg(fileName));
     }
-
-    qDebug() << "[ModulesManagement::addModule] Returning";
     return moduleName;
 }
 

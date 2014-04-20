@@ -12,6 +12,8 @@ Released under AGPL see LICENSE for more information
 #include "guihelper.h"
 #include "quickviewitem.h"
 #include "ui_quickviewdialog.h"
+#include "loggerwidget.h"
+
 #include <QDebug>
 
 QuickViewDialog::QuickViewDialog(GuiHelper *nguiHelper, QWidget *parent) :

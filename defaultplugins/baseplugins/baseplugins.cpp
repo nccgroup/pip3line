@@ -12,6 +12,8 @@ Released under AGPL see LICENSE for more information
 #include <QFile>
 #include <QXmlStreamReader>
 #include <QDebug>
+#include <pip3linecallback.h>
+#include "transformabstract.h"
 #include "baseplugins.h"
 #include "urlencode.h"
 #include "md5.h"

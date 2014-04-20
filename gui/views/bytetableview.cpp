@@ -25,6 +25,10 @@ Released under AGPL see LICENSE for more information
 #include <QMessageBox>
 #include <QFontMetrics>
 #include <QTimer>
+#if QT_VERSION >= 0x050000
+#include <QtConcurrent>
+#endif
+#include <QtConcurrentRun>
 #include "../sources/searchabstract.h"
 
 
@@ -357,10 +361,10 @@ ByteTableView::ByteTableView(QWidget *parent) :
     setSelectionMode(QAbstractItemView::ContiguousSelection);
 
 #if QT_VERSION >= 0x050000
-    verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 #else
-    verticalHeader()->setResizeMode(QHeaderView::Fixed);
+    verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
     horizontalHeader()->setResizeMode(QHeaderView::Fixed);
 #endif
     verticalHeader()->setFont(RegularFont);
@@ -395,9 +399,7 @@ void ByteTableView::setModel(ByteItemModel *nmodel)
     searchObject = currentModel->getSource()->getSearchObject();
     if (searchObject != NULL) {
         searchObject->setStopAtFirst(true);
-
-
-        connect(searchObject, SIGNAL(itemFound(quint64,quint64)), SLOT(gotoSearch(quint64,quint64)));
+        connect(searchObject, SIGNAL(itemFound(quint64,quint64)), SLOT(gotoSearch(quint64,quint64)), Qt::QueuedConnection);
     } else {
         qDebug() << "[ByteTableView] NULL search object returned by " << currentModel->getSource();
     }
@@ -406,9 +408,6 @@ void ByteTableView::setModel(ByteItemModel *nmodel)
         setColumnWidth(i,HEXCOLUMNWIDTH);
     setColumnWidth(hexColumncount,TEXTCOLUMNWIDTH);
     verticalHeader()->setDefaultSectionSize(DEFAULTROWSHEIGHT);
-
-    resizeVerticalHeaders();
-    connect(currentModel->getSource(), SIGNAL(updated(quintptr)), SLOT(resizeVerticalHeaders()));
 
     currentSelectionModel = new(std::nothrow) HexSelectionModel(hexColumncount, nmodel, this);
     if (currentSelectionModel == NULL) {
@@ -885,20 +884,7 @@ bool ByteTableView::goTo(quint64 offset, bool absolute, bool negative, bool sele
     return true;
 }
 
-void ByteTableView::resizeVerticalHeaders()
-{
-    QString maxSizeHeader = QString::number(currentModel->getSource()->startingRealOffset() +  currentModel->size(),16).prepend("0x");
-    int pixelWide = RegularFont.pointSize() * maxSizeHeader.size();
-
-    //verticalHeader()->resizeSections();
-    if (currentVerticalHeaderWidth != pixelWide) {
-        currentVerticalHeaderWidth = pixelWide;
-        verticalHeader()->setFixedWidth(currentVerticalHeaderWidth);
-       // adjustSize();
-    }
-}
-
-void ByteTableView::search(QByteArray item)
+void ByteTableView::search(QByteArray item, QBitArray mask)
 {
 
     if (searchObject == NULL || item.isEmpty()) {
@@ -906,6 +892,7 @@ void ByteTableView::search(QByteArray item)
     }
 
     lastSearch = item;
+    lastMask = mask;
     int currentViewPos = getCurrentPos();
     if (currentViewPos < 0)
         currentViewPos = 0;
@@ -915,16 +902,16 @@ void ByteTableView::search(QByteArray item)
     if (lastSearchIndex == curPos)
         curPos++;
 
-    searchObject->setSearchItem(item);
+    searchObject->setSearchItem(item, mask);
     searchObject->setStartOffset(curPos);
     searchObject->setEndOffset(curPos);
-    QTimer::singleShot(0,searchObject,SLOT(startSearch()));
+    QtConcurrent::run(searchObject, &SearchAbstract::startSearch);
 }
 
 void ByteTableView::searchAgain()
 {
     if (!lastSearch.isEmpty())
-        search(lastSearch);
+        search(lastSearch,lastMask);
 }
 
 void ByteTableView::setColumnCount(int val)

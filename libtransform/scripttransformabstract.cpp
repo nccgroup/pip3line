@@ -28,6 +28,8 @@ ScriptTransformAbstract::ScriptTransformAbstract(ModulesManagement *mmanagement,
         moduleName = modulename;
         type = moduleManagement->getModuleType(modulename);
         moduleFileName = moduleManagement->getModuleFileName(modulename);
+    } else {
+       // qDebug() << "Modulename is empty";
     }
 }
 
@@ -68,26 +70,26 @@ bool ScriptTransformAbstract::setConfiguration(QHash<QString, QString> propertie
     bool res = TransformAbstract::setConfiguration(propertiesList);
     parameters.clear();
 
-    moduleName = propertiesList.value(PROP_MODULE_NAME);
+    QString fileName = QString::fromUtf8(QByteArray::fromBase64(propertiesList.value(PROP_SCRIPT).toUtf8()));
+
+    if (fileName.isEmpty()) {
+        emit error(tr("Module file name is empty, no script loaded"),moduleManagement->getLangName());
+        return false;
+    }
+    moduleName = moduleManagement->getModuleNameFromFile(fileName);
     if (moduleName.isEmpty()) {
-        emit error(tr("[ScriptTransformAbstract::setConfiguration]Module name is empty"),moduleManagement->getLangName());
+        emit error(tr("Module name could not be determined, script not loaded:%1").arg(fileName),moduleManagement->getLangName());
         res = false;
     } else if (moduleManagement->modulesContains(moduleName)) {
         type = moduleManagement->getModuleType(moduleName);
-        moduleFileName = moduleManagement->getModuleFileName(moduleName);
+        moduleFileName = fileName;
     } else {
-        moduleFileName = QString::fromUtf8(QByteArray::fromBase64(propertiesList.value(PROP_SCRIPT).toUtf8()));
-        if (moduleFileName.isEmpty()) {
-            emit error(tr("[ScriptTransformAbstract::setConfiguration]Module file name is empty"),moduleManagement->getLangName());
-            res = false;
+        moduleFileName = fileName;
+        moduleName = moduleManagement->addModule(moduleFileName);
+        if (!moduleName.isEmpty()) {
+            type = moduleManagement->getModuleType(moduleName);
         } else {
-            moduleName = moduleManagement->addModule(moduleFileName);
-            if (!moduleName.isEmpty()) {
-                type = moduleManagement->getModuleType(moduleName);
-            } else {
-                emit error(tr("[ScriptTransformAbstract::setConfiguration]Module name is empty"),moduleManagement->getLangName());
-                res = false;
-            }
+            res = false;
         }
     }
 
@@ -120,11 +122,14 @@ bool ScriptTransformAbstract::setConfiguration(QHash<QString, QString> propertie
 
 QWidget *ScriptTransformAbstract::requestGui(QWidget *parent)
 {
+
     ModuleTransformWidget * widget = new(std::nothrow) ModuleTransformWidget(this, parent);
     if (widget == NULL) {
         qFatal("Cannot allocate memory for ModuleTransformWidget X{");
     }
-    widget->reloadParameters();
+    if (loadModule()) { // need the module to be loaded in order to get the configuration
+        widget->reloadConf();
+    }
     return widget;
 }
 
@@ -176,9 +181,11 @@ void ScriptTransformAbstract::setParameters(QHash<QByteArray, QByteArray> newPar
 
 void ScriptTransformAbstract::setAutoReload(bool val)
 {
+    if (autoReload != val) {
         autoReload = val;
-    if (autoReload)
-        reloadModule();
+        if (autoReload)
+            loadModule(); // as autoReload is true, this garantee that the module will be reloaded
+    }
 }
 
 bool ScriptTransformAbstract::isAutoReload() const

@@ -296,21 +296,34 @@ void LargeRandomAccessSource::setViewSize(int size)
 void LargeRandomAccessSource::refreshData(bool compare)
 {
     QByteArray temp;
-    readData(temp,chunksize);
-    if (temp.size() !=  dataChunk.size() ||  !dataChunk.contains(temp)) {
-        clearAllMarkings();
-        if (compare) {
-            int range = qMin(temp.size(), dataChunk.size());
-            for (int i = 0; i < range; i++) {
-                if (temp.at(i) != dataChunk.at(i)) {
-                    mark(currentStartingOffset + i,currentStartingOffset + i,QColor(212,137,255));
+    if (readData(temp,chunksize)) {
+        bool hasSizeChanged = temp.size() !=  dataChunk.size();
+        if (hasSizeChanged ||  !dataChunk.contains(temp)) {
+            if (compare) {
+                clearAllMarkingsNoUpdate();
+                int range = qMin(temp.size(), dataChunk.size());
+                int selectionStart = -1;
+                int i = 0;
+                for (i = 0; i < range; i++) {
+                    if (temp.at(i) != dataChunk.at(i)) {
+                        if (selectionStart == -1)
+                            selectionStart = i;
+                    } else if (selectionStart > -1) {
+                        markNoUpdate(currentStartingOffset + selectionStart,currentStartingOffset + i - 1,QColor(212,137,255));
+                        selectionStart = -1;
+                    }
+                }
+
+                if (selectionStart > -1) {
+                    markNoUpdate(currentStartingOffset + selectionStart,currentStartingOffset + i,QColor(212,137,255));
                 }
             }
-        }
 
-        dataChunk = temp;
-        emit updated(INVALID_SOURCE);
-        emit sizeChanged();
+            dataChunk = temp;
+            if (hasSizeChanged)
+                emit sizeChanged();
+        }
+        emit minorUpdate(0,dataChunk.size());
     }
 }
 

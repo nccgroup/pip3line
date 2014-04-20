@@ -1,3 +1,13 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
 #include "filewidget.h"
 #include "ui_filewidget.h"
 #include "largefile.h"
@@ -16,6 +26,8 @@ FileWidget::FileWidget(LargeFile *fsource, QWidget *parent) :
     ui = new(std::nothrow) Ui::FileWidget;
     ui->setupUi(this);
 
+    ui->resultWidget->setVisible(false);
+
     itemsFoundModel = new(std::nothrow) FoundOffsetsModel();
     if (itemsFoundModel == NULL) {
         qFatal("Cannot allocate memory for SearchItemModel X{");
@@ -29,7 +41,7 @@ FileWidget::FileWidget(LargeFile *fsource, QWidget *parent) :
     }
     searchWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
     ui->mainLayout->insertWidget(ui->mainLayout->indexOf(ui->statsWidget) + 1, searchWidget);
-    connect(searchWidget, SIGNAL(searchRequest(QByteArray,bool)), SLOT(onSearch(QByteArray,bool)));
+    connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
 
     multiSearch = new(std::nothrow) FileSearch(source->fileName());
     if (multiSearch == NULL) {
@@ -38,7 +50,8 @@ FileWidget::FileWidget(LargeFile *fsource, QWidget *parent) :
     connect(multiSearch, SIGNAL(searchStarted()), searchWidget, SLOT(onSearchStarted()));
     connect(multiSearch, SIGNAL(searchEnded()), searchWidget, SLOT(onSearchEnded()));
     connect(multiSearch, SIGNAL(searchEnded()), SLOT(onEndSearch()));
-    connect(multiSearch, SIGNAL(progressUpdate(quint64)), searchWidget, SLOT(updateProgress(quint64)));
+   // connect(multiSearch, SIGNAL(progressUpdate(quint64)), searchWidget, SLOT(updateProgress(quint64))); this should not be needed anymore
+    connect (multiSearch, SIGNAL(progressStatus(double)), searchWidget, SLOT(updateStatusProgress(double)));
     connect(multiSearch, SIGNAL(itemFound(quint64,quint64)), SLOT(itemFound(quint64,quint64)));
     connect(searchWidget, SIGNAL(stopSearch()), multiSearch, SLOT(stopSearch()));
 
@@ -50,13 +63,20 @@ FileWidget::FileWidget(LargeFile *fsource, QWidget *parent) :
 
 FileWidget::~FileWidget()
 {
+    qDebug() << this << "destroyed";
     delete ui;
     delete multiSearch;
 }
 
-void FileWidget::onSearch(QByteArray item, bool)
+QSize FileWidget::sizeHint() const
+{
+    return QSize(400,500);
+}
+
+void FileWidget::onSearch(QByteArray item,QBitArray mask, bool)
 {
     itemsFoundModel->clear();
+    ui->resultLabel->setText(QString());
     source->clearAllMarkings();
     multiSearch->setSearchItem(item);
     multiSearch->startThreadedSearch();
@@ -101,7 +121,7 @@ void FileWidget::refresh()
 void FileWidget::itemFound(quint64 soffset, quint64 eoffset)
 {
     itemsFoundModel->addOffset(soffset, eoffset);
-    source->mark(soffset, eoffset, QColor(255,182,117));
+    source->markNoUpdate(soffset, eoffset, QColor(255,182,117));
 }
 
 void FileWidget::onDoubleClick(QModelIndex index)
@@ -116,5 +136,7 @@ void FileWidget::onEndSearch()
         ui->resultLabel->setText(QString::number(itemsFoundModel->rowCount()));
     else
         ui->resultLabel->setText(tr("Nothing found"));
+
+    ui->resultWidget->setVisible(true);
 }
 

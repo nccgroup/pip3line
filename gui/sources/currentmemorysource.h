@@ -15,6 +15,7 @@ Released under AGPL see LICENSE for more information
 
 #include "largerandomaccesssource.h"
 #include <QAbstractListModel>
+#include <QStringList>
 
 // extending OffsetRange to add functionalities specific to memory management
 class MemRange : public OffsetsRange {
@@ -34,7 +35,7 @@ class MemRange : public OffsetsRange {
         bool getCopy() const;
         void setCopy(bool value);
 #endif
-
+        bool operator<(const MemRange& other) const;
     private:
         bool read;
         bool write;
@@ -65,8 +66,10 @@ class MemRangeModel : public QAbstractListModel
         void addRange(MemRange *range);
         void setCurrentRange(MemRange *range);
     private:
+        static const QFont RegularFont;
         QList<MemRange *> ranges;
         int currentMemRow;
+        static const QStringList headers;
 };
 
 

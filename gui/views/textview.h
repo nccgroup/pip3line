@@ -36,7 +36,7 @@ class TextView : public SingleViewAbstract
         explicit TextView(ByteSourceAbstract *byteSource, GuiHelper *guiHelper, QWidget *parent = 0);
         ~TextView();
         void setModel(ByteSourceAbstract *byteSource);
-        void search(QByteArray item);
+        void search(QByteArray item, QBitArray mask = QBitArray());
 
     signals:
         void invalidText();

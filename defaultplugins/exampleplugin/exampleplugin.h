@@ -29,7 +29,7 @@ class EXAMPLEPLUGINSHARED_EXPORT ExamplePlugin : public QObject, public Transfor
     public:
         explicit ExamplePlugin();
         // This function set a Pip3lineCallback object for the plugin to interact with the upper layer
-        // It can be seen as an initialisation call, as it is called jsut after the plugin is intanciated
+        // It can be seen as an initialisation call, as it is called just after the plugin is instanciated
         void setCallBack(Pip3lineCallback *);
         ~ExamplePlugin();
         // The plugin name helps differentiate plugins and should describe them. If two plugins return the same

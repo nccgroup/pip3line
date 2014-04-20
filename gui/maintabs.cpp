@@ -63,30 +63,34 @@ bool MainTabs::eventFilter(QObject *receiver, QEvent *event)
 {
     bool result = QObject::eventFilter(receiver, event);
     if (receiver == tabBarRef) {
-            if (event->type() == QEvent::MouseButtonDblClick) {
+        if (event->type() == QEvent::MouseButtonDblClick) {
+            QMouseEvent* me = dynamic_cast<QMouseEvent*>(event);
+            if (me == NULL) {
+                qWarning() << "[MainTabs::eventFilter] NULL MouseEvent";
+            } else {
                 // checking if we can locate the tab
-                QMouseEvent* me = static_cast<QMouseEvent*>(event);
+
                 int clickedTabId = tabBarRef->tabAt(me->pos());
                 if (clickedTabId == -1)
                     return result;
                 //renaming
                 askForRenaming(clickedTabId);
-                return true; //no further handling of this event is required
-            } else if (event->type() == QEvent::MouseButtonPress) {
-                QMouseEvent* me = static_cast<QMouseEvent*>(event);
-                QPoint posGlobal = me->globalPos();
-                int clickedTabId = tabBarRef->tabAt(me->pos());
-                qDebug() << "pressing on tab " << clickedTabId << " x:" << posGlobal.rx() << " y:" << posGlobal.ry();
-            } else if (event->type() == QEvent::MouseButtonRelease) {
-                QMouseEvent* me = static_cast<QMouseEvent*>(event);
-                QPoint posGlobal = me->globalPos();
-                qDebug() << "releasing on tab" << posGlobal.rx() << " y:" << posGlobal.ry();
-            }  else if (event->type() == QEvent::MouseMove) {
-//                QMouseEvent* me = static_cast<QMouseEvent*>(event);
+                return true;  //no further handling of this event is required
+            }
+        }
+        // not usefull right now, probably never will...
+//            else if (event->type() == QEvent::MouseButtonPress) {
+//                QPoint posGlobal = me->globalPos();
+//                int clickedTabId = tabBarRef->tabAt(me->pos());
+//                qDebug() << "pressing on tab " << clickedTabId << " x:" << posGlobal.rx() << " y:" << posGlobal.ry();
+//            } else if (event->type() == QEvent::MouseButtonRelease) {
+//                QPoint posGlobal = me->globalPos();
+//                qDebug() << "releasing on tab" << posGlobal.rx() << " y:" << posGlobal.ry();
+//            }  else if (event->type() == QEvent::MouseMove) {
 
 //                QPoint posGlobal = me->globalPos();
 //                qDebug() << "Moving on tab" << posGlobal.rx() << posGlobal.ry();
-            }
+//            }
         }
     return result;
 }
@@ -179,6 +183,7 @@ void MainTabs::onDeleteTab(int index)
         removeTab(index);
         tabList.remove(tgui);
         delete tgui;
+        setCurrentIndex(index > 0 ? index - 1 : 0);
     } else {
         removeTab(index);
     }
@@ -212,7 +217,7 @@ void MainTabs::onLogCleanStatus()
 
 void MainTabs::receivedNameChanged()
 {
-    TransformsGui *tab = static_cast<TransformsGui *>(sender());
+    TabAbstract *tab = dynamic_cast<TabAbstract *>(sender());
     int index = indexOf(tab);
     if (index == -1) {
         qWarning("[MainTabs] Tab %d not found when renaming T_T",index);
@@ -297,7 +302,7 @@ void MainTabs::receivedBringToFront()
 
 void MainTabs::onFloatingWindowsReject()
 {
-    FloatingDialog *fd = static_cast<FloatingDialog *>(sender());
+    FloatingDialog *fd = dynamic_cast<FloatingDialog *>(sender());
     if (fd != NULL) {
         TabAbstract *tab = activeWindows.key(fd,NULL);
         if (tab != NULL) {

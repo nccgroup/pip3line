@@ -28,5 +28,5 @@ SingleViewAbstract::~SingleViewAbstract()
 
 void SingleViewAbstract::searchAgain()
 {
-    return search(previousSearch);
+    return search(previousSearch,previousMask);
 }

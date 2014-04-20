@@ -31,6 +31,7 @@ const QString GenericTab::LOGID = "FileTab";
 GenericTab::GenericTab(ByteSourceAbstract *bytesource, GuiHelper *guiHelper, QWidget *parent) :
     TabAbstract(guiHelper,parent)
 {
+    ableToReceiveData = false;
     byteSource = bytesource;
     setName(bytesource->name());
     connect(byteSource,SIGNAL(nameChanged(QString)), SLOT(setName(QString)));
@@ -54,7 +55,7 @@ GenericTab::GenericTab(ByteSourceAbstract *bytesource, GuiHelper *guiHelper, QWi
     searchWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
 
     ui->mainLayout->insertWidget(1,searchWidget);
-    connect(searchWidget, SIGNAL(searchRequest(QByteArray,bool)), SLOT(onSearch(QByteArray,bool)));
+    connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
 
     hexView->installEventFilter(this);
     gotoWidget = new(std::nothrow) OffsetGotoWidget(guiHelper,this);
@@ -145,10 +146,7 @@ void GenericTab::setData(const QByteArray &data)
     if (byteSource->isReadonly()) {
         QMessageBox::critical(this, tr("Read only"), tr("The byte source is readonly"),QMessageBox::Ok);
     } else if (byteSource->hasCapability(ByteSourceAbstract::CAP_RESET)) {
-        int ret = QMessageBox::warning(this, tr("Overwritting the entire source"), tr("This will overwrite the entire source"),QMessageBox::Abort, QMessageBox::Ok);
-        if (ret == QMessageBox::Ok) {
-            byteSource->setData(data);
-        }
+        byteSource->setData(data);
     } else {
         QMessageBox::critical(this,tr("Error"), tr("%1 does not have the CAP_RESET capability").arg(((QObject *)byteSource)->metaObject()->className()),QMessageBox::Ok);
     }
@@ -156,7 +154,7 @@ void GenericTab::setData(const QByteArray &data)
 
 bool GenericTab::canReceiveData()
 {
-    return false;
+    return (byteSource != NULL && byteSource->hasCapability(ByteSourceAbstract::CAP_RESET));
 }
 
 void GenericTab::fileLoadRequest()
@@ -167,6 +165,7 @@ void GenericTab::fileLoadRequest()
         if (!fileName.isEmpty()) {
             byteSource->fromLocalFile(fileName);
             integrateByteSource();
+            setName(QFileInfo(fileName).fileName());
         }
     } else {
         QMessageBox::critical(this,tr("Error"), tr("%1 does not have the CAP_LOADFILE capability, ignoring").arg(((QObject *)byteSource)->metaObject()->className()),QMessageBox::Ok);
@@ -192,15 +191,15 @@ void GenericTab::onHistoryForward()
     byteSource->historyForward();
 }
 
-void GenericTab::onSearch(QByteArray item, bool)
+void GenericTab::onSearch(QByteArray item, QBitArray mask, bool)
 {
-    hexView->search(item);
+    hexView->search(item, mask);
 }
 
 bool GenericTab::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_N && keyEvent->modifiers().testFlag(Qt::ControlModifier))  {
             hexView->searchAgain();
             return true;

@@ -21,6 +21,7 @@ if(WITH_QT5)
         find_package(Qt5Core)
         find_package(Qt5Svg)
         find_package(Qt5Network)
+	find_package(Qt5Concurrent)
 else(WITH_QT5)
 	find_package ( Qt4 REQUIRED QtCore QtGui QtSvg QtNetwork QtMain )
 	include ( ${QT_USE_FILE} )
@@ -74,8 +75,6 @@ set ( pip3line_HDRS
 	../tools/binaryprocessor.h
 	../tools/textprocessor.h
 	../tools/serverabstract.h
-	../tools/transformrequest.h
-	../tools/centralprocessor.h
 	../tools/processingstats.h
 	../version.h
 	sources/basicsource.h
@@ -145,8 +144,6 @@ set ( pip3line_SRCS
 	../tools/streamprocessor.cpp
 	../tools/tcpserver.cpp
 	../tools/serverabstract.cpp
-	../tools/transformrequest.cpp
-	../tools/centralprocessor.cpp
 	../tools/processingstats.cpp
 	sources/basicsource.cpp
 	sources/bytesourceabstract.cpp
@@ -228,7 +225,7 @@ endif(WITH_QT5)
 add_executable ( pip3line WIN32 ${pip3line_SRCS} ${UIS} ${RSCS} )
 
 if(WITH_QT5)
-        qt5_use_modules(pip3line Widgets Svg Network )
+        qt5_use_modules(pip3line Widgets Svg Network Concurrent)
 	if(WIN32)
 		target_link_libraries ( pip3line Qt5::WinMain )
 	endif(WIN32)

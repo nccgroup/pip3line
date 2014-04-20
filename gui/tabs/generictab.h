@@ -12,6 +12,7 @@ Released under AGPL see LICENSE for more information
 #define GENERICTAB_H
 
 #include "tababstract.h"
+#include <QBitArray>
 
 namespace Ui {
 class GenericTab;
@@ -40,7 +41,7 @@ class GenericTab : public TabAbstract
         void setData(const QByteArray &data);
         bool canReceiveData();
     private slots:
-        void onSearch(QByteArray item, bool);
+        void onSearch(QByteArray item, QBitArray mask, bool);
         void fileLoadRequest();
         void onGotoOffset(quint64 offset, bool absolute,bool negative, bool select);
         void onHistoryBackward();
@@ -60,6 +61,7 @@ class GenericTab : public TabAbstract
         ClearAllMarkingsButton * clearAllMarksButton;
         ByteSourceGuiButton * guiButton;
         DetachTabButton *detachButton;
+        bool ableToReceiveData;
 };
 
 #endif // GENERICTAB_H

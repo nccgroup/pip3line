@@ -8,22 +8,24 @@ https://github.com/nccgroup/pip3line
 Released under AGPL see LICENSE for more information
 **/
 
-#ifndef TRANSFORMREQUEST_H
-#define TRANSFORMREQUEST_H
+#ifndef THREADEDPROCESSOR_H
+#define THREADEDPROCESSOR_H
 
+#include <QObject>
 #include <QThread>
-#include <QMutex>
-#include <transformabstract.h>
+#include <QFuture>
+#include <QQueue>
+#include <QHash>
+#include "libtransform_global.h"
+#include "transformabstract.h"
 
-class TransformRequest : public QThread
+class LIBTRANSFORMSHARED_EXPORT TransformRequest : public QObject
 {
         Q_OBJECT
-    public:
-        // takes ownership of the TransformAbstract object
+     public:
         explicit TransformRequest(TransformAbstract *transform, const QByteArray &in, quintptr nptid,bool takeOwnerShip = true);
         ~TransformRequest();
-        void run();
-        void setMutex(QMutex *mutex);
+        void runRequest();
         quintptr getptid() const;
     signals:
         void finishedProcessing(QByteArray output, Messages messages);
@@ -38,9 +40,28 @@ class TransformRequest : public QThread
         QByteArray outputData;
         TransformAbstract *transform;
         QList<Message> messagesList;
-        QMutex *mutex;
         quintptr ptid;
         bool deleteObject;
 };
 
-#endif // TRANSFORMREQUEST_H
+
+class LIBTRANSFORMSHARED_EXPORT ThreadedProcessor : public QObject
+{
+        Q_OBJECT
+    public:
+        explicit ThreadedProcessor(QObject *parent = 0);
+        ~ThreadedProcessor();
+    public slots:
+        void processRequest(TransformRequest * request);
+    private slots:
+        void onRequestFinished();
+    private:
+        Q_DISABLE_COPY(ThreadedProcessor)
+        void startRequest(TransformRequest * request);
+        bool isSourceRunning(quintptr source);
+        QHash<TransformRequest *, QFuture<void> > currentRunning;
+        QHash<quintptr, TransformRequest *> waitingRequests;
+        QThread workerThread;
+};
+
+#endif // THREADEDPROCESSOR_H
