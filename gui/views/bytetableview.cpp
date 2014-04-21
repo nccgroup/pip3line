@@ -360,11 +360,13 @@ ByteTableView::ByteTableView(QWidget *parent) :
     }
     setSelectionMode(QAbstractItemView::ContiguousSelection);
 
+    // Do not touch the resize mode policy !!!
+    // Fixed is the only one that has good performance
 #if QT_VERSION >= 0x050000
-    verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 #else
-    verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    verticalHeader()->setResizeMode(QHeaderView::Fixed);
     horizontalHeader()->setResizeMode(QHeaderView::Fixed);
 #endif
     verticalHeader()->setFont(RegularFont);
@@ -663,17 +665,6 @@ bool ByteTableView::getSelectionInfo(int *pos, int *length)
         return true;
     }
     return false;
-}
-
-QSize ByteTableView::sizeHint() const
-{
-    int w = verticalHeader()->width() + 4; // +4 seems to be needed
-    for (int i = 0; i < currentModel->columnCount(); i++)
-        w += columnWidth(i); // seems to include gridline (on my machine)
-
-    QSize size = QTableView::sizeHint();
-    size.setWidth(w);
-    return size;
 }
 
 QByteArray ByteTableView::getSelectedBytes()

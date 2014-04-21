@@ -165,7 +165,6 @@ class ByteTableView : public QTableView
         bool getSelectionInfo(int *pos, int *length);
         void setModel(QAbstractItemModel *) {}
         void setSelectionModel (QItemSelectionModel *) {}
-        QSize sizeHint() const;
         HexSelectionModel *currentSelectionModel;
         ByteItemModel * currentModel;
         HexDelegate * delegate;
