@@ -58,7 +58,7 @@ class LargeFile : public LargeRandomAccessSource
         bool isFileReadable();
         bool isFileWriteable();
         bool seekFile(quint64 offset);
-        QWidget * requestGui(QWidget *parent);
+        QWidget * requestGui(QWidget *parent,ByteSourceAbstract::GUI_TYPE type);
         SearchAbstract *requestSearchObject(QObject *parent = 0);
         bool readData(quint64 offset, QByteArray &data, int size);
         bool writeData(quint64 offset, int length, const QByteArray &data, quintptr source);

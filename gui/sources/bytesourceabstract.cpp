@@ -13,6 +13,7 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QMapIterator>
 #include <QTimerEvent>
+#include <QFileInfo>
 #include "bytesourceabstract.h"
 
 const quintptr ByteSourceAbstract::INVALID_SOURCE = 0;
@@ -177,6 +178,8 @@ ByteSourceAbstract::ByteSourceAbstract(QObject *parent) :
 {
     capabilities = 0;
     confGui = NULL;
+    buttonBar = NULL;
+    upperView = NULL;
     searchObj = NULL;
     cachedMarkingRange = NULL;
     currentHistoryPointer = -1;
@@ -196,6 +199,19 @@ ByteSourceAbstract::~ByteSourceAbstract()
     }
     clearAllMarkings();
     delete confGui;
+}
+
+QString ByteSourceAbstract::name()
+{
+    return _name;
+}
+
+void ByteSourceAbstract::setName(QString newName)
+{
+    if (_name.compare(newName) != 0) {
+        _name = newName;
+        emit nameChanged(newName);
+    }
 }
 
 void ByteSourceAbstract::setData(QByteArray, quintptr )
@@ -294,6 +310,7 @@ bool ByteSourceAbstract::setReadOnly(bool readonly)
             return readonly;
 
     _readonly = readonly;
+    emit readOnlyChanged(_readonly);
 
     return true;
 }
@@ -529,6 +546,12 @@ void ByteSourceAbstract::clearMarking(quint64 start, quint64 end)
     emit updated(INVALID_SOURCE);
 }
 
+void ByteSourceAbstract::setNewMarkingsMap(QMap<ComparableRange, ByteSourceAbstract::Markings> newUserMarkingsRanges)
+{
+    userMarkingsRanges = newUserMarkingsRanges;
+    emit updated(INVALID_SOURCE);
+}
+
 void ByteSourceAbstract::clearAllMarkings()
 {
     clearAllMarkingsNoUpdate();
@@ -676,15 +699,32 @@ bool ByteSourceAbstract::hasDiscreetView()
     return false;
 }
 
-QWidget *ByteSourceAbstract::getGui(QWidget *parent)
+QWidget *ByteSourceAbstract::getGui(QWidget *parent,ByteSourceAbstract::GUI_TYPE type)
 {
-    if (confGui == NULL) {
-        confGui = requestGui(parent);
-        if (confGui != NULL) {
-            connect(confGui, SIGNAL(destroyed()), this, SLOT(onGuiDestroyed()), Qt::UniqueConnection);
+    QWidget **requestedGui = NULL;
+
+    switch (type) {
+        case (ByteSourceAbstract::GUI_CONFIG):
+            requestedGui = &confGui;
+            break;
+        case (GUI_BUTTONS):
+            requestedGui = &buttonBar;
+            break;
+        case (GUI_UPPER_VIEW):
+            requestedGui = &upperView;
+            break;
+        default:
+            qCritical() << tr("Unmanaged ByteSourceAbstract::GUI_TYPE:%1").arg(type);
+            return NULL;
+    }
+
+    if ((*requestedGui) == NULL) {
+        (*requestedGui) = requestGui(parent, type);
+        if ((*requestedGui) != NULL) {
+            connect((*requestedGui), SIGNAL(destroyed()), this, SLOT(onGuiDestroyed()), Qt::UniqueConnection);
         }
     }
-    return confGui;
+    return (*requestedGui);
 }
 
 int ByteSourceAbstract::viewSize()
@@ -704,10 +744,21 @@ void ByteSourceAbstract::setViewSize(int)
 
 void ByteSourceAbstract::onGuiDestroyed()
 {
-    confGui = NULL;
+    QWidget *gobj = qobject_cast<QWidget *>(sender());
+    if (gobj == confGui) {
+        confGui = NULL;
+    }
+    else if (gobj == buttonBar) {
+        buttonBar = NULL;
+    }
+    else if (gobj == upperView){
+        upperView = NULL;
+    }
+    else
+        qCritical() << "[ByteSourceAbstract::onGuiDestroyed] Unknown destroyed widget";
 }
 
-QWidget *ByteSourceAbstract::requestGui(QWidget *)
+QWidget *ByteSourceAbstract::requestGui(QWidget *, ByteSourceAbstract::GUI_TYPE)
 {
     return NULL;
 }
@@ -839,7 +890,10 @@ void ByteSourceAbstract::fromLocalFile(QString fileName)
 
         setData(file.readAll());
         file.close();
+        QFileInfo finfo(fileName);
+        setName(finfo.fileName());
     }
+
 }
 
 void ByteSourceAbstract::writeToFile(QString destFilename, QByteArray data)

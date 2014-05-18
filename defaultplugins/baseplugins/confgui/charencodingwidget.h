@@ -28,8 +28,10 @@ class CharEncodingWidget : public QWidget
     private slots:
             void onCodecChange();
             void on_UTF16PushButton_clicked();
-
             void on_latin1PushButton_clicked();
+            void onUTF8Clicked();
+            void onInsertBOMChanged(bool val);
+            void onConvertInvalidToNullChanged(bool val);
 
     private:
         Ui::CharEncodingWidget *ui;

@@ -42,7 +42,7 @@ void FloatingDialog::closeEvent(QCloseEvent *event)
     if (allowReject) {
         reject();
     }
-    emit hiding();
+    //emit hiding(); ??
     event->accept();
 
 }

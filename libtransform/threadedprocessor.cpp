@@ -112,6 +112,7 @@ ThreadedProcessor::~ThreadedProcessor()
 
 void ThreadedProcessor::processRequest(TransformRequest *request)
 {
+
     quintptr source = request->getptid();
     if (isSourceRunning(source)) {
         if (waitingRequests.contains(source)) {

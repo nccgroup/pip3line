@@ -19,6 +19,7 @@ Released under AGPL see LICENSE for more information
 #include <commonstrings.h>
 #include <QIODevice>
 #include <QBitArray>
+#include <QAbstractListModel>
 #include <QList>
 
 class QTimerEvent;

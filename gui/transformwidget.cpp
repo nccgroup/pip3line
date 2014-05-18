@@ -26,7 +26,6 @@ Released under AGPL see LICENSE for more information
 #include <QtAlgorithms>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QMimeData>
 #include <QColorDialog>
 #include <QRgb>
 #include <QColor>
@@ -45,6 +44,7 @@ Released under AGPL see LICENSE for more information
 #include "shared/searchwidget.h"
 #include "views/textview.h"
 #include "views/hexview.h"
+#include "shared/messagepanelwidget.h"
 #include <QDebug>
 #include <QRegExp>
 #include "shared/clearallmarkingsbutton.h"
@@ -75,6 +75,7 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
 
     connect(byteSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger, SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)), Qt::QueuedConnection);
     connect(byteSource, SIGNAL(updated(quintptr)), this, SLOT(refreshOutput()));
+    connect(byteSource, SIGNAL(nameChanged(QString)), this, SIGNAL(tryNewName(QString)));
 
     ui->setupUi(this);
 
@@ -91,7 +92,15 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
 
     configureViewArea();
 
-    ui->messagesScrollArea->hide();
+    messagePanel = new(std::nothrow) MessagePanelWidget(this);
+    if (messagePanel == NULL) {
+        qFatal("Cannot allocate memory for MessagePanelWidget X{");
+    }
+
+
+    ui->mainLayout->insertWidget(0,messagePanel);
+    connect(byteSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), messagePanel, SLOT(log(QString,QString,Pip3lineConst::LOGLEVEL)));
+
     firstView = true;
     setAcceptDrops(true);
 
@@ -141,7 +150,7 @@ void TransformWidget::configureViewArea() {
     ui->tabWidget->installEventFilter(this);
     this->installEventFilter(this);
 
-    searchWidget = new SearchWidget(byteSource, this);
+    searchWidget = new(std::nothrow) SearchWidget(byteSource, this);
     if (searchWidget == NULL) {
         qFatal("Cannot allocate memory for SearchWidget X{");
     }
@@ -152,7 +161,7 @@ void TransformWidget::configureViewArea() {
     connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
     connect(textView, SIGNAL(searchStatus(bool)), searchWidget,SLOT(setError(bool)));
 
-    gotoWidget = new OffsetGotoWidget(guiHelper, this);
+    gotoWidget = new(std::nothrow) OffsetGotoWidget(guiHelper, this);
     if (gotoWidget == NULL) {
         qFatal("Cannot allocate memory for OffsetGotoWidget X{");
     }
@@ -301,11 +310,11 @@ void TransformWidget::refreshOutput()
 
 void TransformWidget::processingFinished(QByteArray output, Messages messages)
 {
-    ui->messagesDisplay->clear();
+    messagePanel->clear();
     outputData = output;
 
     if (messages.isEmpty()) {
-        ui->messagesScrollArea->hide();
+        messagePanel->closeWidget();
     } else {
         for (int i = 0; i < messages.size() ; i++) {
             switch (messages.at(i).level) {
@@ -385,26 +394,19 @@ void TransformWidget::forceUpdating()
 }
 
 void TransformWidget::logWarning(const QString message, const QString source) {
-    addMessage(message,Qt::blue);
+    messagePanel->addMessage(message,Qt::blue);
     emit warning(message, source);
 }
 
 void TransformWidget::logError(const QString message, const QString source) {
-    addMessage(message,Qt::red);
+    messagePanel->addMessage(message,Qt::red);
     emit error(message,source);
 }
 
 void TransformWidget::logStatus(const QString message, const QString source)
 {
-    addMessage(message,Qt::black);
+    messagePanel->addMessage(message,Qt::black);
     emit status(message,source);
-}
-
-void TransformWidget::addMessage(const QString &message, QColor color)
-{
-    ui->messagesDisplay->setTextColor(color);
-    ui->messagesDisplay->append(message);
-    ui->messagesScrollArea->setVisible(true);
 }
 
 void TransformWidget::reset()
@@ -424,25 +426,6 @@ void TransformWidget::reset()
     ui->deleteButton->setEnabled(false);
     ui->infoPushButton->setEnabled(false);
     ui->tabWidget->setCurrentWidget(textView);
-}
-
-void TransformWidget::setDownload(QUrl url)
-{
-    if (manager != NULL) {
-        DownloadManager * downloadManager = new(std::nothrow) DownloadManager(url, manager, byteSource);
-        if (downloadManager == NULL) {
-            qFatal("Cannot allocate memory for setDownload downloadManager X{");
-            return;
-        }
-        connect(downloadManager, SIGNAL(error(QString,QString)), this, SLOT(logError(QString, QString)));
-        connect(downloadManager, SIGNAL(error(QString,QString)), this, SLOT(logWarning(QString, QString)));
-        connect(downloadManager,SIGNAL(finished(DownloadManager *)),this, SLOT(downloadFinished(DownloadManager *)));
-        downloadManager->launch();
-        ui->activityStackedWidget->setCurrentIndex(0);
-
-    } else {
-        logError(tr("No NetworkManager configured, no download launched"));
-    }
 }
 
 void TransformWidget::configureDirectionBox()
@@ -494,12 +477,6 @@ bool TransformWidget::eventFilter(QObject *obj, QEvent *event)
     return QObject::eventFilter(obj, event);
 }
 
-void TransformWidget::downloadFinished(DownloadManager * downloadManager)
-{
-    ui->activityStackedWidget->setCurrentIndex(1);
-    delete downloadManager;
-}
-
 void TransformWidget::updateView(quintptr)
 {
     refreshOutput();
@@ -512,85 +489,16 @@ void TransformWidget::onInvalidText()
 
 void TransformWidget::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (event->mimeData()->hasHtml() || event->mimeData()->hasText() || event->mimeData()->hasUrls())
-        event->acceptProposedAction();
+    guiHelper->processDragEnter(event, byteSource);
 }
 
 void TransformWidget::dropEvent(QDropEvent *event)
 {
-    QStringList formats  = event->mimeData()->formats();
-
-    for (int i = 0; i < formats.size(); i++) {
-        qDebug() << formats.at(i);
-    }
-
-    if (event->mimeData()->hasImage()) {
-            qDebug() << event->mimeData()->imageData();
-    } else if (event->mimeData()->hasUrls() || formats.contains("text/uri-list")) {
-
-        QList<QUrl> list = event->mimeData()->urls();
-
-
-        if (list.size() < 1) {
-            logError(tr("Url list is empty, nothing to drop"));
-            event->acceptProposedAction();
-            return;
-        }
-
-        if (list.size() > 1) {
-            logError(tr("Multiple urls entered, only opening the first one"));
-        }
-
-        QUrl resource = list.at(0);
-
-        QString filename = QString(QByteArray::fromPercentEncoding(resource.toEncoded()));
-
-        logger->logStatus(tr("Received %1 for Drop action").arg(filename));
-
-        if (resource.scheme() == "file") {
-#if defined(Q_OS_WIN32)
-            if (filename.at(0) == '/') // bug on QT < 5 (Windows only)
-                filename = filename.mid(1);
-            if (filename.startsWith("file:///"))
-                filename = filename.mid(8);
-#else
-            if (filename.startsWith("file:///"))
-                filename = filename.mid(7);
-#endif
-
-            fromLocalFile(filename);
-        } else {
-            setDownload(resource);
-        }
-        event->acceptProposedAction();
-    } else if (event->mimeData()->hasText() || event->mimeData()->hasHtml()) {
-        QUrl resource(event->mimeData()->text().toUtf8());
-
-        if (resource.scheme() ==  "https" || resource.scheme() ==  "http" || resource.scheme() ==  "ftp" || resource.scheme() ==  "file") {
-            int res = QMessageBox::question(this, "Download?","This looks like a valid URL.", QMessageBox::Yes, QMessageBox::No);
-            if (res ==  QMessageBox::Yes) {
-                logger->logStatus(tr("Received %1 for Drop action").arg(resource.toString()));
-
-                setDownload(resource);
-
-            } else {
-                byteSource->setData(event->mimeData()->text().toUtf8());
-            }
-        } else {
-            byteSource->setData(event->mimeData()->text().toUtf8());
-
-        }
-        event->acceptProposedAction();
-    } else {
-        logger->logWarning(tr("Don't know how to handle this Drop action"));
-    }
+    guiHelper->processDropEvent(event, byteSource);
 }
 
 void TransformWidget::fromLocalFile(QString fileName)
 {
-    QFileInfo finfo(fileName);
-    emit tryNewName(finfo.fileName());
-
     byteSource->fromLocalFile(fileName);
 }
 

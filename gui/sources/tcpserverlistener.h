@@ -44,16 +44,18 @@ class TcpServerListener : public BlocksSource
     public:
         explicit TcpServerListener(QObject *parent = 0);
         ~TcpServerListener();
-        void sendBlock(const QByteArray & block);
-        void startListening();
+        void sendBlock(const Block & block);
+        bool startListening();
         void stopListening();
-        QHostAddress getListeningAddress() const;
+        void postBlockForSending(Block block);
+    public slots:
         void setListeningAddress(const QHostAddress &value);
+        void setPort(const quint16 &value);
     signals:
-        void blockReceived(QByteArray data);
-        void broadcastBlock(QByteArray data);
+        void blockToClient(Block block);
     private slots:
         void clientFinished();
+        void onClientReceivedBlock(Block block);
 #if QT_VERSION >= 0x050000
         void handlingClient(qintptr socketDescriptor);
 #else
@@ -61,8 +63,11 @@ class TcpServerListener : public BlocksSource
 #endif
 
     private:
+        static const quint16 DEFAULT_PORT;
+        static const QHostAddress DEFAULT_ADDRESS;
         void startingWorkers();
         void stoppingWorkers();
+        QWidget *requestGui(QWidget * parent);
         QHostAddress listeningAddress;
         quint16 port;
         QThread *workerThread;

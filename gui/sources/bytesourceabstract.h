@@ -19,7 +19,7 @@ Released under AGPL see LICENSE for more information
 #include <commonstrings.h>
 #include "searchabstract.h"
 
-class QWidget;
+class SourceWidgetAbstract;
 
 class OffsetsRange
 {
@@ -87,6 +87,12 @@ class ByteSourceAbstract : public QObject
             CAP_SEARCH = 0x80
         };
 
+        enum GUI_TYPE {
+            GUI_CONFIG,
+            GUI_BUTTONS,
+            GUI_UPPER_VIEW
+        };
+
         struct Markings {
                 QColor bgcolor;
                 QColor fgcolor;
@@ -96,11 +102,19 @@ class ByteSourceAbstract : public QObject
                 }
         };
 
+        enum HistAction {INSERT = 0, REMOVE = 1, REPLACE = 2}; // int values are used for debugging only
+        struct HistItem {
+               HistAction action;
+               quint64 offset;
+               QByteArray before;
+               QByteArray after;
+        };
+
         explicit ByteSourceAbstract(QObject *parent = 0);
         virtual ~ByteSourceAbstract();
         virtual QString description() = 0;
-        virtual QString name() = 0;
-        virtual void setData(QByteArray data, quintptr source = INVALID_SOURCE); // not always possible
+        virtual QString name();
+        virtual void setName(QString newName);
         virtual QByteArray getRawData(); // not always possible
         virtual quint64 size();
         virtual int viewSize();
@@ -131,7 +145,7 @@ class ByteSourceAbstract : public QObject
         virtual bool tryMoveDown(int size);
         virtual bool hasDiscreetView();
 
-        QWidget * getGui(QWidget *parent = 0);
+        QWidget * getGui(QWidget *parent = 0,ByteSourceAbstract::GUI_TYPE type = ByteSourceAbstract::GUI_CONFIG);
 
         virtual void viewMark(int start, int end, const QColor &bgcolor,const QColor &fgColor = QColor(), QString toolTip = QString());
 
@@ -166,29 +180,25 @@ class ByteSourceAbstract : public QObject
         void mark(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor = QColor(), QString toolTip = QString());
         // use the next function with caution as it does not send updates signals
         void markNoUpdate(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor = QColor(), QString toolTip = QString());
+        virtual void setData(QByteArray data, quintptr source = INVALID_SOURCE); // not always possible
     private slots:
         void onGuiDestroyed();
+        void setNewMarkingsMap(QMap<ComparableRange, Markings> newUserMarkingsRanges);
     signals:
         void updated(quintptr source);
         void minorUpdate(quint64,quint64);
         void log(QString mess, QString source, Pip3lineConst::LOGLEVEL level);
         void nameChanged(QString newName);
         void sizeChanged();
+        void readOnlyChanged(bool readonly);
         
     protected:
-        enum HistAction {INSERT = 0, REMOVE = 1, REPLACE = 2}; // int values are used for debugging only
-        struct HistItem {
-               HistAction action;
-               quint64 offset;
-               QByteArray before;
-               QByteArray after;
-        };
         QList<HistItem> history;
         int currentHistoryPointer;
         bool applyingHistory;
 
         enum TabType {TAB_GENERIC = 0, TAB_TRANSFORM = 1, TAB_LARGERANDOM = 2};
-        virtual QWidget * requestGui(QWidget *parent);
+        virtual QWidget * requestGui(QWidget *parent,ByteSourceAbstract::GUI_TYPE type);
         virtual SearchAbstract *requestSearchObject(QObject *parent);
         void historyApply(HistItem item, bool forward);
         void historyAddInsert(quint64 offset, QByteArray after);
@@ -200,11 +210,13 @@ class ByteSourceAbstract : public QObject
         bool _readonly;
         static const quintptr INVALID_SOURCE;
         quint32 capabilities;
-
         QMap<ComparableRange, Markings> userMarkingsRanges;
         OffsetsRange *cachedMarkingRange;
         QWidget *confGui;
+        QWidget *buttonBar;
+        QWidget *upperView;
         SearchAbstract *searchObj;
+        QString _name;
 };
 
 

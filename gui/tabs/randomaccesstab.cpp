@@ -47,7 +47,7 @@ RandomAccessTab::RandomAccessTab(ByteSourceAbstract *nbyteSource, GuiHelper *gui
 
     ui->mainLayout->insertWidget(ui->mainLayout->indexOf(ui->logsWidget) + 1,hexView);
 
-    searchWidget = new SearchWidget(byteSource, this);
+    searchWidget = new(std::nothrow) SearchWidget(byteSource, this);
     if (searchWidget == NULL) {
         qFatal("Cannot allocate memory for SearchWidget X{");
     }

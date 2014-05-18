@@ -24,12 +24,19 @@ Released under AGPL see LICENSE for more information
 #include "guihelper.h"
 #include <QSettings>
 #include <QStandardItemModel>
+#include <QSslConfiguration>
 #include <QDebug>
+#include <QNetworkProxy>
+#include <QNetworkAccessManager>
 #include "loggerwidget.h"
 
 using namespace Pip3lineConst;
 
 const QString SettingsDialog::LOGID = "SettingsDialog";
+const QString SettingsDialog::DEFAULT_GLOBAL_PROXY_IP = "127.0.0.1";
+const quint16 SettingsDialog::DEFAULT_GLOBAL_PROXY_PORT = 8080;
+const QString SettingsDialog::SETTINGS_GLOBAL_PROXY_IP = "GlobalProxyIP";
+const QString SettingsDialog::SETTINGS_GLOBAL_PROXY_PORT = "GlobalProxyPort";
 
 SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
     AppDialog(nhelper, parent)
@@ -50,6 +57,8 @@ SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
     ui->autoUpdateCheckBox->setChecked(settings->value(SETTINGS_AUTO_UPDATE, true).toBool());
     ui->minimizeCheckBox->setChecked(settings->value(SETTINGS_MINIMIZE_TO_TRAY, true).toBool());
     ui->hexWidget->setChar(guiHelper->getDefaultServerSeparator());
+    ui->proxyHostLineEdit->setText(settings->value(SETTINGS_GLOBAL_PROXY_IP,DEFAULT_GLOBAL_PROXY_IP).toString());
+    ui->proxyPortSpinBox->setValue(settings->value(SETTINGS_GLOBAL_PROXY_PORT, QString::number(DEFAULT_GLOBAL_PROXY_PORT)).toInt());
 
     connect(ui->autoUpdateCheckBox, SIGNAL(toggled(bool)), this, SLOT(autoUpdateChanged(bool)));
     connect(ui->minimizeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onMinimizeChanged(bool)));
@@ -61,6 +70,9 @@ SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
     updateSavedMarkingColors();
     updateImportExportFuncs();
     updateFilter();
+
+    ui->proxyHostLineEdit->setEnabled(ui->enableProxyCheckBox->isChecked());
+    ui->proxyPortSpinBox->setEnabled(ui->enableProxyCheckBox->isChecked());
 
     connect(tManager, SIGNAL(savedUpdated()), this, SLOT(updateRegisteredList()));
     connect(guiHelper, SIGNAL(markingsUpdated()), this, SLOT(updateSavedMarkingColors()));
@@ -77,6 +89,8 @@ SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
     connect(ui->importExportListWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(onDoubleClickImportExportFuncs(QListWidgetItem*)));
     connect(ui->addImportExportPushButton, SIGNAL(clicked()), this, SLOT(onAddImportExportFuncs()));
     connect(ui->offsetBaseComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(onOffsetBaseChanged(QString)));
+    connect(ui->enableProxyCheckBox, SIGNAL(toggled(bool)), SLOT(onProxyEnabledChanged(bool)));
+    connect(ui->ignoreSSLErrCheckBox, SIGNAL(toggled(bool)), SLOT(onIgnoreSSLErrChanged(bool)));
 }
 
 SettingsDialog::~SettingsDialog()
@@ -390,5 +404,35 @@ void SettingsDialog::onOffsetBaseChanged(QString val)
     } else {
         guiHelper->setDefaultOffsetBase(intval);
     }
+}
+
+void SettingsDialog::onIgnoreSSLErrChanged(bool ignore)
+{
+    QSslConfiguration currentConf = QSslConfiguration::defaultConfiguration();
+    if (ignore) {
+        currentConf.setPeerVerifyMode(QSslSocket::VerifyNone);
+    }
+    else {
+        currentConf.setPeerVerifyMode(QSslSocket::AutoVerifyPeer);
+
+    }
+    QSslConfiguration::setDefaultConfiguration(currentConf);
+}
+
+void SettingsDialog::onProxyEnabledChanged(bool proxyEnable)
+{
+    QNetworkProxy networkProxy = guiHelper->getNetworkManager()->proxy();
+    if (proxyEnable) {
+        networkProxy.setType(QNetworkProxy::HttpProxy);
+        networkProxy.setHostName(ui->proxyHostLineEdit->text());
+        networkProxy.setPort(ui->proxyPortSpinBox->value());
+    } else {
+        networkProxy = QNetworkProxy::DefaultProxy;
+    }
+
+    ui->proxyHostLineEdit->setEnabled(proxyEnable);
+    ui->proxyPortSpinBox->setEnabled(proxyEnable);
+
+    guiHelper->getNetworkManager()->setProxy(networkProxy);
 }
 

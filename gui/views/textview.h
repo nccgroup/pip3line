@@ -16,6 +16,7 @@ Released under AGPL see LICENSE for more information
 #include <QQueue>
 #include <QSemaphore>
 #include <QThread>
+#include <commonstrings.h>
 
 #include "singleviewabstract.h"
 
@@ -37,17 +38,14 @@ class TextView : public SingleViewAbstract
         ~TextView();
         void setModel(ByteSourceAbstract *byteSource);
         void search(QByteArray item, QBitArray mask = QBitArray());
-
     signals:
         void invalidText();
         void searchStatus(bool);
-
     private slots:
         void updateSendToMenu();
         void updateImportExportMenu();
         void onTextChanged();
         void updateText(quintptr source);
-        void reveceivingTextChunk(const QString &chunk);
         void updateStats();
         void onRightClick(QPoint pos);
         void onLoad(QAction *action);
@@ -58,7 +56,7 @@ class TextView : public SingleViewAbstract
         void onSelectAll();
         void onKeepOnlySelection();
         void onCodecChange(QString codecName);
-
+        void onReadOnlyChanged(bool viewIsReadonly);
     private:
         Q_DISABLE_COPY(TextView)
         void buildContextMenu();
@@ -78,10 +76,7 @@ class TextView : public SingleViewAbstract
         QAction * selectAllAction;
         QAction * keepOnlySelectedAction;
         QHash<QAction *, TabAbstract *> sendToTabMapping;
-
         Ui::TextView *ui;
-
-
         QTextCodec *currentCodec;
         bool errorNotReported;
 };

@@ -64,11 +64,18 @@ void XorWidget::onTypeChange(int index)
 
 bool XorWidget::eventFilter(QObject *o, QEvent *e)
 {
+    QEvent::Type etyp = e->type();
     // Filtering out wheel event for comboboxes
-    if ( e->type() == QEvent::Wheel && qobject_cast<QComboBox*>(o) )
+    if ( etyp == QEvent::Wheel && qobject_cast<QComboBox*>(o) )
     {
         e->ignore();
         return true;
     }
     return false;
+}
+
+void XorWidget::focusOutEvent(QFocusEvent *event)
+{
+    qDebug() << "focusOutEvent" << event->lostFocus();
+    QWidget::focusOutEvent(event);
 }

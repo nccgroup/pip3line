@@ -30,7 +30,8 @@ class ReadOnlyButton : public QPushButton
         ByteSourceAbstract *byteSource;
         static const QString ReadWrite;
         static const QString ReadOnly;
-        static const QString ButtonToolTip;
+        static const QString ButtonToolTipRW;
+        static const QString ButtonToolTipRO;
         static const QString CAP_WRITE_ToolTip;
 
 };

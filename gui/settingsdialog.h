@@ -58,10 +58,16 @@ class SettingsDialog : public AppDialog
         void onServerSeparatorChanged(char c);
         void onServerPipeNameChanged(QString name);
         void onOffsetBaseChanged(QString val);
+        void onIgnoreSSLErrChanged(bool ignore);
+        void onProxyEnabledChanged(bool proxyEnable);
         
     private:
         Q_DISABLE_COPY(SettingsDialog)
         static const QString LOGID;
+        static const QString SETTINGS_GLOBAL_PROXY_IP;
+        static const QString SETTINGS_GLOBAL_PROXY_PORT;
+        static const QString DEFAULT_GLOBAL_PROXY_IP;
+        static const quint16 DEFAULT_GLOBAL_PROXY_PORT;
         TransformMgmt *tManager;
         QHash<QString, int> stackedList;
         Ui::SettingsDialog *ui;

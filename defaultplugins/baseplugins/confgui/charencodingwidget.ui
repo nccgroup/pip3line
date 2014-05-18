@@ -77,6 +77,19 @@
        <number>0</number>
       </property>
       <item alignment="Qt::AlignHCenter">
+       <widget class="QPushButton" name="UTF8pushButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>UTF-8</string>
+        </property>
+       </widget>
+      </item>
+      <item alignment="Qt::AlignHCenter">
        <widget class="QPushButton" name="UTF16PushButton">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -100,6 +113,29 @@
         <property name="text">
          <string>latin1 (ISO-8859-1)</string>
         </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_3">
+        <property name="title">
+         <string>Misc parameters</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item alignment="Qt::AlignHCenter">
+          <widget class="QCheckBox" name="convertInvalidToNullCheckBox">
+           <property name="text">
+            <string>Convert invalid value to NULL char</string>
+           </property>
+          </widget>
+         </item>
+         <item alignment="Qt::AlignHCenter">
+          <widget class="QCheckBox" name="insertBOMCheckBox">
+           <property name="text">
+            <string>Insert BOM header</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>

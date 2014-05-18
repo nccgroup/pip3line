@@ -83,6 +83,7 @@ const QString BasicSource::LOGID("BasicSource");
 BasicSource::BasicSource(QObject *parent) :
     ByteSourceAbstract(parent)
 {
+    _name = tr("Basic source");
     capabilities = CAP_RESET | CAP_RESIZE | CAP_HISTORY | CAP_TRANSFORM | CAP_LOADFILE | CAP_SEARCH | CAP_WRITE | CAP_COMPARE;
    // qDebug() << "Created: " << this;
 }
@@ -96,12 +97,6 @@ QString BasicSource::description()
 {
     return name();
 }
-
-QString BasicSource::name()
-{
-    return tr("Basic source");
-}
-
 
 void BasicSource::setData(QByteArray data, quintptr source)
 {
@@ -147,12 +142,12 @@ char BasicSource::extract(quint64 offset)
 
 void BasicSource::replace(quint64 offset, int length, QByteArray repData, quintptr source)
 {
-
     if (!_readonly && validateOffsetAndSize(offset, length)) {
         historyAddReplace(offset, rawData.mid(offset,length),repData);
         rawData.replace(offset,length,repData);
         emit updated(source);
-        emit sizeChanged();
+        if (length != repData.size())
+            emit sizeChanged();
     }
 }
 

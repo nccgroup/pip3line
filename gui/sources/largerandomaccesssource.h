@@ -30,6 +30,7 @@ class LargeRandomAccessSource : public ByteSourceAbstract
         virtual char extract(quint64 offset);
         virtual char viewExtract(int offset);
         virtual void replace(quint64 offset, int length, QByteArray repData, quintptr source = INVALID_SOURCE);
+        virtual void viewReplace(int offset, int length, QByteArray repData, quintptr source = INVALID_SOURCE);
         virtual void insert(quint64 offset, QByteArray repData, quintptr source = INVALID_SOURCE);
         virtual void remove(quint64 offset, int length, quintptr source = INVALID_SOURCE);
         virtual void clear(quintptr source = INVALID_SOURCE);

@@ -49,6 +49,7 @@ Released under AGPL see LICENSE for more information
 #include "comparisondialog.h"
 #include "sources/tcpserverlistener.h"
 #include "sources/tcplistener.h"
+#include "sources/intercepsource.h"
 
 using namespace Pip3lineConst;
 
@@ -56,6 +57,7 @@ const QString MainWindow::NEW_TRANSFORMTAB = "Transform tab";
 const QString MainWindow::NEW_FILE = "File";
 const QString MainWindow::NEW_CURRENTMEM = "Current memory";
 const QString MainWindow::NEW_BASEHEX = "Hexeditor";
+const QString MainWindow::NEW_INTERCEP = "Interceptor";
 
 MainWindow::MainWindow(bool debug, QWidget *parent) :
     QMainWindow(parent)
@@ -83,6 +85,8 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 
     qRegisterMetaType<Pip3lineConst::LOGLEVEL>("Pip3lineConst::LOGLEVEL");
     qRegisterMetaType<quintptr>("quintptr");
+    qRegisterMetaType<Block>("Block");
+    qRegisterMetaType<QHostAddress>("QHostAddress");
 #if QT_VERSION >= 0x050000
     qRegisterMetaType<qintptr>("qintptr");
 #endif
@@ -110,13 +114,6 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     else
         ui->actionDebug_dialog->setVisible(false);
 
-//    networkProxy.setType(QNetworkProxy::HttpProxy);
-//    networkProxy.setHostName("127.0.0.1");
-//    networkProxy.setPort(8080);
-//    networkManager.setProxy(networkProxy);
-
-
-
     mainTabs = new(std::nothrow) MainTabs(guiHelper, this);
     if (mainTabs == NULL) {
         qFatal("Cannot allocate memory for MainTabs X{");
@@ -140,9 +137,9 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     }
 
     // by default everything is base64 encoded, to avoid parsing issues
-    blockListener->setBase64Applied(true);
+    blockListener->setDecodeinput(true);
 
-    connect(blockListener, SIGNAL(blockReceived(QByteArray)), mainTabs, SLOT(newTabTransform(QByteArray)),Qt::QueuedConnection);
+    connect(blockListener, SIGNAL(blockReceived(Block)), SLOT(onExternalBlockReceived(Block)),Qt::QueuedConnection);
     connect(blockListener,SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
     connect(blockListener, SIGNAL(status(QString,QString)), logger, SLOT(logStatus(QString,QString)));
     QTimer::singleShot(0,blockListener,SLOT(startListening()));
@@ -217,6 +214,12 @@ void MainWindow::buildToolBar()
         qFatal("Cannot allocate memory for QAction NEW_CURRENTMEM X{");
     }
     newMenu->addAction(action);
+
+//    action = new(std::nothrow) QAction(NEW_INTERCEP, newMenu);
+//    if (action == NULL) {
+//    qFatal("Cannot allocate memory for QAction NEW_INTERCEP X{");
+//    }
+//    newMenu->addAction(action);
 
     newPushButton->setMenu(newMenu);
 
@@ -303,21 +306,19 @@ void MainWindow::onSettingsDialogOpen(bool checked)
 void MainWindow::checkForUpdates()
 {
     QUrl resource(UPDATE_URL);
-    DownloadManager * dm = new(std::nothrow) DownloadManager(resource, &networkManager);
+    DownloadManager * dm = new(std::nothrow) DownloadManager(resource, guiHelper);
     if (dm == NULL) {
         qFatal("Cannot allocate memory for DownloadManager (updates) X{");
         return;
     }
-    connect(dm,SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
-    connect(dm, SIGNAL(warning(QString,QString)), logger, SLOT(logWarning(QString,QString)));
-    connect(dm, SIGNAL(finished(DownloadManager*)), this, SLOT(processingCheckForUpdate(DownloadManager*)));
 
-    dm->launch();
+    connect(dm, SIGNAL(finished(QByteArray)), this, SLOT(processingCheckForUpdate(QByteArray)));
+    guiHelper->requestDownload(resource, NULL,dm);
 }
 
-void MainWindow::processingCheckForUpdate(DownloadManager *dm)
+void MainWindow::processingCheckForUpdate(QByteArray bdata)
 {
-    QString data = QString::fromUtf8(dm->getData());
+    QString data = QString::fromUtf8(bdata.constData(),bdata.size());
     QString message = "Unknown";
 
     QRegExp versionRegExp("^([0-9]{1,2})\\.([0-9]{1,2})\\.?([0-9]{0,2})");
@@ -356,20 +357,16 @@ void MainWindow::processingCheckForUpdate(DownloadManager *dm)
 
     if (settingsDialog != NULL)
         settingsDialog->setVersionUpdateMessage(message);
-
-    delete dm;
 }
 
-void MainWindow::processingUrlDownload(DownloadManager *dm)
+void MainWindow::processingUrlDownload(QByteArray data)
 {
-    QByteArray data = dm->getData();
     if (data.isEmpty()) {
         data = "No data from URL";
         mainTabs->newTabTransform(data);
     } else {
         mainTabs->newTabTransform(data);
     }
-    delete dm;
     showWindow();
 }
 
@@ -421,9 +418,15 @@ void MainWindow::showWindow()
 
 }
 
+void MainWindow::onExternalBlockReceived(const Block &block)
+{
+    guiHelper->routeExternalDataBlock(block.data);
+}
+
 void MainWindow::hideEvent(QHideEvent *event)
 {
     savedPos = pos();
+    guiHelper->goIntoHidding();
     QMainWindow::hideEvent(event);
 }
 
@@ -553,6 +556,20 @@ void MainWindow::onNewAction(QAction *action)
 
         mainTabs->integrateTab(tab);
 
+    } else if (action->text() == NEW_INTERCEP) {
+        IntercepSource * is = new(std::nothrow) IntercepSource();
+        if (is == NULL) {
+            qFatal("Cannot allocate memory for IntercepSource X{");
+        }
+        connect(is,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+
+        GenericTab *tab = new(std::nothrow) GenericTab(is,guiHelper,mainTabs);
+        if (tab == NULL) {
+            qFatal("Cannot allocate memory for GenericTab X{");
+        }
+        tab->setName("");
+
+        mainTabs->integrateTab(tab);
     }
 }
 
@@ -608,15 +625,13 @@ void MainWindow::onDataFromURL()
     QString input = QApplication::clipboard()->text();
     QUrl resource(input);
     if (resource.isValid()) {
-        DownloadManager * dm = new(std::nothrow) DownloadManager(resource, &networkManager);
+        DownloadManager * dm = new(std::nothrow) DownloadManager(resource, guiHelper);
         if (dm == NULL) {
             qFatal("Cannot allocate memory for DownloadManager (url) X{");
             return;
         }
-        connect(dm,SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
-        connect(dm, SIGNAL(warning(QString,QString)), logger, SLOT(logWarning(QString,QString)));
-        connect(dm, SIGNAL(finished(DownloadManager*)), this, SLOT(processingUrlDownload(DownloadManager*)));
-        dm->launch();
+        connect(dm, SIGNAL(finished(QByteArray)), this, SLOT(processingUrlDownload(QByteArray)));
+        guiHelper->requestDownload(resource, NULL,dm);
     }
 }
 

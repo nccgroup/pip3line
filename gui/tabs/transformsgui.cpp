@@ -24,6 +24,7 @@ Released under AGPL see LICENSE for more information
 #include "../transformwidget.h"
 #include "ui_transformsgui.h"
 #include "../shared/detachtabbutton.h"
+#include "../shared/universalreceiverbutton.h"
 
 TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
     TabAbstract(guiHelper,parent)
@@ -54,6 +55,13 @@ TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
 
     ui->toolbarLayout->insertWidget(ui->toolbarLayout->indexOf(ui->massProcessingPushButton) + 1,detachButton);
 
+    UniversalReceiverButton *urb = new(std::nothrow) UniversalReceiverButton(this, guiHelper);
+    if (urb == NULL) {
+        qFatal("Cannot allocate memory for UniversalReceiverButton X{");
+    }
+
+    ui->toolbarLayout->insertWidget(ui->toolbarLayout->indexOf(ui->registerPushButton),urb);
+
     ui->savedComboBox->installEventFilter(guiHelper);
     buildSavedCombo();
     connect(ui->savedComboBox, SIGNAL(currentIndexChanged(QString)), SLOT(onSavedSelected(QString)));
@@ -81,7 +89,7 @@ TransformsGui::~TransformsGui()
 
 QString TransformsGui::getCurrentChainConf()
 {
-    this->setEnabled(false);
+//    this->setEnabled(false);
 
     TransformChain list = getCurrentTransformChain();
     QString ret;
@@ -89,7 +97,7 @@ QString TransformsGui::getCurrentChainConf()
 
     transformFactory->saveConfToXML(list, &streamin);
 
-    this->setEnabled(true);
+//    this->setEnabled(true);
 
     return ret;
 }
@@ -123,7 +131,7 @@ void TransformsGui::setCurrentChainConf(const QString &conf)
 
 TransformChain TransformsGui::getCurrentTransformChain()
 {
-    this->setEnabled(false);
+   // this->setEnabled(false);
 
     TransformChain list;
     for (int i = 0; i < transformWidgetList.size() - 1; i++) {
@@ -132,7 +140,7 @@ TransformChain TransformsGui::getCurrentTransformChain()
     }
     list.setName(name);
 
-    this->setEnabled(true);
+ //   this->setEnabled(true);
     return list;
 }
 

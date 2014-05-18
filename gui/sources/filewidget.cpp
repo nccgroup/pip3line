@@ -19,9 +19,12 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 FileWidget::FileWidget(LargeFile *fsource, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::FileWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::FileWidget;
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::FileWidget X{");
+    }
     source = fsource;
     ui = new(std::nothrow) Ui::FileWidget;
     ui->setupUi(this);
@@ -34,6 +37,8 @@ FileWidget::FileWidget(LargeFile *fsource, QWidget *parent) :
     }
 
     ui->itemsFoundListView->setModel(itemsFoundModel);
+    ui->itemsFoundListView->setUniformItemSizes(true);
+    ui->itemsFoundListView->setLayoutMode(QListView::Batched);
 
     searchWidget = new(std::nothrow) SearchWidget(fsource,this);
     if (searchWidget == NULL) {
@@ -78,7 +83,7 @@ void FileWidget::onSearch(QByteArray item,QBitArray mask, bool)
     itemsFoundModel->clear();
     ui->resultLabel->setText(QString());
     source->clearAllMarkings();
-    multiSearch->setSearchItem(item);
+    multiSearch->setSearchItem(item,mask);
     multiSearch->startThreadedSearch();
 }
 

@@ -80,7 +80,6 @@ class CurrentMemorysource : public LargeRandomAccessSource
         explicit CurrentMemorysource(QObject *parent = 0);
         ~CurrentMemorysource();
         QString description();
-        QString name();
         quint64 size();
         bool isOffsetValid(quint64 offset);
         MemRangeModel * getMemRanges() const;
@@ -90,13 +89,13 @@ class CurrentMemorysource : public LargeRandomAccessSource
         bool tryMoveUp(int size);
         bool tryMoveDown(int size);
         bool tryMoveView(int size);
-
+        void fromLocalFile(QString fileName);
     public slots:
         bool setStartingOffset(quint64 offset);
     signals:
         void mappingChanged();
     private:
-        QWidget * requestGui(QWidget *parent);
+        QWidget *requestGui(QWidget *parent,ByteSourceAbstract::GUI_TYPE type);
         bool readData(quint64 offset, QByteArray &data, int size);
         bool writeData(quint64 offset, QByteArray &data, int size);
         MemRangeModel *rangesModel;

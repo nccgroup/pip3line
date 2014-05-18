@@ -32,8 +32,18 @@ class CharEncoding : public TransformAbstract
 
         QByteArray getCodecName();
         bool setCodecName(QByteArray val);
+        bool getIncludeHeader() const;
+        void setIncludeHeader(bool value);
+
+        bool getConvertInvalidToNull() const;
+        void setConvertInvalidToNull(bool value);
+
     private:
+        static const QString IGNORE_BOM_XML;
+        static const QString CONVERT_INVALID_TO_NULL_XML;
         QByteArray codecName;
+        bool includeHeader;
+        bool convertInvalidToNull;
 };
 
 #endif // CHARENCODING_H

@@ -10,16 +10,21 @@ Released under AGPL see LICENSE for more information
 
 #include "downloadmanager.h"
 #include <QMutexLocker>
+#include <QSslConfiguration>
+#include <QNetworkRequest>
+#include <QVariant>
+#include <QUrl>
 #include <QDebug>
+#include "loggerwidget.h"
 
 const QString DownloadManager::ID = "DownloadManager";
 
-DownloadManager::DownloadManager(QUrl &url,QNetworkAccessManager * nnetworkManager, ByteSourceAbstract *destModel, QObject *parent) :
-    QObject(parent)
+DownloadManager::DownloadManager(QUrl &url, GuiHelper *guiHelper,QObject *parent) :
+    QObject(parent),
+    guiHelper(guiHelper)
 {
     resource = url;
-    networkManager = nnetworkManager;
-    model = destModel;
+    networkManager = guiHelper->getNetworkManager();
 }
 
 DownloadManager::~DownloadManager()
@@ -30,11 +35,11 @@ DownloadManager::~DownloadManager()
 bool DownloadManager::launch()
 {
     if (networkManager != NULL) {
-        reply = networkManager->get(QNetworkRequest(resource));
-        connect(reply, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(networkSSLError(QList<QSslError>)));
-        connect(reply,SIGNAL(finished()), this, SLOT(requestFinished()));
+
+        createRequest(resource);
+
     } else {
-        emit error(tr("No network manager, ignoring download request"),ID);
+        guiHelper->getLogger()->logError(tr("No network manager, ignoring download request"),ID);
         return false;
     }
     return true;
@@ -42,34 +47,52 @@ bool DownloadManager::launch()
 
 QByteArray DownloadManager::getData()
 {
-    QMutexLocker lock(&dataMutex);
+    // there should not be any need for a mutex here, as getData and requestFisnihed should never execute concurrently
     if (data.size() == 0) {
-        emit warning(tr("No data for collection"), ID);
+        guiHelper->getLogger()->logWarning(tr("No data for collection"),ID);
     }
     return data;
 }
 
 void DownloadManager::requestFinished()
 {
+    QNetworkReply * reply = qobject_cast<QNetworkReply *>(sender());
+    if (reply == NULL) {
+        qFatal("DownloadManager::requestFinished reply is NULL");
+    }
+
     if (reply->error()) {
-        emit error(tr("[Failed to load \"%1\"] %2\n").arg(resource.toString()).arg(reply->errorString()),ID);
+        guiHelper->getLogger()->logError(tr("[Failed to load \"%1\"] %2").arg(resource.toString()).arg(reply->errorString()),ID);
     } else {
-        qDebug() << tr("%1 successfully loaded (%2 bytes) ").arg(resource.toEncoded().constData()).arg(reply->size());
-        if (model != NULL) {
-            model->setData(reply->readAll());
-        } else {
-            dataMutex.lock();
+        QUrl possibleRedirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+        if (possibleRedirectUrl.isEmpty() || (!previousRedirect.isEmpty() && previousRedirect == possibleRedirectUrl)) {
+            // there should not be any need for a mutex here, as getData and requestFisnihed should never execute concurrently
             data = reply->readAll();
-            dataMutex.unlock();
+            qDebug() << tr("%1 successfully loaded (%2 bytes) ").arg(resource.toEncoded().constData()).arg(data.size());
+            emit finished(data);
+            deleteLater();
+        } else {
+            createRequest(possibleRedirectUrl);
         }
     }
     reply->deleteLater();
-    emit finished(this);
 }
 
 void DownloadManager::networkSSLError(QList<QSslError> sslErrors)
 {
     for (int i = 0; i < sslErrors.size(); i++) {
-        emit error(sslErrors.at(i).errorString(),ID);
+        guiHelper->getLogger()->logError(sslErrors.at(i).errorString(),ID);
     }
+}
+
+void DownloadManager::createRequest(QUrl url)
+{
+    QNetworkRequest request(url);
+    request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
+    qDebug() << "ssl verify" << QSslConfiguration::defaultConfiguration().peerVerifyMode();
+    QNetworkReply * reply = networkManager->get(request);
+    connect(reply, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(networkSSLError(QList<QSslError>)));
+    connect(reply,SIGNAL(finished()), this, SLOT(requestFinished()));
+    if (QSslConfiguration::defaultConfiguration().peerVerifyMode() == QSslSocket::VerifyNone)
+        reply->ignoreSslErrors();
 }

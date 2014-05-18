@@ -37,7 +37,11 @@
        </widget>
       </item>
       <item>
-       <widget class="QPlainTextEdit" name="keyPlainTextEdit"/>
+       <widget class="QPlainTextEdit" name="keyPlainTextEdit">
+        <property name="focusPolicy">
+         <enum>Qt::StrongFocus</enum>
+        </property>
+       </widget>
       </item>
       <item alignment="Qt::AlignHCenter">
        <widget class="QCheckBox" name="fromHexcheckBox">

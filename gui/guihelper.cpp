@@ -20,13 +20,16 @@ Released under AGPL see LICENSE for more information
 #include <QSettings>
 #include <transformabstract.h>
 #include <QXmlStreamWriter>
+#include <QMimeData>
 #include "guihelper.h"
 #include "tabs/tababstract.h"
 #include "sources/bytesourceabstract.h"
 #include "newbytedialog.h"
 #include "loggerwidget.h"
 #include "textinputdialog.h"
+#include "downloadmanager.h"
 #include <transformmgmt.h>
+#include <QDragEnterEvent>
 #include <threadedprocessor.h>
 
 using namespace Pip3lineConst;
@@ -48,6 +51,7 @@ GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nm
     networkManager = nmanager;
     logger = nlogger;
     centralTransProc = NULL;
+    universalReceiver = NULL;
     settings = transformFactory->getSettingsObj();
     bool ok = false;
     defaultServerPort = settings->value(SETTINGS_SERVER_PORT,DEFAULT_PORT).toInt(&ok);
@@ -131,6 +135,11 @@ void GuiHelper::sendToNewTab(const QByteArray &initialValue)
     emit newTabRequested(initialValue);
 }
 
+void GuiHelper::setUniveralReceiver(TabAbstract *tab)
+{
+    universalReceiver = tab;
+}
+
 void GuiHelper::addTab(TabAbstract *tab)
 {
     tabs.insert(tab);
@@ -167,6 +176,15 @@ void GuiHelper::onTabDeleted()
 void GuiHelper::raisePip3lineWindow()
 {
     emit raiseWindowRequest();
+}
+
+void GuiHelper::routeExternalDataBlock(QByteArray data)
+{
+    if (universalReceiver != NULL) {
+        universalReceiver->setData(data);
+    } else {
+        emit newTabRequested(data);
+    }
 }
 
 void GuiHelper::updateSortedTabs()
@@ -450,9 +468,130 @@ void GuiHelper::deleteImportExportFuncs()
         importExportFunctions.clear();
     }
 }
+
 ThreadedProcessor *GuiHelper::getCentralTransProc() const
 {
     return centralTransProc;
+}
+
+void GuiHelper::processDragEnter(QDragEnterEvent *event, ByteSourceAbstract *byteSource)
+{
+    if ((event->mimeData()->hasHtml() ||
+         event->mimeData()->hasText() ||
+         event->mimeData()->hasUrls()) &&
+            byteSource->hasCapability(ByteSourceAbstract::CAP_RESET))
+        event->accept();
+    else {
+        event->setDropAction(Qt::IgnoreAction);
+        event->accept();
+    }
+}
+
+void GuiHelper::processDropEvent(QDropEvent *event, ByteSourceAbstract *byteSource, DownloadManager *downloadManager)
+{
+    if (byteSource == NULL && downloadManager == NULL) {
+        qCritical() << tr("Bytesource and downloadManager cannot be both NULL at the same time, ignoring the drop event");
+        event->setDropAction(Qt::IgnoreAction);
+        event->accept();
+    }
+    QStringList formats  = event->mimeData()->formats();
+
+    for (int i = 0; i < formats.size(); i++) {
+        qDebug() << formats.at(i);
+    }
+
+    if (event->mimeData()->hasImage()) {
+            qDebug() << event->mimeData()->imageData();
+    } else if (event->mimeData()->hasUrls() || formats.contains("text/uri-list")) {
+
+        QList<QUrl> list = event->mimeData()->urls();
+
+
+        if (list.size() < 1) {
+            logger->logError(tr("Url list is empty, nothing to drop"));
+            event->acceptProposedAction();
+            return;
+        }
+
+        if (list.size() > 1) {
+            logger->logError(tr("Multiple urls entered, only opening the first one"));
+        }
+
+        QUrl resource = list.at(0);
+
+        QString filename = QString(QByteArray::fromPercentEncoding(resource.toEncoded()));
+
+        logger->logStatus(tr("Received %1 for Drop action").arg(filename));
+
+        if (resource.scheme() == "file") {
+            if (!byteSource->hasCapability(ByteSourceAbstract::CAP_LOADFILE)) {
+                logger->logWarning(tr("%1 does not accept load file request").arg(byteSource->metaObject()->className()));
+                return;
+            }
+#if defined(Q_OS_WIN32)
+            if (filename.at(0) == '/') // bug on QT < 5 (Windows only)
+                filename = filename.mid(1);
+            if (filename.startsWith("file:///"))
+                filename = filename.mid(8);
+#else
+            if (filename.startsWith("file:///"))
+                filename = filename.mid(7);
+#endif
+
+            byteSource->fromLocalFile(filename);
+        } else {
+            requestDownload(resource, byteSource, downloadManager);
+        }
+        event->acceptProposedAction();
+    } else if (event->mimeData()->hasText() || event->mimeData()->hasHtml()) {
+        QUrl resource(event->mimeData()->text().toUtf8());
+
+        if (resource.scheme() ==  "https" || resource.scheme() ==  "http" || resource.scheme() ==  "ftp" || resource.scheme() ==  "file") {
+            int res = QMessageBox::question(NULL, "Download ?","This looks like a valid URL.", QMessageBox::Yes, QMessageBox::No);
+            if (res ==  QMessageBox::Yes) {
+                logger->logStatus(tr("Received %1 for Drop action").arg(resource.toString()));
+
+                requestDownload(resource, byteSource, downloadManager);
+
+            } else {
+                byteSource->setData(event->mimeData()->text().toUtf8());
+            }
+        } else {
+            byteSource->setData(event->mimeData()->text().toUtf8());
+        }
+        event->acceptProposedAction();
+    } else {
+        logger->logWarning(tr("Don't know how to handle this Drop action"));
+        event->setDropAction(Qt::IgnoreAction);
+        event->accept();
+    }
+}
+
+void GuiHelper::requestDownload(QUrl url, ByteSourceAbstract *byteSource, DownloadManager *ndownloadManager)
+{
+    if (byteSource == NULL && ndownloadManager == NULL) { // double check , just in case of alcohol
+        qCritical() << tr("Bytesource and downloadManager cannot be both NULL at the same time, ignoring the download");
+        return;
+    }
+    if (networkManager != NULL) {
+        DownloadManager * downloadManager = NULL;
+        if (ndownloadManager == NULL) { // caller has not defined any DownloadManager, creating a default one, which will be managed here
+            downloadManager = new(std::nothrow) DownloadManager(url, this, byteSource);
+            if (downloadManager == NULL) {
+                qFatal("Cannot allocate memory for setDownload downloadManager X{");
+                return;
+            }
+            if (byteSource != NULL) {
+                connect(downloadManager,SIGNAL(finished(QByteArray)),byteSource, SLOT(setData(QByteArray)));
+            }
+        } else { // caller has supplied their own DownloadManager Object, use it
+            downloadManager = ndownloadManager;
+        }
+        downloadManager->launch();
+
+    } else {
+        logger->logError(tr("No NetworkManager configured, no download launched"));
+    }
 }
 
 QSet<QString> GuiHelper::getTypesBlacklist() const

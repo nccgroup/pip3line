@@ -27,6 +27,15 @@
         <file>icons/configure-5.png</file>
         <file>icons/go-bottom-3.png</file>
         <file>icons/edit-delete-4.png</file>
+        <file>icons/object-rotate-right.png</file>
+        <file>icons/edit-find-and-replace.png</file>
+        <file>icons/media-seek-forward-7.png</file>
+        <file>icons/go-top-3.png</file>
+        <file>icons/media-playback-start.png</file>
+        <file>icons/media-playback-stop-7.png</file>
+        <file>icons/system-switch-user-3.png</file>
+        <file>icons/arrow-left-3.png</file>
+        <file>icons/arrow-right-3-mod.png</file>
     </qresource>
     <qresource prefix="/xmlconfs">
         <file>defaultsxml/base32decode.xml</file>

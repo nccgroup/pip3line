@@ -15,26 +15,49 @@ Released under AGPL see LICENSE for more information
 #include "blockssource.h"
 
 class QUdpSocket;
+class QThread;
+
+class UDPClient {
+    public:
+        explicit UDPClient(QHostAddress clientAddress, quint16 clientPort);
+        UDPClient(const UDPClient &other); // copy constructor
+        QHostAddress getAdress() const;
+        void setAdress(const QHostAddress &value);
+        quint16 getPort() const;
+        void setPort(const quint16 &value);
+        bool operator==(const UDPClient& other) const;
+        void operator=(const UDPClient& other);
+
+    private:
+        QHostAddress adress;
+        quint16 port;
+};
 
 class UdpListener : public BlocksSource
 {
         Q_OBJECT
     public:
-        explicit UdpListener(QHostAddress listeningAddress = QHostAddress::LocalHost, quint16 port = 40000 , QObject *parent = 0);
+        explicit UdpListener(QObject *parent = 0);
+        explicit UdpListener(QHostAddress listeningAddress, quint16 port , QObject *parent = 0);
         ~UdpListener();
     public slots:
-        void sendBlock(const QByteArray & block);
-        void startListening();
+        void sendBlock(const Block & block);
+        void setPort(const quint16 &value);
+        void setListeningAddress(const QHostAddress &value);
+        bool startListening();
         void stopListening();
     private slots:
         void readPendingDatagrams();
     private:
+        static const quint16 DEFAULT_PORT;
+        static const QHostAddress DEFAULT_ADDRESS;
+        void initialize(QHostAddress listeningAddress = DEFAULT_ADDRESS, quint16 port = DEFAULT_PORT);
         QWidget *requestGui(QWidget * parent);
         QHostAddress listeningAddress;
         quint16 port;
-        QUdpSocket *socket;
-        QHostAddress lastClient;
-        quint16 lastClientPort;
+        QUdpSocket *currentSocket;
+        QThread *serverThread;
+        QList<UDPClient> clients;
 };
 
 #endif // UDPLISTENER_H

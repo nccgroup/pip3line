@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "tcpserverlistener.h"
 #include "tcplistener.h"
+#include "networkconfwidget.h"
 #include <QThread>
 #include <QDebug>
 #include <QTimer>
@@ -32,43 +33,51 @@ void InTcpServer::incomingConnection(int socketDescriptor)
     emit newClient(socketDescriptor);
 }
 
+const quint16 TcpServerListener::DEFAULT_PORT = 40000;
+const QHostAddress TcpServerListener::DEFAULT_ADDRESS = QHostAddress::LocalHost;
+
 TcpServerListener::TcpServerListener(QObject *parent) :
     BlocksSource(parent)
 {
-    listeningAddress = QHostAddress::LocalHost;
-    port = 40000;
+    listeningAddress = DEFAULT_ADDRESS;
+    port = DEFAULT_PORT;
     server = NULL;
-    workerThread = new(std::nothrow) QThread();
-    if (workerThread == NULL) {
-        qFatal("Cannot allocate memory for workerThread X{");
-    }
-    qDebug() << "Worker" << workerThread;
+    workerThread = NULL;
 
     serverThread = new(std::nothrow) QThread();
     if (serverThread == NULL) {
         qFatal("Cannot allocate memory for serverThread X{");
     }
-    qDebug() << "Server" << serverThread;
+    moveToThread(serverThread);
+    serverThread->start();
 
     separator='\x0a';
 }
 
 TcpServerListener::~TcpServerListener() {
     stopListening();
+
+    serverThread->quit();
+    serverThread->wait();
     delete server;
-    delete workerThread;
+
+    if (workerThread != NULL) {
+        workerThread->quit();
+        workerThread->wait();
+        delete workerThread;
+    }
 }
 
-void TcpServerListener::sendBlock(const QByteArray &block)
+void TcpServerListener::sendBlock(const Block & )
 {
-    emit broadcastBlock(block);
+    qFatal("[TcpServerListener::sendBlock] forbidden secret");
 }
 
-void TcpServerListener::startListening()
+bool TcpServerListener::startListening()
 {
     startingWorkers();
     if (server == NULL) {
-        server = new(std::nothrow) InTcpServer(serverThread);
+        server = new(std::nothrow) InTcpServer(this);
         if (server == NULL) {
             qFatal("Cannot allocate memory for QTcpServer X{");
         }
@@ -78,34 +87,55 @@ void TcpServerListener::startListening()
         connect(server,SIGNAL(newClient(int)), SLOT(handlingClient(int)));
 #endif
     }
-    if (server->isListening())
-        return;
+    if (server->isListening()) { // already listening nothing to do
+        return true;
+    }
 
 
     if (!server->listen(listeningAddress,port)) {
-        qCritical() << "could not start TCP server" << server->errorString();
+        emit error(tr("could not start TCP server %1").arg(server->errorString()),metaObject()->className());
+        delete server;
+        server = NULL;
         workerThread->quit();
-        serverThread->quit();
-    } else {
-        qDebug() << tr("Tcp server started %1:%2").arg(listeningAddress.toString()).arg(port);
+        return false;
     }
+    emit status(tr("TCP server started %1:%2").arg(listeningAddress.toString()).arg(port), "");
+    emit started();
+    return true;
 }
 
 void TcpServerListener::stopListening()
 {
     if (server != NULL && server->isListening()) {
-       qDebug() << tr("Stopping TCP Server %1:%2").arg(listeningAddress.toString()).arg(port);
+       emit status(tr("TCP server stopped %1:%2").arg(listeningAddress.toString()).arg(port), "");
        server->close();
        for (int i = 0; i < clients.size(); i++)
            QTimer::singleShot(0,clients.at(i),SLOT(stopListening()));
        stoppingWorkers();
+       emit stopped();
+       delete server;
+       server = NULL;
+    }
+}
 
+void TcpServerListener::postBlockForSending(Block block)
+{
+    TcpListener * client = static_cast<TcpListener *>(block.source);
+
+    if (client != NULL) {
+        if (clients.contains(client)) {
+            client->postBlockForSending(block); // the client is going to take care of encoding the block
+        } else {
+            emit error(tr("Client disconnected cannot forward data block"), metaObject()->className());
+        }
+    } else {
+        qCritical() << "[TcpServerListener::postBlockForSending] NULL client";
     }
 }
 
 void TcpServerListener::clientFinished()
 {
-    TcpListener * client = dynamic_cast<TcpListener *>(sender());
+    TcpListener * client = static_cast<TcpListener *>(sender());
     if (client == NULL) {
         qWarning() << "[TcpServerListener] NULL client finished";
     } else if (clients.contains(client)) {
@@ -118,6 +148,19 @@ void TcpServerListener::clientFinished()
     delete client;
 }
 
+void TcpServerListener::onClientReceivedBlock(Block block)
+{
+    TcpListener *client = qobject_cast<TcpListener *>(sender());
+    int index = clients.indexOf(client);
+    if (index == -1) {
+        qCritical() << tr("Could not find client in list");
+    } else {
+        block.sourceid = index;
+        block.direction = Block::SOURCE;
+        emit blockReceived(block);
+    }
+}
+
 #if QT_VERSION >= 0x050000
 void TcpServerListener::handlingClient(qintptr socketDescriptor)
 #else
@@ -127,11 +170,12 @@ void TcpServerListener::handlingClient(int socketDescriptor)
     TcpListener * listener = new(std::nothrow) TcpListener(socketDescriptor);
     if (listener != NULL) {
        // qDebug() << "Listener created" << listener;
-        listener->setBase64Applied(base64Applied);
+        listener->setDecodeinput(decodeInput);
+        listener->setEncodeOutput(encodeOutput);
         clients.append(listener);
         listener->moveToThread(workerThread);
-        connect(listener, SIGNAL(newBlock(QByteArray)), SIGNAL(blockReceived(QByteArray)));
-        connect(listener, SIGNAL(finished()), SLOT(clientFinished()));
+        connect(listener, SIGNAL(blockReceived(Block)), SLOT(onClientReceivedBlock(Block)));
+        connect(listener, SIGNAL(stopped()), SLOT(clientFinished()));
         connect(listener, SIGNAL(error(QString,QString)), SIGNAL(error(QString,QString)));
         connect(listener, SIGNAL(status(QString,QString)), SIGNAL(status(QString,QString)));
         QTimer::singleShot(0,listener,SLOT(startListening()));
@@ -142,11 +186,15 @@ void TcpServerListener::handlingClient(int socketDescriptor)
 
 void TcpServerListener::startingWorkers()
 {
-    if (serverThread != QThread::currentThread())
-        moveToThread(serverThread);
-    serverThread->start();
-
-    workerThread->start();
+    if (workerThread == NULL) {
+        workerThread = new(std::nothrow) QThread();
+        if (workerThread == NULL) {
+            qFatal("Cannot allocate memory for workerThread X{");
+        }
+    }
+    if (workerThread != NULL) {
+        workerThread->start();
+    }
 }
 
 void TcpServerListener::stoppingWorkers()
@@ -154,24 +202,38 @@ void TcpServerListener::stoppingWorkers()
     workerThread->quit();
     if (!workerThread->wait())
         qCritical() << metaObject()->className() << "Could not stop the worker thread";
-
-    serverThread->quit();
-    if (!serverThread->wait())
-        qCritical() << metaObject()->className() << "Could not stop the server thread";
 }
 
-QHostAddress TcpServerListener::getListeningAddress() const
+QWidget *TcpServerListener::requestGui(QWidget *parent)
 {
-    return listeningAddress;
+    NetworkConfWidget *ncw = new(std::nothrow)NetworkConfWidget(NetworkConfWidget::TCP_SERVER,parent);
+    if (ncw == NULL) {
+        qFatal("Cannot allocate memory for NetworkConfWidget X{");
+    }
+    ncw->setPort(port);
+    ncw->setIP(listeningAddress);
+    ncw->enableDecodeEncodeOption(true);
+    connect(ncw, SIGNAL(newIp(QHostAddress)), this, SLOT(setListeningAddress(QHostAddress)));
+    connect(ncw, SIGNAL(newPort(quint16)), this, SLOT(setPort(quint16)));
+    connect(ncw, SIGNAL(start()), this, SLOT(startListening()));
+    connect(ncw, SIGNAL(stop()), this, SLOT(stopListening()));
+    connect(ncw,SIGNAL(restart()), this, SLOT(restart()));
+    connect(this, SIGNAL(started()), ncw, SLOT(onServerStarted()));
+    connect(this, SIGNAL(stopped()), ncw, SLOT(onServerStopped()));
+    return ncw;
+}
+
+void TcpServerListener::setPort(const quint16 &value)
+{
+    if (value != port) {
+        port = value;
+    }
+
 }
 
 void TcpServerListener::setListeningAddress(const QHostAddress &value)
 {
     if (value != listeningAddress) {
-        if (server != NULL && server->isListening()) {
-            qDebug() << "The new address will be used once the server is restarted";
-        }
-
         listeningAddress = value;
     }
 }

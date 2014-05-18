@@ -15,11 +15,14 @@ class SendToPip3line(sublime_plugin.TextCommand):
 		return (len(self.view.sel()) > 0 and not self.view.sel()[0].empty())
 
 	def run(self, edit):
-		for region in self.view.sel():
-			if not region.empty():
-				s = self.view.substr(region)
-				s = base64.b64encode(s.encode("utf-8"))
-				self.sendData(s)
+		try:
+			for region in self.view.sel():
+				if not region.empty():
+					s = self.view.substr(region)
+					s = base64.b64encode(s.encode("utf-8"))
+					self.sendData(s)
+		except e:
+			print("SendToPip3line Error:" + str(e))
 	
 	def sendData(self,data):
 		try: 
@@ -37,6 +40,8 @@ class SendToPip3line(sublime_plugin.TextCommand):
 				totalsent = totalsent + sent
 			sock.close()
 		except ConnectionRefusedError:
-			print("Network connection refused. Is Pip3line running?")
+			print("SendToPip3line Network connection refused. Is Pip3line running?")
 		except IOError as e:
-			print("Network error [" + self.adress + ":"+ str(self.port) + "]: " + str(e))
+			print("SendToPip3line Network error [" + self.adress + ":"+ str(self.port) + "]: " + str(e))
+		except e:
+			print("SendToPip3line Error:" + str(e))

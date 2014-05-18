@@ -13,6 +13,7 @@ Released under AGPL see LICENSE for more information
 
 #include "tababstract.h"
 #include <QBitArray>
+#include <QUrl>
 
 namespace Ui {
 class GenericTab;
@@ -27,6 +28,10 @@ class ClearAllMarkingsButton;
 class ByteSourceGuiButton;
 class DetachTabButton;
 class ByteTableView;
+class MessagePanelWidget;
+class QDragEnterEvent;
+class QDropEvent;
+class DownloadManager;
 
 class GenericTab : public TabAbstract
 {
@@ -46,11 +51,14 @@ class GenericTab : public TabAbstract
         void onGotoOffset(quint64 offset, bool absolute,bool negative, bool select);
         void onHistoryBackward();
         void onHistoryForward();
+        void onNewViewTab(QAction * action);
+        void onDeleteTab(int index);
 
     private:
         Q_DISABLE_COPY(GenericTab)
-        static const QString LOGID;
         bool eventFilter(QObject *obj, QEvent *event);
+        void dragEnterEvent ( QDragEnterEvent * event );
+        void dropEvent(QDropEvent *event);
         void integrateByteSource();
         ByteSourceAbstract *byteSource;
         Ui::GenericTab *ui;
@@ -61,6 +69,9 @@ class GenericTab : public TabAbstract
         ClearAllMarkingsButton * clearAllMarksButton;
         ByteSourceGuiButton * guiButton;
         DetachTabButton *detachButton;
+        MessagePanelWidget * messagePanel;
+        QAction * newHexViewAction;
+        QAction * newTextViewAction;
         bool ableToReceiveData;
 };
 

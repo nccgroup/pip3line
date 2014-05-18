@@ -151,40 +151,44 @@ void SearchLine::keyPressEvent(QKeyEvent *event)
 SearchWidget::SearchWidget(ByteSourceAbstract * source, QWidget *parent) :
     QWidget(parent)
 {
-    lineEdit = new(std::nothrow) SearchLine(source, this);
-    if (lineEdit == NULL) {
-        qFatal("Cannot allocate memory for SearchLine X{");
-    }
-    setFocusProxy(lineEdit);
-    QHBoxLayout * layout = new(std::nothrow) QHBoxLayout(this);
-    if (layout == NULL) {
-        qFatal("Cannot allocate memory for QHBoxLayout X{");
-    }
-    layout->setContentsMargins(0,0,0,0);
-    layout->setSpacing(0);
-    setLayout(layout);
-    layout->addWidget(lineEdit);
-
-    stopPushButton = new(std::nothrow) QPushButton(QIcon(":/Images/icons/edit-delete-4.png"), QString(),this);
-    if (stopPushButton == NULL) {
-        qFatal("Cannot allocate memory for QPushButton X{");
-    }
-    stopPushButton->setFlat(true);
-    stopPushButton->setEnabled(false);
-    stopPushButton->setMaximumWidth(25);
-    layout->addWidget(stopPushButton);
-
-    setSizePolicy(QSizePolicy::Maximum,QSizePolicy::Preferred);
+    lineEdit = NULL;
+    stopPushButton = NULL;
 
     SearchAbstract *sObject = source->getSearchObject();
     if (sObject != NULL) {
+        lineEdit = new(std::nothrow) SearchLine(source, this);
+        if (lineEdit == NULL) {
+            qFatal("Cannot allocate memory for SearchLine X{");
+        }
+        setFocusProxy(lineEdit);
+        QHBoxLayout * layout = new(std::nothrow) QHBoxLayout(this);
+        if (layout == NULL) {
+            qFatal("Cannot allocate memory for QHBoxLayout X{");
+        }
+        layout->setContentsMargins(0,0,0,0);
+        layout->setSpacing(0);
+        setLayout(layout);
+        layout->addWidget(lineEdit);
+
+        stopPushButton = new(std::nothrow) QPushButton(QIcon(":/Images/icons/edit-delete-4.png"), QString(),this);
+        if (stopPushButton == NULL) {
+            qFatal("Cannot allocate memory for QPushButton X{");
+        }
+        stopPushButton->setFlat(true);
+        stopPushButton->setEnabled(false);
+        stopPushButton->setMaximumWidth(25);
+        layout->addWidget(stopPushButton);
+
+        setSizePolicy(QSizePolicy::Maximum,QSizePolicy::Preferred);
+
         connect(stopPushButton, SIGNAL(clicked()), sObject, SLOT(stopSearch()), Qt::DirectConnection);
         connect(stopPushButton, SIGNAL(clicked()), SIGNAL(stopSearch()), Qt::QueuedConnection);
         connect(sObject, SIGNAL(searchStarted()), SLOT(onSearchStarted()), Qt::QueuedConnection);
         connect(sObject, SIGNAL(searchEnded()), SLOT(onSearchEnded()), Qt::QueuedConnection);
+        connect(lineEdit, SIGNAL(newSearch(QString,int)),SLOT(onSearch(QString,int)));
+    } else {
+        setVisible(false);
     }
-
-    connect(lineEdit, SIGNAL(newSearch(QString,int)),SLOT(onSearch(QString,int)));
 }
 
 SearchWidget::~SearchWidget()

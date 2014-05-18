@@ -9,6 +9,7 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "tcplistener.h"
+#include "networkconfwidget.h"
 #include <QTcpSocket>
 #include <QThread>
 #include <QTimer>
@@ -50,7 +51,7 @@ TcpListener::~TcpListener()
     qDebug() << "Destroyed" << this;
 }
 
-void TcpListener::startListening()
+bool TcpListener::startListening()
 {
    // qDebug() << "Socket starts processing";
 
@@ -67,15 +68,18 @@ void TcpListener::startListening()
             qCritical() << metaObject()->className() << tr("Invalid socket descriptor");
             delete socket;
             socket = NULL;
-            return;
+            return false;
         }
         remotePeerAddress = socket->peerAddress();
         remotePort = socket->peerPort();
+        emit started();
     } else {
         socket->connectToHost(remotePeerAddress, remotePort);
     }
 
     qDebug() << "socket opened" << remotePeerAddress.toString() << ":" << remotePort;
+
+    return true;
 
 }
 
@@ -91,16 +95,11 @@ void TcpListener::stopListening()
         processBlock(tempData);
         tempData.clear();
     }
-    emit finished();
+    emit stopped();
 }
 
 void TcpListener::onDataReceived()
 {
-//    qDebug() << "socket received data";
-//    qDebug() << "Socket" << this << "performing long operation";
-//    for (int i = 0; i < 1000000; i++)
-//        QCryptographicHash::hash(QByteArray("vhsfdiuhfpishfpeirhjpfoerjre"), QCryptographicHash::Sha1);
-
     QByteArray data;
     QList<QByteArray> dataList;
 
@@ -160,7 +159,7 @@ void TcpListener::processBlock(QByteArray data)
         return;
     }
 
-    if (base64Applied) {
+    if (decodeInput) {
         data = QByteArray::fromBase64(data);
         if (data.isEmpty()){
             QString mess = tr("Base64 decoded received data block is empty, ignoring.");
@@ -170,16 +169,25 @@ void TcpListener::processBlock(QByteArray data)
         }
     }
 
-    emit newBlock(data);
+    Block datab;
+    datab.data = data;
+    datab.source = this;
+    datab.sourceid = 0;
+    emit blockReceived(datab);
 }
 
-void TcpListener::sendBlock(const QByteArray &block)
+void TcpListener::sendBlock(const Block & block)
 {
     if (socket != NULL && socket->isWritable()) {
-        qint64 size = block.size();
-        qint64 byteWritten = socket->write(block);
-        while (size > byteWritten) {
-            byteWritten += socket->write(&(block.data()[byteWritten - 1]),size - byteWritten);
+        QByteArray data;
+        if (encodeOutput)
+            data = block.data.toBase64();
+        else
+            data = block.data;
+        qint64 size = data.size();
+        qint64 byteWritten = socket->write(data);
+        while (size > byteWritten && socket->isWritable()) {
+            byteWritten += socket->write(&(data.data()[byteWritten - 1]),size - byteWritten);
         }
     }
 }

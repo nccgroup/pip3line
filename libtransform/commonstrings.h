@@ -88,6 +88,7 @@ namespace Pip3lineConst {
     static const QString SETTINGS_SERVER_SEPARATOR = "DefaultServerSeparator";
     static const QString SETTINGS_PIPE_NAME="PipeName";
     static const QString UPDATE_URL = "https://raw.github.com/nccgroup/pip3line/master/gui/release.txt";
+   // static const QString UPDATE_URL = "https://raw.githubusercontent.com/nccgroup/pip3line/master/gui/release.txt";
     static const QString SETTINGS_AUTO_UPDATE = "AutoUpdate";
     static const QString SETTINGS_GENERAL_GROUP = "General";
     static const QString SETTINGS_MINIMIZE_TO_TRAY = "MinimizeToTray";

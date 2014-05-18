@@ -24,9 +24,12 @@ const QString MemoryWidget::GOTOSTART = "Go to start of range";
 const QString MemoryWidget::GOTOEND = "Go to end of range";
 
 MemoryWidget::MemoryWidget(CurrentMemorysource *source, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::MemoryWidget)
+    QWidget(parent)
 {
+    ui = new(std::nothrow) Ui::MemoryWidget;
+    if (ui == NULL) {
+        qFatal("Cannot allocate memory for Ui::MemoryWidget X{");
+    }
     msource = source;
     ui->setupUi(this);
 

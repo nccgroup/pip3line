@@ -11,6 +11,7 @@ Released under AGPL see LICENSE for more information
 #include <QString>
 #include <QtTest>
 #include <transformmgmt.h>
+#include <transformabstract.h>
 #include <QTextStream>
 #include <QtCore/QCoreApplication>
 #include <QHash>
@@ -45,6 +46,7 @@ class UnittestsTest : public QObject
         void printConf(QHash<QString, QString> configuration);
         QTextStream *messlog;
         TransformMgmt *transformFactory;
+        bool displayLogs;
 
 };
 
@@ -52,16 +54,19 @@ UnittestsTest::UnittestsTest()
 {
     messlog = new QTextStream(stdout);
     transformFactory = NULL;
+    displayLogs = false;
 }
 
 void UnittestsTest::logError(const QString mess)
 {
-    *messlog << "Error: " <<  mess << endl;
+    if (displayLogs)
+        *messlog << "Error: " <<  mess << endl;
 }
 
 void UnittestsTest::logStatus(const QString mess)
 {
-    *messlog << "Status: " <<  mess << endl;
+    if (displayLogs)
+        *messlog << "Status: " <<  mess << endl;
 }
 
 void UnittestsTest::initTestCase()
@@ -473,6 +478,7 @@ void UnittestsTest::testCharEncoding()
     QString name = "Char encoding";
     QHash<QString, QString> configuration;
     QHash<QString, QString> failconfiguration;
+    int charEncodingParamscount = 4;
 
     TransformAbstract *transf = transformFactory->getTransform(name);
     if (transf == 0)
@@ -487,7 +493,7 @@ void UnittestsTest::testCharEncoding()
     QCOMPARE(transf->transform(QByteArray("")), QByteArray(""));
 
     configuration = transf->getConfiguration();
-    QCOMPARE(configuration.size() , 3);
+    QCOMPARE(configuration.size() , charEncodingParamscount);
     QCOMPARE(configuration.value(PROP_NAME) , name);
     QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::INBOUND));
     QCOMPARE(configuration.value(XMLCODECNAME), QString("ASMO-708"));
@@ -497,7 +503,7 @@ void UnittestsTest::testCharEncoding()
     QVERIFY(transf->setConfiguration(configuration));
 
     configuration = transf->getConfiguration();
-    QCOMPARE(configuration.size(),3);
+    QCOMPARE(configuration.size(),charEncodingParamscount);
     QCOMPARE(configuration.value(PROP_NAME), name);
     QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::OUTBOUND));
     QCOMPARE(transf->transform(QByteArray("\xc2\xa3")), QByteArray("\xea\x8f\x82"));

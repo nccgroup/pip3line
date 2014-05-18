@@ -38,7 +38,11 @@ class Xor : public TransformAbstract
         void setFromHex(bool val);
         void setType(Xor::Type val);
         Xor::Type getType() const;
+        QString inboundString() const;
+        QString outboundString() const;
     private:
+        QByteArray applyPreviousInput(const QByteArray & data, QByteArray & key);
+        QByteArray applyPreviousOutput(const QByteArray & data, QByteArray & key);
         static const QString XMLXORALGORITHM;
         QByteArray key;
         bool hexDecode;

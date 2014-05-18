@@ -18,7 +18,10 @@ BlocksSource::BlocksSource(QObject *parent) :
     QObject(parent)
 {
     readWrite = false;
+    encodeOutput = true;
+    decodeInput = true;
     gui = NULL;
+    connect(this, SIGNAL(blockToBeSend(Block)), SLOT(sendBlock(Block)), Qt::QueuedConnection);
     //qDebug() << this << "created";
 }
 
@@ -43,6 +46,26 @@ QWidget *BlocksSource::requestGui(QWidget *)
 {
     return NULL;
 }
+bool BlocksSource::getDecodeinput() const
+{
+    return decodeInput;
+}
+
+void BlocksSource::setDecodeinput(bool value)
+{
+    decodeInput = value;
+}
+
+bool BlocksSource::getEncodeOutput() const
+{
+    return encodeOutput;
+}
+
+void BlocksSource::setEncodeOutput(bool value)
+{
+    encodeOutput = value;
+}
+
 char BlocksSource::getSeparator() const
 {
     return separator;
@@ -53,18 +76,20 @@ void BlocksSource::setSeparator(char value)
     separator = value;
 }
 
+void BlocksSource::postBlockForSending(Block block)
+{
+    emit blockToBeSend(block);
+}
+
+void BlocksSource::restart()
+{
+    stopListening();
+    startListening();
+}
+
 
 void BlocksSource::onGuiDestroyed()
 {
     gui = NULL;
-}
-bool BlocksSource::getBase64Applied() const
-{
-    return base64Applied;
-}
-
-void BlocksSource::setBase64Applied(bool value)
-{
-    base64Applied = value;
 }
 

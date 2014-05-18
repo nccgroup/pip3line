@@ -12,10 +12,12 @@ Released under AGPL see LICENSE for more information
 #include "../sources/bytesourceabstract.h"
 #include "../guihelper.h"
 #include <QMessageBox>
+#include <QToolTip>
 
 const QString ReadOnlyButton::ReadWrite = "RW";
 const QString ReadOnlyButton::ReadOnly = "RO";
-const QString ReadOnlyButton::ButtonToolTip = "Switch between readonly state and read/write";
+const QString ReadOnlyButton::ButtonToolTipRW = "Current state is read/write, click here if you want to switch to readonly";
+const QString ReadOnlyButton::ButtonToolTipRO = "Current state is read-only, click here if you want to enable write";
 const QString ReadOnlyButton::CAP_WRITE_ToolTip = "Disabled: the source cannot be modified";
 
 ReadOnlyButton::ReadOnlyButton(ByteSourceAbstract *bytesource, QWidget *parent) :
@@ -35,13 +37,15 @@ void ReadOnlyButton::refreshStateValue()
     if (byteSource->isReadonly()) {
         setStyleSheet(GuiStyles::PushButtonReadonly);
         setChecked(true);
+        setToolTip(ButtonToolTipRO);
         setText(ReadOnly);
     } else {
         setStyleSheet(QString());
         setChecked(false);
+        setToolTip(ButtonToolTipRW);
         setText(ReadWrite);
     }
-    setToolTip(ButtonToolTip);
+
 
     if (!byteSource->hasCapability(ByteSourceAbstract::CAP_WRITE)) {
         setDisabled(true);
@@ -57,12 +61,15 @@ void ReadOnlyButton::onToggle(bool val)
         if (byteSource->setReadOnly(val)) {
             if (val) {
                 setStyleSheet(GuiStyles::PushButtonReadonly);
+                QToolTip::showText( this->mapToGlobal( QPoint( 0, 0 ) ), ButtonToolTipRO );
+                setToolTip(ButtonToolTipRO);
                 setText(ReadOnly);
             } else {
                 setStyleSheet(QString());
+                QToolTip::showText( this->mapToGlobal( QPoint( 0, 0 ) ), ButtonToolTipRW );
+                setToolTip(ButtonToolTipRW);
                 setText(ReadWrite);
             }
-            setToolTip(ButtonToolTip);
             return;
         } else {
             mess = tr("Could not set readonly property on %1").arg(((QObject *)byteSource)->metaObject()->className());

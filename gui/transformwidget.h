@@ -38,6 +38,7 @@ class SearchWidget;
 class ClearAllMarkingsButton;
 class ByteTableView;
 class TransformRequest;
+class MessagePanelWidget;
 
 namespace Ui {
 class TransformWidget;
@@ -56,7 +57,6 @@ class TransformWidget : public QWidget
         bool setTransform(TransformAbstract *transf);
         ByteSourceAbstract * getSource();
         ByteTableView *getHexTableView();
-
     signals:
         void updated();
         void transfoRequest(TransformWidget *);
@@ -81,7 +81,6 @@ class TransformWidget : public QWidget
         void onFileLoadRequest();
         void processingFinished(QByteArray output, Messages messages);
         void buildSelectionArea();
-        void downloadFinished(DownloadManager *downloadManager);
         void updateView(quintptr source);
         void onInvalidText();
         void onTransformSelected(QString name);
@@ -103,8 +102,6 @@ class TransformWidget : public QWidget
         void integrateTransform();
         void configureViewArea();
         void clearCurrentTransform();
-        void addMessage(const QString &message, QColor color);
-        void setDownload(QUrl url);
         void configureDirectionBox();
         bool eventFilter(QObject *obj, QEvent *event);
         void dragEnterEvent ( QDragEnterEvent * event );
@@ -112,16 +109,12 @@ class TransformWidget : public QWidget
         bool firstView;
         QNetworkAccessManager *manager;
         Ui::TransformWidget *ui;
-
         TransformAbstract * currentTransform;
         TransformMgmt *transformFactory;
-
         InfoDialog * infoDialog;
-
         GuiHelper * guiHelper;
         LoggerWidget *logger;
         QByteArray outputData;
-
         ByteSourceAbstract *byteSource;
         HexView *hexView;
         TextView *textView;
@@ -129,6 +122,7 @@ class TransformWidget : public QWidget
         OffsetGotoWidget *gotoWidget;
         SearchWidget *searchWidget;
         ClearAllMarkingsButton * clearAllMarkingsButton;
+        MessagePanelWidget* messagePanel;
 };
 
 

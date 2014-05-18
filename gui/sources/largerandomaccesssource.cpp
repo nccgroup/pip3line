@@ -16,6 +16,7 @@ LargeRandomAccessSource::LargeRandomAccessSource(QObject *parent) :
     ByteSourceAbstract(parent)
 {
     currentStartingOffset = 0;
+    _readonly = true;
     capabilities = CAP_HISTORY;
     currentHistoryPointer = -1;
     chunksize = 256;
@@ -97,6 +98,15 @@ void LargeRandomAccessSource::replace(quint64 offset, int length, QByteArray rep
 {
     if (!writeData(offset,length,repData,source))
         emit log(tr("Error occurred while trying to write data"),metaObject()->className(), Pip3lineConst::LERROR);
+    else
+        refreshData(false);
+}
+
+void LargeRandomAccessSource::viewReplace(int offset, int length, QByteArray repData, quintptr source)
+{
+    if (validateViewOffsetAndSize(offset, length)) { // if valid
+        replace(currentStartingOffset + (quint64)offset, length,repData,source);
+    }
 }
 
 
@@ -393,7 +403,7 @@ bool LargeRandomAccessSource::validateViewOffsetAndSize(int offset, int length)
     }
 
     if ((INT_MAX - length) < offset) { //
-        emit log(tr("Length too large, hitting the chunksize limit. offset: %1 length: %2").arg(offset).arg(length),metaObject()->className(),Pip3lineConst::LERROR);
+        emit log(tr("Length too large, hitting the INT_MAX limit. offset: %1 length: %2").arg(offset).arg(length),metaObject()->className(),Pip3lineConst::LERROR);
         return false;
     }
 

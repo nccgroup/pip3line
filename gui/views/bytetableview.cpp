@@ -393,9 +393,10 @@ ByteTableView::~ByteTableView()
 
 void ByteTableView::setModel(ByteItemModel *nmodel)
 {
-    QAbstractItemModel *m = QTableView::model();
+    QAbstractItemModel *old = QTableView::model();
     QTableView::setModel(nmodel);
-    delete m;
+    delete old;
+    old = NULL;
 
     currentModel = nmodel;
     searchObject = currentModel->getSource()->getSearchObject();

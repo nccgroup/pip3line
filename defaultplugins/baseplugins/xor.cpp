@@ -35,7 +35,7 @@ QString Xor::description() const {
 }
 
 bool Xor::isTwoWays() {
-    return false;
+    return true;
 }
 
 QHash<QString, QString> Xor::getConfiguration()
@@ -116,23 +116,21 @@ void Xor::transform(const QByteArray &input, QByteArray &output){
             break;
         case PREVIOUSINPUT:
             {
-                QByteArray temp = input;
-                temp.prepend(finalKey);
-
-                for (int i = finalKey.size() ; i < temp.size(); i++) {
-                    output.append(temp.at(i) ^ temp.at(i - finalKey.size()));
+                if (wayValue == INBOUND) {
+                    output = applyPreviousInput(input,finalKey);
+                } else {
+                    output = applyPreviousOutput(input,finalKey);
                 }
 
             }
             break;
         case PREVIOUSOUTPUT:
             {
-                output = finalKey;
-
-                for (int i = 0 ; i < input.size(); i++) {
-                    output.append(input.at(i) ^ output.at(i));
+                if (wayValue == INBOUND) {
+                    output = applyPreviousOutput(input,finalKey);
+                } else {
+                    output = applyPreviousInput(input,finalKey);
                 }
-                output = output.mid(finalKey.size());
             }
             break;
         default:
@@ -177,4 +175,39 @@ void Xor::setType(Xor::Type val)
 Xor::Type Xor::getType() const
 {
     return xortype;
+}
+
+QByteArray Xor::applyPreviousInput(const QByteArray &data, QByteArray & key)
+{
+    QByteArray output;
+    QByteArray temp = data;
+    temp.prepend(key);
+
+    for (int i = key.size() ; i < temp.size(); i++) {
+        output.append(temp.at(i) ^ temp.at(i - key.size()));
+    }
+
+    return output;
+}
+
+QByteArray Xor::applyPreviousOutput(const QByteArray &data, QByteArray &key)
+{
+    QByteArray output = key;
+
+    for (int i = 0 ; i < data.size(); i++) {
+        output.append(data.at(i) ^ output.at(i));
+    }
+    output = output.mid(key.size());
+
+    return output;
+}
+
+QString Xor::inboundString() const
+{
+    return tr("Encrypt");
+}
+
+QString Xor::outboundString() const
+{
+    return tr("Decrypt");
 }

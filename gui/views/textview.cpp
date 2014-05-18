@@ -23,6 +23,7 @@ Released under AGPL see LICENSE for more information
 #include <QTextDecoder>
 #include <QMenu>
 #include <QAction>
+#include <transformabstract.h>
 #include "../tabs/tababstract.h"
 #include "../sources/bytesourceabstract.h"
 #include "../loggerwidget.h"
@@ -65,12 +66,16 @@ TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidg
     textViewFont.setPointSize(10);
     ui->plainTextEdit->setFont(textViewFont);
 
+    ui->plainTextEdit->setReadOnly(byteSource->isReadonly());
+    connect(byteSource, SIGNAL(readOnlyChanged(bool)), this, SLOT(onReadOnlyChanged(bool)));
+
     QList<QByteArray> codecs =  QTextCodec::availableCodecs();
     qSort(codecs);
     for (int i = 0; i < codecs.size(); i++) {
         ui->codecsComboBox->addItem(QString(codecs.at(i)),QVariant(codecs.at(i)));
     }
     ui->codecsComboBox->setCurrentIndex(ui->codecsComboBox->findData(DEFAULT_CODEC));
+    ui->codecsComboBox->setMaximumWidth(200);
     ui->codecsComboBox->installEventFilter(guiHelper);
     connect(ui->codecsComboBox,SIGNAL(currentIndexChanged(QString)), this, SLOT(onCodecChange(QString)));
 
@@ -129,6 +134,8 @@ void TextView::onRightClick(QPoint pos)
         saveToFileAction->setEnabled(true);
         selectAllAction->setEnabled(true);
     }
+    loadFileAction->setEnabled(byteSource->hasCapability((ByteSourceAbstract::CAP_LOADFILE))
+                               && byteSource->hasCapability(ByteSourceAbstract::CAP_WRITE));
     globalContextMenu->exec(this->mapToGlobal(pos));
 }
 
@@ -194,6 +201,11 @@ void TextView::onCodecChange(QString codecName)
         currentCodec = codec;
         updateText(0);
     }
+}
+
+void TextView::onReadOnlyChanged(bool readonly)
+{
+    ui->plainTextEdit->setReadOnly(readonly);
 }
 
 void TextView::updateSendToMenu()
@@ -315,7 +327,8 @@ void TextView::updateText(quintptr source)
 
     ui->plainTextEdit->blockSignals(true);
     ui->plainTextEdit->clear();
-    if (byteSource->size() > (quint64)MAX_TEXT_VIEW) {
+    QByteArray rawdata = byteSource->getRawData();
+    if (rawdata.size() > MAX_TEXT_VIEW) {
         ui->plainTextEdit->appendPlainText("Data Too large for this view");
         ui->plainTextEdit->blockSignals(false);
         ui->plainTextEdit->setEnabled(false);
@@ -323,10 +336,10 @@ void TextView::updateText(quintptr source)
         ui->codecsComboBox->setStyleSheet("");
         emit invalidText();
     } else {
-        if (byteSource->size() > 0) {
+        if (rawdata.size() > 0) {
             if (currentCodec != NULL) { //safeguard
                 QTextDecoder *decoder = currentCodec->makeDecoder(QTextCodec::ConvertInvalidToNull | QTextCodec::IgnoreHeader);
-                QString textf = decoder->toUnicode(byteSource->getRawData().constData(),byteSource->size());
+                QString textf = decoder->toUnicode(rawdata.constData(),rawdata.size());
                 if (decoder->hasFailure()) {
                     if (errorNotReported) {
                         logger->logError(tr("invalid text decoding [%1]").arg(QString::fromUtf8(currentCodec->name())),LOGID);
@@ -344,7 +357,7 @@ void TextView::updateText(quintptr source)
                 ui->plainTextEdit->ensureCursorVisible();
                 ui->plainTextEdit->setEnabled(true);
             } else {
-                logger->logError(tr(":updatedText() currentCodec is NULL T_T"),LOGID);
+                qCritical() << tr("%1:updatedText() currentCodec is NULL T_T").arg(metaObject()->className());
             }
         } else {
 
@@ -352,12 +365,6 @@ void TextView::updateText(quintptr source)
         }
     }
     ui->plainTextEdit->blockSignals(false);
-}
-
-
-void TextView::reveceivingTextChunk(const QString &chunk)
-{
-    ui->plainTextEdit->insertPlainText(chunk);
 }
 
 void TextView::updateStats()
@@ -440,4 +447,5 @@ QByteArray TextView::encode(QString text)
     }
     return ret;
 }
+
 

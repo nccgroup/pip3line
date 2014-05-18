@@ -90,7 +90,11 @@ SOURCES += main.cpp\
     sources/searchabstract.cpp \
     sources/tcplistener.cpp \
     sources/intercepsource.cpp \
-    sources/networkconfwidget.cpp
+    sources/networkconfwidget.cpp \
+    sources/interceptwidget.cpp \
+    shared/universalreceiverbutton.cpp \
+    shared/messagepanelwidget.cpp \
+    sources/intermediatesource.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -156,7 +160,11 @@ HEADERS  += mainwindow.h \
     sources/searchabstract.h \
     sources/tcplistener.h \
     sources/intercepsource.h \
-    sources/networkconfwidget.h
+    sources/networkconfwidget.h \
+    sources/interceptwidget.h \
+    shared/universalreceiverbutton.h \
+    shared/messagepanelwidget.h \
+    sources/intermediatesource.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \
@@ -185,7 +193,9 @@ FORMS    += mainwindow.ui \
     shared/hexwidget.ui \
     sources/filewidget.ui \
     sources/memorywidget.ui \
-    sources/networkconfwidget.ui
+    sources/networkconfwidget.ui \
+    sources/interceptwidget.ui \
+    shared/messagepanelwidget.ui
 
 OTHER_FILES += icons/pip3line.png \
     win.rc \

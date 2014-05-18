@@ -144,9 +144,11 @@ const qint64 LargeFile::MAX_COMPARABLE_SIZE = 0x8000000;
 LargeFile::LargeFile(QObject *parent) :
     LargeRandomAccessSource(parent)
 {
+    _name = tr("Large file source");
     capabilities = CAP_LOADFILE;
     chunksize = BLOCKSIZE;
     fileSize = 0;
+    _readonly = true;
     connect(&watcher, SIGNAL(fileChanged(QString)), SLOT(onFileChanged(QString)));
 }
 
@@ -232,6 +234,7 @@ void LargeFile::fromLocalFile(QString fileName, quint64 startOffset)
         emit nameChanged(infoFile.fileName());
     }
     currentStartingOffset = startOffset;
+    _readonly = true; // set it to default , to avoid accidents
 
     emit infoUpdated();
 
@@ -356,11 +359,15 @@ bool LargeFile::seekFile(quint64 offset)
     return true;
 }
 
-QWidget *LargeFile::requestGui(QWidget *parent)
+QWidget *LargeFile::requestGui(QWidget *parent, GUI_TYPE type)
 {
-    FileWidget *fw = new(std::nothrow)FileWidget(this,parent);
-    if (fw == NULL) {
-        qFatal("Cannot allocate memory for FileWidget X{");
+
+    QWidget *fw = NULL;
+    if (type == GUI_CONFIG) {
+        fw = new(std::nothrow)FileWidget(this,parent);
+        if (fw == NULL) {
+            qFatal("Cannot allocate memory for FileWidget X{");
+        }
     }
     return fw;
 }

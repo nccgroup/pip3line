@@ -22,11 +22,12 @@ Released under AGPL see LICENSE for more information
 #include <QSet>
 #include <QMultiMap>
 #include <QMenu>
+#include <QSslConfiguration>
 
 namespace GuiStyles {
     static const QString LineEditError = "QLineEdit { background-color: #FFB1B2; }";
     static const QString ComboBoxError = "QComboBox { color : red; }";
-    static const QString PushButtonReadonly = "QPushButton { background-color : #FF595C; }";
+    static const QString PushButtonReadonly = "QPushButton { color : #FF0000; }";
     static const QString LineEditWarning = "";
     static const QString LineEditMessage = "";
 }
@@ -42,6 +43,8 @@ class LoggerWidget;
 class TransformMgmt;
 class TransformRequest;
 class TextInputDialog;
+class QDragEnterEvent;
+class DownloadManager;
 
 class GuiHelper : public QObject
 {
@@ -56,8 +59,10 @@ class GuiHelper : public QObject
         QNetworkAccessManager *getNetworkManager();
 
         void sendNewSelection(const QByteArray &selection);
-
         void sendToNewTab(const QByteArray &initialValue = QByteArray());
+
+        void setUniveralReceiver(TabAbstract * tab);
+
         void addTab(TabAbstract *tab);
         void removeTab(TabAbstract * tab);
         QList<TabAbstract *> getTabs();
@@ -107,8 +112,13 @@ class GuiHelper : public QObject
         QSet<QString> getTypesBlacklist() const;
         ThreadedProcessor *getCentralTransProc() const;
 
+        void processDragEnter(QDragEnterEvent * event, ByteSourceAbstract *byteSource);
+        void processDropEvent(QDropEvent *event, ByteSourceAbstract *byteSource = NULL, DownloadManager * downloadManager = NULL);
+        void requestDownload(QUrl url, ByteSourceAbstract *byteSource = NULL, DownloadManager * downloadManager = NULL);
+
     public slots:
         void raisePip3lineWindow();
+        void routeExternalDataBlock(QByteArray data);
     signals:
         void newSelection(QByteArray selection);
         void newTabRequested(QByteArray initialValue);
@@ -157,6 +167,7 @@ class GuiHelper : public QObject
         QHash<QString , TransformAbstract *> importExportFunctions;
         ThreadedProcessor * centralTransProc;
         int offsetDefaultBase;
+        TabAbstract * universalReceiver;
 };
 
 #endif // GUIHELPER_H

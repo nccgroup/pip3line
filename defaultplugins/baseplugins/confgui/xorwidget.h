@@ -34,6 +34,7 @@ class XorWidget : public QWidget
         Ui::XorWidget *ui;
         Xor *transform;
         bool eventFilter(QObject *o, QEvent *e);
+        void focusOutEvent ( QFocusEvent * event );
 };
 
 #endif // XORWIDGET_H

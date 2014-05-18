@@ -114,6 +114,7 @@ void MemRange::setCopy(bool value)
 
 const QFont MemRangeModel::RegularFont = QFont("Courier New",10,2);
 const QStringList MemRangeModel::headers = QStringList() << "Start" << "End" << "Permissions" << "Size" << "Description" ;
+
 MemRangeModel::MemRangeModel(QObject *parent) :
     QAbstractListModel(parent)
 {
@@ -260,6 +261,7 @@ CurrentMemorysource::CurrentMemorysource(QObject *parent) :
     LargeRandomAccessSource(parent)
 {
     _readonly = true;
+    _name = tr("Current process memory");
     capabilities = CAP_HISTORY;
     currentRange = NULL;
     rangesModel = new(std::nothrow) MemRangeModel(this);
@@ -286,11 +288,6 @@ QString CurrentMemorysource::description()
     return name();
 }
 
-QString CurrentMemorysource::name()
-{
-    return tr("Current process memory");
-}
-
 quint64 CurrentMemorysource::size()
 {
     qDebug() << "Wordsize = " << QSysInfo::WordSize;
@@ -310,14 +307,18 @@ MemRangeModel *CurrentMemorysource::getMemRanges() const
     return rangesModel;
 }
 
-QWidget *CurrentMemorysource::requestGui(QWidget *parent)
+QWidget *CurrentMemorysource::requestGui(QWidget *parent, GUI_TYPE type)
 {
-    MemoryWidget * mw = new(std::nothrow) MemoryWidget(this, parent);
-    if (mw == NULL) {
-        qFatal("Cannot allocate memory for MemoryWidget X{");
+    QWidget *ret = NULL;
+    if (type == GUI_CONFIG) {
+        MemoryWidget * mw = new(std::nothrow) MemoryWidget(this, parent);
+        if (mw == NULL) {
+            qFatal("Cannot allocate memory for MemoryWidget X{");
+        }
+        mw->setProcSelection(false);
+        ret = mw;
     }
-    mw->setProcSelection(false);
-    return mw;
+    return ret;
 }
 
 void CurrentMemorysource::mapMemory()
@@ -504,6 +505,11 @@ bool CurrentMemorysource::tryMoveView(int sizeToMove)
     return true;
 }
 
+void CurrentMemorysource::fromLocalFile(QString )
+{
+    qCritical() << tr("fromLocalFile should never be called on CurrentMemorysource");
+}
+
 bool CurrentMemorysource::setStartingOffset(quint64 offset)
 {
     bool found = false;
@@ -623,7 +629,7 @@ bool CurrentMemorysource::writeData(quint64 offset,  QByteArray &data, int size)
     if (size < 0)
         return valid;
 
-#ifdef Q_OS_UNIX
+
     for (int i = 0; i < ranges.size(); i++) {
         curRange = ranges.at(i);
         if (curRange->isInRange(offset)) {
@@ -631,7 +637,11 @@ bool CurrentMemorysource::writeData(quint64 offset,  QByteArray &data, int size)
                 valid = true;
                 if (!curRange->isInRange(offset + size - 1)) {
                     size = curRange->getUpperVal() - offset;
+#ifdef Q_OS_UNIX
                     memcpy((void *)&offset,(void *)data.data(), size);
+#elif defined(Q_OS_WIN)
+
+#endif
                 }
             } else {
                 qDebug() << "not writable" << offset;
@@ -642,9 +652,9 @@ bool CurrentMemorysource::writeData(quint64 offset,  QByteArray &data, int size)
         }
     }
 
-#elif defined(Q_OS_WIN)
 
-#endif
+
+
 
     if (!valid) {
         emit log(tr("offset %1 is not in a valid memory blocks").arg(QString::number(offset,16)),metaObject()->className(), Pip3lineConst::LERROR);

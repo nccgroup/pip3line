@@ -45,6 +45,7 @@ ByteSourceGuiButton::ByteSourceGuiButton(ByteSourceAbstract *bytesource, GuiHelp
     } else {
         localAction->setToolTip(tr("No settings available for this source"));
         setDisabled(true);
+        setVisible(false);
     }
 }
 
@@ -59,11 +60,13 @@ void ByteSourceGuiButton::refreshState()
 
     if (gui != NULL) {
         setDisabled(false);
+        setVisible(true);
         connect(localAction, SIGNAL(toggled(bool)), SLOT(onToggle(bool)),Qt::UniqueConnection);
         connect(this, SIGNAL(toggled(bool)), SLOT(onToggle(bool)),Qt::UniqueConnection);
     } else {
         qDebug() << tr("No gui available for this source %1").arg(byteSource->metaObject()->className());
         setDisabled(true);
+        setVisible(false);
     }
 
 }

@@ -28,33 +28,31 @@ class BasicSource : public ByteSourceAbstract
         Q_OBJECT
     public:
         BasicSource(QObject *parent = 0);
-        ~BasicSource();
+        virtual ~BasicSource();
         QString description();
-        virtual QString name();
         virtual void setData(QByteArray data, quintptr source = INVALID_SOURCE);
         QByteArray getRawData();
         quint64 size();
-        QByteArray extract(quint64 offset, int length);
+        virtual QByteArray extract(quint64 offset, int length);
         char extract(quint64 offset);
-        void replace(quint64 offset, int length, QByteArray repData, quintptr source = INVALID_SOURCE);
-        void insert(quint64 offset, QByteArray repData, quintptr source = INVALID_SOURCE);
-        void remove(quint64 offset, int length, quintptr source = INVALID_SOURCE);
-        void clear(quintptr source = INVALID_SOURCE);
+        virtual void replace(quint64 offset, int length, QByteArray repData, quintptr source = INVALID_SOURCE);
+        virtual void insert(quint64 offset, QByteArray repData, quintptr source = INVALID_SOURCE);
+        virtual void remove(quint64 offset, int length, quintptr source = INVALID_SOURCE);
+        virtual void clear(quintptr source = INVALID_SOURCE);
         int getViewOffset(quint64 realoffset);
-
-        virtual int preferredTabType();
+        int preferredTabType();
         bool isOffsetValid(quint64 offset);
-
-        virtual bool isReadableText();
-
+        bool isReadableText();
+    protected:
+        QByteArray rawData;
     private:
         Q_DISABLE_COPY(BasicSource)
         static const QByteArray TEXT;
         static const QString LOGID;
         bool validateOffsetAndSize(quint64 offset, int length);
         SearchAbstract *requestSearchObject(QObject *parent = 0);
-        QByteArray rawData;
         BasicSearch *bsearchObj;
+
 };
 
 #endif // BASICSOURCE_H

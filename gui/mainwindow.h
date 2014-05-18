@@ -16,10 +16,10 @@ Released under AGPL see LICENSE for more information
 #include <transformmgmt.h>
 #include <QSystemTrayIcon>
 #include <QMenu>
-#include <QNetworkProxy>
 #include <QPushButton>
-#include <QNetworkAccessManager>
 #include <QPoint>
+#include <QNetworkAccessManager>
+#include "sources/blockssource.h"
 
 namespace Ui {
 class MainWindow;
@@ -52,8 +52,8 @@ class MainWindow : public QMainWindow
         void onHelpWithRegExp();
         void onSettingsDialogOpen(bool checked);
         void checkForUpdates();
-        void processingCheckForUpdate(DownloadManager * dm);
-        void processingUrlDownload(DownloadManager * dm);
+        void processingCheckForUpdate(QByteArray data);
+        void processingUrlDownload(QByteArray data);
         void iconActivated(QSystemTrayIcon::ActivationReason reason);
         void onImport(QAction* action);
         void onDataFromURL();
@@ -66,6 +66,7 @@ class MainWindow : public QMainWindow
         void onNewAction(QAction * action);
         void onNewDefault();
         void showWindow();
+        void onExternalBlockReceived(const Block &block);
 
     private:
         Q_DISABLE_COPY(MainWindow)
@@ -83,6 +84,7 @@ class MainWindow : public QMainWindow
         static const QString NEW_FILE;
         static const QString NEW_CURRENTMEM;
         static const QString NEW_BASEHEX;
+        static const QString NEW_INTERCEP;
         Ui::MainWindow *ui;
         SettingsDialog *settingsDialog;
         AnalyseDialog *analyseDialog;
@@ -105,7 +107,6 @@ class MainWindow : public QMainWindow
         bool quickViewWasVisible;
         bool settingsWasVisible;
         bool compareWasVisible;
-        QNetworkProxy networkProxy;
         QPoint savedPos;
         BlocksSource * blockListener;
 };

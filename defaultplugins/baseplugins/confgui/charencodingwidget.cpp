@@ -29,6 +29,7 @@ CharEncodingWidget::CharEncodingWidget(CharEncoding *ntransform, QWidget *parent
     }
     ui->codecComboBox->setCurrentIndex(ui->codecComboBox->findData((QVariant) transform->getCodecName()));
     connect(ui->codecComboBox,SIGNAL(currentIndexChanged(int)), this, SLOT(onCodecChange()));
+    connect(ui->UTF8pushButton, SIGNAL(clicked()), SLOT(onUTF8Clicked()));
 }
 
 CharEncodingWidget::~CharEncodingWidget()
@@ -51,4 +52,20 @@ void CharEncodingWidget::on_latin1PushButton_clicked()
 {
     transform->setCodecName("ISO-8859-1");
     ui->codecComboBox->setCurrentIndex(ui->codecComboBox->findData((QVariant) transform->getCodecName()));
+}
+
+void CharEncodingWidget::onUTF8Clicked()
+{
+    transform->setCodecName("UTF-8");
+    ui->codecComboBox->setCurrentIndex(ui->codecComboBox->findData((QVariant) transform->getCodecName()));
+}
+
+void CharEncodingWidget::onInsertBOMChanged(bool val)
+{
+    transform->setIncludeHeader(val);
+}
+
+void CharEncodingWidget::onConvertInvalidToNullChanged(bool val)
+{
+    transform->setConvertInvalidToNull(val);
 }

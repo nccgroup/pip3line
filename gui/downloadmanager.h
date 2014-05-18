@@ -19,34 +19,34 @@ Released under AGPL see LICENSE for more information
 #include <QNetworkReply>
 #include <QSslError>
 #include <QUrl>
+#include "guihelper.h"
 #include "sources/bytesourceabstract.h"
+
+class QNetworkRequest;
+class GuiHelper;
 
 class DownloadManager : public QObject
 {
         Q_OBJECT
     public:
-        explicit DownloadManager(QUrl &url,QNetworkAccessManager * networkManager, ByteSourceAbstract *destModel = NULL, QObject *parent = 0);
+        explicit DownloadManager(QUrl &url, GuiHelper *guiHelper, QObject *parent = 0);
         ~DownloadManager();
         bool launch();
         QByteArray getData();
     signals:
-        void error(QString, QString);
-        void warning(QString, QString);
-        void finished(DownloadManager *);
+        void finished(QByteArray data);
     public slots:
         void requestFinished();
         void networkSSLError(QList<QSslError> sslError);
     private:
         Q_DISABLE_COPY(DownloadManager)
         static const QString ID;
-
         QNetworkAccessManager * networkManager;
-        QMutex dataMutex;
-        QNetworkReply * reply;
-
-        ByteSourceAbstract *model;
         QByteArray data;
         QUrl resource;
+        QUrl previousRedirect;
+        void createRequest(QUrl url);
+        GuiHelper *guiHelper;
 };
 
 #endif // DOWNLOADMANAGER_H

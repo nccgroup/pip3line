@@ -15,6 +15,19 @@ Released under AGPL see LICENSE for more information
 #include <QObject>
 #include <QByteArray>
 class QWidget;
+class BlocksSource;
+
+class Block {
+    public:
+        enum BLOCK_ORIGIN {
+            SOURCE,
+            TARGET
+        };
+        QByteArray data;
+        BlocksSource * source;
+        BLOCK_ORIGIN direction;
+        int sourceid;
+};
 
 class BlocksSource : public QObject
 {
@@ -25,23 +38,32 @@ class BlocksSource : public QObject
         QWidget *getGui(QWidget * parent = 0);
         bool isReadWrite();
         static const int BLOCK_MAX_SIZE;
-        bool getBase64Applied() const;
-        void setBase64Applied(bool value);
         char getSeparator() const;
         void setSeparator(char value);
+        virtual void postBlockForSending(Block block);
+        bool getEncodeOutput() const;
+        void setEncodeOutput(bool value);
+        bool getDecodeinput() const;
+        void setDecodeinput(bool value);
+
     signals:
-        void blockReceived(QByteArray block);
+        void blockReceived(Block block);
+        void blockToBeSend(Block block);
+        void stopped();
+        void started();
         void error(const QString, const QString);
         void status(const QString, const QString);
     public slots:
-        virtual void sendBlock(const QByteArray & block) = 0;
-        virtual void startListening() = 0;
+        virtual void sendBlock(const Block & block) = 0;
+        virtual bool startListening() = 0;
         virtual void stopListening() = 0;
+        virtual void restart();
     protected:
         virtual QWidget *requestGui(QWidget * parent);
         bool readWrite;
         char separator;
-        bool base64Applied;
+        bool encodeOutput;
+        bool decodeInput;
     private slots:
         void onGuiDestroyed();
     private:

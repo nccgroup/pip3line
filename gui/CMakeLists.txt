@@ -89,6 +89,10 @@ set ( pip3line_HDRS
 	sources/tcpserverlistener.h
 	sources/tcplistener.h
 	sources/searchabstract.h
+	sources/intercepsource.h
+	sources/interceptwidget.h
+	sources/networkconfwidget.h
+	sources/intermediatesource.h
 	views/hexview.h
 	views/textview.h
 	views/bytetableview.h
@@ -107,6 +111,8 @@ set ( pip3line_HDRS
 	shared/clearallmarkingsbutton.h
 	shared/bytesourceguibutton.h
 	shared/detachtabbutton.h
+	shared/universalreceiverbutton.h
+	shared/messagepanelwidget.h
 	)
 
 
@@ -157,6 +163,10 @@ set ( pip3line_SRCS
 	sources/tcpserverlistener.cpp
 	sources/tcplistener.cpp
 	sources/searchabstract.cpp
+	sources/intercepsource.cpp
+	sources/interceptwidget.cpp
+	sources/networkconfwidget.cpp
+	sources/intermediatesource.cpp
 	views/hexview.cpp
 	views/bytetableview.cpp
 	views/byteitemmodel.cpp
@@ -175,6 +185,8 @@ set ( pip3line_SRCS
 	shared/clearallmarkingsbutton.cpp
 	shared/bytesourceguibutton.cpp
 	shared/detachtabbutton.cpp
+	shared/universalreceiverbutton.cpp
+	shared/messagepanelwidget.cpp
 	)
 
 set ( pip3line_UIS
@@ -201,6 +213,7 @@ set ( pip3line_UIS
 	quickviewitemconfig.ui
 	newbytedialog.ui
 	shared/hexwidget.ui
+	shared/messagepanelwidget.ui
 	debugdialog.ui
 	sources/memorywidget.ui
 	sources/filewidget.ui
@@ -208,6 +221,8 @@ set ( pip3line_UIS
 	textinputdialog.ui
 	views/hexview.ui
 	views/textview.ui
+	sources/interceptwidget.ui
+	sources/networkconfwidget.ui
 	)
 
 set ( pip3line_RSCS

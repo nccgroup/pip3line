@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <comment>
+* Released as open source by NCC Group Plc - http://www.nccgroup.com/
+*
+* Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+*
+* https://github.com/nccgroup/pip3line
+*
+* Released under AGPL see LICENSE for more information
+</comment>
+ <class>InterceptWidget</class>
+ <widget class="QWidget" name="InterceptWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>1</number>
+     </property>
+     <widget class="QWidget" name="listTab">
+      <attribute name="title">
+       <string>data</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="listLayout"/>
+     </widget>
+     <widget class="QWidget" name="confTab">
+      <attribute name="title">
+       <string>config</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QTabWidget" name="configTabWidget">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <widget class="QWidget" name="sourceTab">
+          <attribute name="title">
+           <string>source/destination</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="sourceLayout">
+           <item alignment="Qt::AlignTop">
+            <widget class="QComboBox" name="blockSourceComboBox">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="columnsTab">
+          <attribute name="title">
+           <string>Columns</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QListView" name="columnListWidget">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="columnWidget" native="true">
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="margin">
+           <number>0</number>
+          </property>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -118,13 +118,11 @@ void QuickViewItemConfig::setFormat(OutputFormat nformat)
 void QuickViewItemConfig::setWayBoxVisible(bool val)
 {
     wayBoxVisible = val;
-    ui->wayGroupBox->setVisible(wayBoxVisible);
 }
 
 void QuickViewItemConfig::setFormatVisible(bool val)
 {
     formatBoxVisible = val;
-    ui->formatGroupBox->setVisible(formatBoxVisible);
 }
 
 void QuickViewItemConfig::onTransformSelect(QString name)

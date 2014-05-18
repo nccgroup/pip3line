@@ -83,7 +83,7 @@ void LoggerWidget::addMessage(const QString &message, const QString &source, LOG
     switch (level) {
         case LERROR:
             color = Qt::red;
-            qDebug() << fmess;
+            qCritical() << fmess;
             if (!(uncheckedError && isVisible())) {
                 uncheckedError = true;
                 emit errorRaised();
@@ -91,11 +91,11 @@ void LoggerWidget::addMessage(const QString &message, const QString &source, LOG
             break;
         case LWARNING:
             color = Qt::blue;
-            qDebug() << fmess;
+            qWarning() << fmess;
             break;
         default:
             color = Qt::black;
-            qDebug() << fmess;
+            qWarning() << fmess;
             break;
 
     }
