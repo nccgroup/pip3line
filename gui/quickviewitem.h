@@ -14,6 +14,8 @@ Released under AGPL see LICENSE for more information
 #include <QWidget>
 #include <transformabstract.h>
 #include <commonstrings.h>
+#include <QTextEdit>
+#include <QLineEdit>
 #include "guihelper.h"
 #include "quickviewitemconfig.h"
 
@@ -54,6 +56,9 @@ class QuickViewItem : public QWidget
         bool noError;
         QByteArray currentData;
         OutputFormat format;
+        OutputType outputType;
+        QLineEdit *outputLine;
+        QTextEdit *outputBlock;
 };
 
 #endif // QUICKVIEWITEM_H

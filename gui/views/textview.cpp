@@ -24,35 +24,42 @@ Released under AGPL see LICENSE for more information
 #include <QMenu>
 #include <QAction>
 #include <transformabstract.h>
+#include <QClipboard>
 #include "../tabs/tababstract.h"
 #include "../sources/bytesourceabstract.h"
 #include "../loggerwidget.h"
 #include "../guihelper.h"
+#include "shared/guiconst.h"
+using namespace GuiConst;
 
 // We need to set this limit as QTextEdit has difficulties with large input
 const int TextView::MAX_TEXT_VIEW = 100000;
 const QString TextView::DEFAULT_CODEC = "UTF-8";
 const QString TextView::LOGID = "TextView";
+const QString TextView::COPY_AS_TEXT = "Text";
 
-TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidget *parent) :
-    SingleViewAbstract(nbyteSource, nguiHelper, parent)
+TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidget *parent, bool takeByteSourceOwnership) :
+    SingleViewAbstract(nbyteSource, nguiHelper, parent, takeByteSourceOwnership)
 {
     connect(byteSource,SIGNAL(updated(quintptr)), this, SLOT(updateText(quintptr)), Qt::UniqueConnection);
     ui = new(std::nothrow) Ui::TextView();
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::TextView X{");
     }
+
     globalContextMenu = NULL;
     sendToMenu = NULL;
     loadMenu = NULL;
     copyMenu = NULL;
     loadFileAction = NULL;
-    saveToFileAction = NULL;
+    saveToFileMenu = NULL;
     sendToNewTabAction = NULL;
     selectAllAction = NULL;
     keepOnlySelectedAction = NULL;
+    copyAsTextAction = NULL;
     currentCodec = NULL;
     errorNotReported = true;
+    autoCopyToClipboard = false;
     ui->setupUi(this);
 
     ui->plainTextEdit->installEventFilter(this);
@@ -86,7 +93,7 @@ TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidg
 TextView::~TextView()
 {
     delete sendToMenu;
-    delete saveToFileAction;
+    delete saveToFileMenu;
     delete loadMenu;
     delete copyMenu;
     delete loadFileAction;
@@ -120,6 +127,15 @@ void TextView::search(QByteArray block, QBitArray)
     emit searchStatus(!found);
 }
 
+void TextView::copyToClipboard()
+{
+    QString data = ui->plainTextEdit->toPlainText();
+    if (!data.isEmpty()) {
+        QClipboard *clipboard = QApplication::clipboard();
+        clipboard->setText(data);
+    }
+}
+
 void TextView::onRightClick(QPoint pos)
 {
     // if any selection
@@ -128,10 +144,10 @@ void TextView::onRightClick(QPoint pos)
     copyMenu->setEnabled(hasTextSelection);
     keepOnlySelectedAction->setEnabled(hasTextSelection);
     if (ui->plainTextEdit->toPlainText().isEmpty()) {
-        saveToFileAction->setEnabled(false);
+        saveToFileMenu->setEnabled(false);
         selectAllAction->setEnabled(false);
     } else {
-        saveToFileAction->setEnabled(true);
+        saveToFileMenu->setEnabled(true);
         selectAllAction->setEnabled(true);
     }
     loadFileAction->setEnabled(byteSource->hasCapability((ByteSourceAbstract::CAP_LOADFILE))
@@ -146,16 +162,12 @@ void TextView::onLoad(QAction * action)
 
 void TextView::onCopy(QAction *action)
 {
-    guiHelper->copyAction(action->text(), encode(ui->plainTextEdit->textCursor().selection().toPlainText()));
-}
-
-void TextView::onSaveToFile()
-{
-    if (ui->plainTextEdit->textCursor().hasSelection()) {
-        guiHelper->saveToFileAction(encode(ui->plainTextEdit->textCursor().selection().toPlainText()),this);
+    if (action == copyAsTextAction) {
+        QClipboard *clipboard = QApplication::clipboard();
+        clipboard->setText(ui->plainTextEdit->textCursor().selection().toPlainText());
+    } else {
+        guiHelper->copyAction(action->text(), encode(ui->plainTextEdit->textCursor().selection().toPlainText()));
     }
-    else
-        guiHelper->saveToFileAction(byteSource->getRawData(),this);
 }
 
 void TextView::onLoadFile()
@@ -208,6 +220,23 @@ void TextView::onReadOnlyChanged(bool readonly)
     ui->plainTextEdit->setReadOnly(readonly);
 }
 
+void TextView::onSaveToFile(QAction * action)
+{
+
+    if (action == ui->saveSelectedToFileAction) {
+        if (ui->plainTextEdit->textCursor().hasSelection()) {
+            guiHelper->saveToFileAction(encode(ui->plainTextEdit->textCursor().selection().toPlainText()),this);
+        }
+        else {
+            QString mess = tr("No text selected when save requested");
+            logger->logError(mess);
+            QMessageBox::critical(this,tr("Error"), mess,QMessageBox::Ok);
+        }
+    }
+    else
+        guiHelper->saveToFileAction(byteSource->getRawData(),this);
+}
+
 void TextView::updateSendToMenu()
 {
     sendToMenu->clear(); // action created on the fly should be automatically deleted
@@ -232,6 +261,10 @@ void TextView::updateImportExportMenu()
 {
     guiHelper->updateLoadContextMenu(loadMenu);
     guiHelper->updateCopyContextMenu(copyMenu);
+
+    QAction *firstAction = copyMenu->actions().at(0);
+    copyMenu->insertAction(firstAction,copyAsTextAction);
+    copyMenu->insertSeparator(firstAction);
 }
 
 void TextView::buildContextMenu()
@@ -244,7 +277,7 @@ void TextView::buildContextMenu()
         qFatal("Cannot allocate memory for sendToMenu X{");
         return;
     }
-    sendToNewTabAction = new(std::nothrow) QAction(GuiHelper::SEND_TO_NEW_TAB_ACTION, this);
+    sendToNewTabAction = new(std::nothrow) QAction(SEND_TO_NEW_TAB_ACTION, this);
     if (sendToNewTabAction == NULL) {
         qFatal("Cannot allocate memory for sendToNewTab X{");
     }
@@ -267,13 +300,24 @@ void TextView::buildContextMenu()
     }
 
     guiHelper->updateCopyContextMenu(copyMenu);
+    QAction *firstAction = copyMenu->actions().at(0);
+    copyAsTextAction = new(std::nothrow) QAction(COPY_AS_TEXT, this);
+    if (copyAsTextAction == NULL) {
+        qFatal("Cannot allocate memory for copyAsTextAction X{");
+    }
+
+    copyMenu->insertAction(firstAction,copyAsTextAction);
+    copyMenu->insertSeparator(firstAction);
     connect(copyMenu, SIGNAL(triggered(QAction*)), this, SLOT(onCopy(QAction*)), Qt::UniqueConnection);
 
-    saveToFileAction = new(std::nothrow) QAction("Save to file", this);
-    if (saveToFileAction == NULL) {
-        qFatal("Cannot allocate memory for saveToFileAction X{");
+    saveToFileMenu = new(std::nothrow) QMenu(tr("Save to file"));
+    if (saveToFileMenu == NULL) {
+        qFatal("Cannot allocate memory for saveToFile X{");
+        return;
     }
-    connect(saveToFileAction, SIGNAL(triggered()), this, SLOT(onSaveToFile()));
+    connect(saveToFileMenu, SIGNAL(triggered(QAction*)), this, SLOT(onSaveToFile(QAction*)), Qt::UniqueConnection);
+    saveToFileMenu->addAction(ui->saveAllToFileAction);
+    saveToFileMenu->addAction(ui->saveSelectedToFileAction);
 
     loadFileAction = new(std::nothrow) QAction("Load from file", this);
     if (loadFileAction == NULL) {
@@ -310,7 +354,7 @@ void TextView::buildContextMenu()
     globalContextMenu->addMenu(sendToMenu);
     globalContextMenu->addMenu(copyMenu);
     globalContextMenu->addSeparator();
-    globalContextMenu->addAction(saveToFileAction);
+    globalContextMenu->addMenu(saveToFileMenu);
 
 }
 
@@ -318,6 +362,8 @@ void TextView::onTextChanged()
 {
     byteSource->setData(encode(ui->plainTextEdit->toPlainText()),(quintptr) this);
     updateStats();
+    if (autoCopyToClipboard)
+        copyToClipboard();
 }
 
 void TextView::updateText(quintptr source)
@@ -338,7 +384,7 @@ void TextView::updateText(quintptr source)
     } else {
         if (rawdata.size() > 0) {
             if (currentCodec != NULL) { //safeguard
-                QTextDecoder *decoder = currentCodec->makeDecoder(QTextCodec::ConvertInvalidToNull | QTextCodec::IgnoreHeader);
+                QTextDecoder *decoder = currentCodec->makeDecoder(QTextCodec::ConvertInvalidToNull); // when decoding take possible BOM headers into account
                 QString textf = decoder->toUnicode(rawdata.constData(),rawdata.size());
                 if (decoder->hasFailure()) {
                     if (errorNotReported) {
@@ -363,6 +409,8 @@ void TextView::updateText(quintptr source)
 
             ui->plainTextEdit->setEnabled(true);
         }
+        if (autoCopyToClipboard)
+            copyToClipboard();
     }
     ui->plainTextEdit->blockSignals(false);
 }
@@ -447,5 +495,19 @@ QByteArray TextView::encode(QString text)
     }
     return ret;
 }
+
+bool TextView::isAutoCopyToClipboard() const
+{
+    return autoCopyToClipboard;
+}
+
+void TextView::setAutoCopyToClipboard(bool value)
+{
+    if (autoCopyToClipboard != value) {
+        autoCopyToClipboard = value;
+        copyToClipboard();
+    }
+}
+
 
 

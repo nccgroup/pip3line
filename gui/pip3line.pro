@@ -94,7 +94,14 @@ SOURCES += main.cpp\
     sources/interceptwidget.cpp \
     shared/universalreceiverbutton.cpp \
     shared/messagepanelwidget.cpp \
-    sources/intermediatesource.cpp
+    sources/intermediatesource.cpp \
+    shared/searchresultswidget.cpp \
+    state/stateorchestrator.cpp \
+    state/basestateabstract.cpp \
+    state/closingstate.cpp \
+    state/statedialog.cpp \
+    sources/rawtcplistener.cpp \
+    sources/networkclientwidget.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -164,7 +171,15 @@ HEADERS  += mainwindow.h \
     sources/interceptwidget.h \
     shared/universalreceiverbutton.h \
     shared/messagepanelwidget.h \
-    sources/intermediatesource.h
+    sources/intermediatesource.h \
+    shared/searchresultswidget.h \
+    shared/guiconst.h \
+    state/stateorchestrator.h \
+    state/basestateabstract.h \
+    state/closingstate.h \
+    state/statedialog.h \
+    sources/rawtcplistener.h \
+    sources/networkclientwidget.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \
@@ -195,7 +210,10 @@ FORMS    += mainwindow.ui \
     sources/memorywidget.ui \
     sources/networkconfwidget.ui \
     sources/interceptwidget.ui \
-    shared/messagepanelwidget.ui
+    shared/messagepanelwidget.ui \
+    shared/searchresultswidget.ui \
+    state/statedialog.ui \
+    sources/networkclientwidget.ui
 
 OTHER_FILES += icons/pip3line.png \
     win.rc \

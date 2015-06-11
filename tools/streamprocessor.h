@@ -24,10 +24,11 @@ class StreamProcessor : public Processor
     public slots:
         void stop();
     protected:
+        explicit StreamProcessor() {}
         QSemaphore runSem;
     private:
         Q_DISABLE_COPY(StreamProcessor)
-        
+
 };
 
 #endif // STREAMPROCESSOR_H

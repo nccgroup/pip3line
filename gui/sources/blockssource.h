@@ -14,11 +14,15 @@ Released under AGPL see LICENSE for more information
 #include <QThread>
 #include <QObject>
 #include <QByteArray>
+#include "commonstrings.h"
+
 class QWidget;
 class BlocksSource;
 
 class Block {
     public:
+        explicit Block();
+
         enum BLOCK_ORIGIN {
             SOURCE,
             TARGET
@@ -51,10 +55,9 @@ class BlocksSource : public QObject
         void blockToBeSend(Block block);
         void stopped();
         void started();
-        void error(const QString, const QString);
-        void status(const QString, const QString);
+        void log(QString message, QString source, Pip3lineConst::LOGLEVEL level);
     public slots:
-        virtual void sendBlock(const Block & block) = 0;
+        virtual void sendBlock(const Block & block);
         virtual bool startListening() = 0;
         virtual void stopListening() = 0;
         virtual void restart();

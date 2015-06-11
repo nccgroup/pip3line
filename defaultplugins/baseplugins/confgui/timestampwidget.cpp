@@ -22,7 +22,15 @@ TimestampWidget::TimestampWidget(TimeStamp *ntransform, QWidget *parent) :
     ui->setupUi(this);
 
     ui->formatLineEdit->setText(transform->getDateFormat());
+    ui->formatLineEdit->setReadOnly(true);
+    if (transform->getTZ() == TimeStamp::TZ_UTC) {
+        ui->tzUTCRadioButton->setChecked(true);
+    } else {
+        ui->tzLocalRadioButton->setChecked(true);
+    }
     connect(ui->formatLineEdit, SIGNAL(textChanged(QString)), this, SLOT(formatChanged(QString)));
+    connect(ui->tzLocalRadioButton, SIGNAL(toggled(bool)), this, SLOT(outBoundTZLocalChanged(bool)));
+
 }
 
 TimestampWidget::~TimestampWidget()
@@ -33,4 +41,13 @@ TimestampWidget::~TimestampWidget()
 void TimestampWidget::formatChanged(QString format)
 {
     transform->setDateFormat(format);
+}
+
+void TimestampWidget::outBoundTZLocalChanged(bool checked)
+{
+    if (checked) {
+        transform->setTZ(TimeStamp::TZ_LOCAL);
+    } else {
+        transform->setTZ(TimeStamp::TZ_UTC);
+    }
 }

@@ -30,6 +30,10 @@ class QuickViewDialog : public AppDialog
     public:
         explicit QuickViewDialog(GuiHelper * guiHelper, QWidget *parent = 0);
         ~QuickViewDialog();
+        BaseStateAbstract *getStateMngtObj();
+        QStringList getConf();
+        void clear();
+        void addItem(const QString & conf);
     public slots:
         void receivingData(const QByteArray &data);
     private slots:
@@ -39,10 +43,20 @@ class QuickViewDialog : public AppDialog
 
     private:
         Q_DISABLE_COPY(QuickViewDialog)
-        void addItem(const QString & conf);
+
         Ui::QuickViewDialog *ui;
         QList<QuickViewItem *> itemList;
         QByteArray currentData;
+};
+
+class QuickViewDialogStateObj : public AppStateObj
+{
+        Q_OBJECT
+    public:
+        explicit QuickViewDialogStateObj(QuickViewDialog *diag);
+        ~QuickViewDialogStateObj();
+    private:
+        void internalRun();
 };
 
 #endif // QUICKVIEWDIALOG_H

@@ -56,8 +56,8 @@ public class Pip3lineContextMenu implements IContextMenuFactory {
 	public List<JMenuItem> createMenuItems(IContextMenuInvocation arg0) {
 		itemList.clear();
 		int tool = arg0.getToolFlag();
-//    	System.out.print("Tools calling:");
-//    	System.out.print(tool);
+    	System.out.print("\nTools calling:");
+    	System.out.println(tool);
 		if (tool == IBurpExtenderCallbacks.TOOL_INTRUDER ||
 				tool == IBurpExtenderCallbacks.TOOL_PROXY ||
 				tool == IBurpExtenderCallbacks.TOOL_REPEATER ||

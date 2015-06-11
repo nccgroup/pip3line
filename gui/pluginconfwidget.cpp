@@ -22,6 +22,7 @@ PluginConfWidget::PluginConfWidget(TransformFactoryPluginInterface *nplugin, QWi
     plugin = nplugin;
     ui->setupUi(this);
     ui->pluginNamelabel->setText(plugin->pluginName());
+
     QWidget * gui = plugin->getConfGui(this);
 
     if (gui != NULL) {

@@ -93,6 +93,8 @@ set ( pip3line_HDRS
 	sources/interceptwidget.h
 	sources/networkconfwidget.h
 	sources/intermediatesource.h
+	sources/networkclientwidget.h
+	sources/rawtcplistener.h
 	views/hexview.h
 	views/textview.h
 	views/bytetableview.h
@@ -113,6 +115,11 @@ set ( pip3line_HDRS
 	shared/detachtabbutton.h
 	shared/universalreceiverbutton.h
 	shared/messagepanelwidget.h
+	shared/searchresultswidget.h
+	state/basestateabstract.h
+	state/stateorchestrator.h
+	state/closingstate.h
+	state/statedialog.h
 	)
 
 
@@ -167,6 +174,8 @@ set ( pip3line_SRCS
 	sources/interceptwidget.cpp
 	sources/networkconfwidget.cpp
 	sources/intermediatesource.cpp
+	sources/networkclientwidget.cpp
+	sources/rawtcplistener.cpp
 	views/hexview.cpp
 	views/bytetableview.cpp
 	views/byteitemmodel.cpp
@@ -187,6 +196,11 @@ set ( pip3line_SRCS
 	shared/detachtabbutton.cpp
 	shared/universalreceiverbutton.cpp
 	shared/messagepanelwidget.cpp
+	shared/searchresultswidget.cpp
+	state/basestateabstract.cpp
+	state/stateorchestrator.cpp
+	state/closingstate.cpp
+	state/statedialog.cpp
 	)
 
 set ( pip3line_UIS
@@ -223,6 +237,9 @@ set ( pip3line_UIS
 	views/textview.ui
 	sources/interceptwidget.ui
 	sources/networkconfwidget.ui
+	sources/networkclientwidget.ui
+	shared/searchresultswidget.ui
+	state/statedialog.ui
 	)
 
 set ( pip3line_RSCS

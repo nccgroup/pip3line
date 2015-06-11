@@ -40,11 +40,14 @@ HexEncodeWidget::HexEncodeWidget(HexEncode *ntransform, QWidget *parent) :
             ui->normalRadioButton->setChecked(true);
     }
 
+    ui->addPrefixCheckBox->setChecked(transform->getAddHexPrefix());
+
     connect(ui->normalRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
     connect(ui->escapedRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
     connect(ui->escapedMixedRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
     connect(ui->cstyleRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
     connect(ui->csvRadioButton, SIGNAL(clicked()), this, SLOT(onTypeChange()));
+    connect(ui->addPrefixCheckBox, SIGNAL(toggled(bool)), SLOT(onAddPrefixChanged(bool)));
 }
 
 HexEncodeWidget::~HexEncodeWidget()
@@ -64,4 +67,9 @@ void HexEncodeWidget::onTypeChange()
         transform->setType(HexEncode::CSTYLE);
     else
         transform->setType(HexEncode::CSV);
+}
+
+void HexEncodeWidget::onAddPrefixChanged(bool val)
+{
+    transform->setAddHexPrefix(val);
 }

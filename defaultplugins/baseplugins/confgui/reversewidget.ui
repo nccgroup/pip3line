@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<comment>
+ <comment>
   * Released as open source by NCC Group Plc - http://www.nccgroup.com/
   *
   * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
@@ -36,7 +36,7 @@
       <string>Discard the block size to reverse the entire string as it is</string>
      </property>
      <property name="text">
-      <string>Just reverse the entire string</string>
+      <string>Just reverse the entire byte array</string>
      </property>
     </widget>
    </item>

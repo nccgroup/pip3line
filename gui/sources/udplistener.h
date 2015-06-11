@@ -26,7 +26,7 @@ class UDPClient {
         quint16 getPort() const;
         void setPort(const quint16 &value);
         bool operator==(const UDPClient& other) const;
-        void operator=(const UDPClient& other);
+        UDPClient& operator=(const UDPClient& other);
 
     private:
         QHostAddress adress;

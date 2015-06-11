@@ -30,6 +30,7 @@ Released under AGPL see LICENSE for more information
 #endif
 #include <QtConcurrentRun>
 #include "../sources/searchabstract.h"
+#include "../shared/guiconst.h"
 
 
 TextCell::TextCell(QWidget *parent, Qt::WindowFlags f) :
@@ -143,7 +144,7 @@ void HexDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, c
         TextCell textData;
         textData.setTextFormat(Qt::PlainText);
         textData.setText(optionV4.text);
-        textData.setFont(ByteTableView::RegularFont);
+        textData.setFont(GuiStyles::DEFAULT_REGULAR_FONT);
         textData.setTextInteractionFlags(Qt::TextSelectableByKeyboard);
 
         int row = index.row();
@@ -345,7 +346,6 @@ const int ByteTableView::TEXTCOLUMNWIDTH = 131; // arbitratry number, dont' ask
 const int ByteTableView::HEXCOLUMNWIDTH = 28; // arbitratry number, dont' ask
 const int ByteTableView::DEFAULTROWSHEIGHT = 20; // arbitratry number, dont' ask
 const QString ByteTableView::LOGID = "ByteTableView";
-const QFont ByteTableView::RegularFont = QFont("Courier New",10);
 
 ByteTableView::ByteTableView(QWidget *parent) :
     QTableView(parent)
@@ -369,8 +369,8 @@ ByteTableView::ByteTableView(QWidget *parent) :
     verticalHeader()->setResizeMode(QHeaderView::Fixed);
     horizontalHeader()->setResizeMode(QHeaderView::Fixed);
 #endif
-    verticalHeader()->setFont(RegularFont);
-    horizontalHeader()->setFont(RegularFont);
+    verticalHeader()->setFont(GuiStyles::DEFAULT_REGULAR_FONT);
+    horizontalHeader()->setFont(GuiStyles::DEFAULT_REGULAR_FONT);
     currentSelectionModel = NULL;
     currentModel = NULL;
     searchObject = NULL;
@@ -401,8 +401,7 @@ void ByteTableView::setModel(ByteItemModel *nmodel)
     currentModel = nmodel;
     searchObject = currentModel->getSource()->getSearchObject();
     if (searchObject != NULL) {
-        searchObject->setStopAtFirst(true);
-        connect(searchObject, SIGNAL(itemFound(quint64,quint64)), SLOT(gotoSearch(quint64,quint64)), Qt::QueuedConnection);
+        connect(searchObject, SIGNAL(jumpRequest(quint64,quint64)), SLOT(gotoSearch(quint64,quint64)), Qt::QueuedConnection);
     } else {
         qDebug() << "[ByteTableView] NULL search object returned by " << currentModel->getSource();
     }
@@ -520,10 +519,10 @@ void ByteTableView::keyPressEvent(QKeyEvent *event)
                     event->accept();
                 }
                 break;
-            case Qt::Key_N:
-                searchAgain();
-                event->accept();
-                break;
+//            case Qt::Key_N:
+//                searchAgain();
+//                event->accept();
+//                break;
             default:
                 QAbstractItemView::keyPressEvent(event);
         }
@@ -882,9 +881,6 @@ void ByteTableView::search(QByteArray item, QBitArray mask)
     if (searchObject == NULL || item.isEmpty()) {
         return;
     }
-
-    lastSearch = item;
-    lastMask = mask;
     int currentViewPos = getCurrentPos();
     if (currentViewPos < 0)
         currentViewPos = 0;
@@ -895,15 +891,8 @@ void ByteTableView::search(QByteArray item, QBitArray mask)
         curPos++;
 
     searchObject->setSearchItem(item, mask);
-    searchObject->setStartOffset(curPos);
-    searchObject->setEndOffset(curPos);
-    QtConcurrent::run(searchObject, &SearchAbstract::startSearch);
-}
-
-void ByteTableView::searchAgain()
-{
-    if (!lastSearch.isEmpty())
-        search(lastSearch,lastMask);
+    searchObject->setCursorOffset(curPos);
+    QTimer::singleShot(0,searchObject,SLOT(startSearch()));
 }
 
 void ByteTableView::setColumnCount(int val)
@@ -927,7 +916,8 @@ void ByteTableView::gotoSearch(quint64 soffset, quint64 eoffset)
     QPersistentModelIndex searchStartIndex = currentModel->createIndex(sviewOffset);
     QPersistentModelIndex searchEndIndex = currentModel->createIndex(eViewOffset);
 
-    if (!(searchStartIndex.isValid() && searchEndIndex.isValid())) {
+    if (!(searchStartIndex.isValid() && searchEndIndex.isValid())) { // if one of the offset is invalid, just ignore
+        qDebug() << "Invalid goto search offset";
         return;
     }
 

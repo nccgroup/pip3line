@@ -16,6 +16,8 @@ Released under AGPL see LICENSE for more information
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QVBoxLayout>
+#include <QFileInfo>
+#include <QXmlStreamWriter>
 #include "aboutdialog.h"
 #include "messagedialog.h"
 #include <QDesktopWidget>
@@ -31,6 +33,9 @@ Released under AGPL see LICENSE for more information
 #include <transformabstract.h>
 #include <commonstrings.h>
 #include <QFileDialog>
+#include <QPalette>
+#include <QTemporaryFile>
+#include <QDebug>
 #include "tabs/generictab.h"
 #include "tabs/randomaccesstab.h"
 #include "sources/currentmemorysource.h"
@@ -50,14 +55,26 @@ Released under AGPL see LICENSE for more information
 #include "sources/tcpserverlistener.h"
 #include "sources/tcplistener.h"
 #include "sources/intercepsource.h"
+#include "shared/guiconst.h"
+#include "state/stateorchestrator.h"
+#include "state/closingstate.h"
+#include "state/statedialog.h"
 
-using namespace Pip3lineConst;
+#ifdef Q_OS_LINUX
+#include <QSocketNotifier>
+#include <sys/socket.h>
+#include <csignal>
+#include "unistd.h"
+#endif
 
-const QString MainWindow::NEW_TRANSFORMTAB = "Transform tab";
-const QString MainWindow::NEW_FILE = "File";
-const QString MainWindow::NEW_CURRENTMEM = "Current memory";
-const QString MainWindow::NEW_BASEHEX = "Hexeditor";
-const QString MainWindow::NEW_INTERCEP = "Interceptor";
+
+using namespace GuiConst;
+
+#ifdef Q_OS_LINUX
+int MainWindow::sigFd[2];
+#endif
+
+bool MainWindow::appExiting = false;
 
 MainWindow::MainWindow(bool debug, QWidget *parent) :
     QMainWindow(parent)
@@ -74,9 +91,30 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     blockListener = NULL;
     trayIconMenu = NULL;
 
+    newTransformTabAction = NULL;
+    newLargeFileTabAction = NULL;
+    newInterceptTabAction = NULL;
+    newHexeditorTabAction = NULL;
+    newCurrentMemTabAction = NULL;
+
+    stateOrchestrator = NULL;
+    stateDialog = NULL;
+
     settingsWasVisible = false;
     quickViewWasVisible = false;
     compareWasVisible = false;
+
+#ifdef Q_OS_LINUX
+    // handling signals in linux
+    if (::socketpair(AF_UNIX, SOCK_STREAM, 0, MainWindow::sigFd))
+            qFatal("Couldn't create signal socketpair");
+    snExit = new(std::nothrow) QSocketNotifier(MainWindow::sigFd[1],QSocketNotifier::Read, this);
+    connect(snExit, SIGNAL(activated(int)), this, SLOT(handleUnixSignal()));
+
+    if (snExit == NULL) {
+        qFatal("Cannot allocate memory for QSocketNotifier X{");
+    }
+#endif
 
     ui = new(std::nothrow) Ui::MainWindow();
     if (ui == NULL) {
@@ -87,13 +125,28 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     qRegisterMetaType<quintptr>("quintptr");
     qRegisterMetaType<Block>("Block");
     qRegisterMetaType<QHostAddress>("QHostAddress");
+    qRegisterMetaType<BytesRangeList>("BytesRangeList");
 #if QT_VERSION >= 0x050000
     qRegisterMetaType<qintptr>("qintptr");
 #endif
+
     qApp->setOrganizationName(APPNAME);
     qApp->setApplicationName(APPNAME);
 
     ui->setupUi(this);
+
+    // change selection colors so that they appear the same whether they are enable/active or not
+    QPalette palette = QApplication::palette();
+    QColor originalb = palette.color(QPalette::Active,QPalette::Highlight);
+    QColor originalf = palette.color(QPalette::Active,QPalette::HighlightedText);
+    palette.setColor(QPalette::Disabled,QPalette::Highlight, originalb);
+    palette.setColor(QPalette::Inactive,QPalette::Highlight, originalb);
+    palette.setColor(QPalette::Disabled,QPalette::HighlightedText, originalf);
+    palette.setColor(QPalette::Inactive,QPalette::HighlightedText, originalf);
+    QApplication::setPalette(palette);
+
+    // special stylesheet for the hexadecimal editor cells
+    qApp->setStyleSheet("TextCell {background: white}");
 
     logger = new(std::nothrow) LoggerWidget();
     if (logger == NULL) {
@@ -106,6 +159,7 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     if (guiHelper == NULL) {
         qFatal("Cannot allocate memory for GuiHelper X{");
     }
+    guiHelper->setDebugMode(debug);
 
     buildToolBar();
 
@@ -129,7 +183,9 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     if (settings->value(SETTINGS_AUTO_UPDATE, true).toBool()) {
         checkForUpdates();
     }
-    qApp->setStyleSheet("TextCell {background: white}");
+
+    onNewDefault();
+
    // blockListener = new(std::nothrow) UdpListener(this);
     blockListener = new(std::nothrow) TcpServerListener();
     if (blockListener == NULL) {
@@ -140,11 +196,19 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     blockListener->setDecodeinput(true);
 
     connect(blockListener, SIGNAL(blockReceived(Block)), SLOT(onExternalBlockReceived(Block)),Qt::QueuedConnection);
-    connect(blockListener,SIGNAL(error(QString,QString)), logger,SLOT(logError(QString,QString)));
-    connect(blockListener, SIGNAL(status(QString,QString)), logger, SLOT(logStatus(QString,QString)));
+    connect(blockListener,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)));
     QTimer::singleShot(0,blockListener,SLOT(startListening()));
+    connect(this, SIGNAL(exiting()), blockListener, SLOT(stopListening()), Qt::QueuedConnection);
 
     connect(guiHelper,SIGNAL(raiseWindowRequest()), SLOT(showWindow()));
+    connect(ui->actionSave_State, SIGNAL(triggered()), SLOT(onSaveState()));
+    connect(ui->actionLoad_State, SIGNAL(triggered()), SLOT(onLoadState()));
+
+    connect(guiHelper, SIGNAL(requestSaveState()), this, SLOT(autoSave()));
+    connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(onExit()));
+
+    if (guiHelper->getAutoRestoreOnStartup())
+        QTimer::singleShot(0,this, SLOT(autoRestore()));
 
 //  qApp->setStyleSheet("* {color : green; background: black}");
 }
@@ -153,8 +217,12 @@ MainWindow::~MainWindow()
 {
     //qDebug() << "Destroying main window";
     if (blockListener != NULL) {
-        blockListener->stopListening();
         delete blockListener;
+    }
+
+    if (stateOrchestrator != NULL) {
+        delete stateOrchestrator;
+        stateOrchestrator = NULL;
     }
     delete debugDialog;
     delete newMenu;
@@ -172,7 +240,6 @@ MainWindow::~MainWindow()
     delete settingsDialog;
 
     delete ui;
-
 }
 
 void MainWindow::buildToolBar()
@@ -191,35 +258,37 @@ void MainWindow::buildToolBar()
 
     connect(ui->actionNewDefault, SIGNAL(triggered()), SLOT(onNewDefault()));
 
-    QAction * action = new(std::nothrow) QAction(NEW_TRANSFORMTAB, newMenu);
-    if (action == NULL) {
+    newTransformTabAction = new(std::nothrow) QAction(TRANSFORM_TAB_STRING, newMenu);
+    if (newTransformTabAction == NULL) {
         qFatal("Cannot allocate memory for QAction NEW_DEFAULT X{");
     }
-    newMenu->addAction(action);
+    newMenu->addAction(newTransformTabAction);
 
-    action = new(std::nothrow) QAction(NEW_BASEHEX, newMenu);
-    if (action == NULL) {
+    newHexeditorTabAction = new(std::nothrow) QAction(BASEHEX_TAB_STRING, newMenu);
+    if (newHexeditorTabAction == NULL) {
         qFatal("Cannot allocate memory for QAction NEW_BASEHEX X{");
     }
-    newMenu->addAction(action);
+    newMenu->addAction(newHexeditorTabAction);
 
-    action = new(std::nothrow) QAction(NEW_FILE, newMenu);
-    if (action == NULL) {
+    newLargeFileTabAction = new(std::nothrow) QAction(LARGE_FILE_TAB_STRING, newMenu);
+    if (newLargeFileTabAction == NULL) {
         qFatal("Cannot allocate memory for QAction NEW_FILE X{");
     }
-    newMenu->addAction(action);
+    newMenu->addAction(newLargeFileTabAction);
 
-    action = new(std::nothrow) QAction(NEW_CURRENTMEM, newMenu);
-    if (action == NULL) {
-        qFatal("Cannot allocate memory for QAction NEW_CURRENTMEM X{");
+    if (guiHelper->getDebugMode()) {
+        newCurrentMemTabAction = new(std::nothrow) QAction(CURRENTMEM_TAB_STRING, newMenu);
+        if (newCurrentMemTabAction == NULL) {
+            qFatal("Cannot allocate memory for QAction NEW_CURRENTMEM X{");
+        }
+        newMenu->addAction(newCurrentMemTabAction);
     }
-    newMenu->addAction(action);
 
-//    action = new(std::nothrow) QAction(NEW_INTERCEP, newMenu);
-//    if (action == NULL) {
-//    qFatal("Cannot allocate memory for QAction NEW_INTERCEP X{");
+//    newInterceptTabAction = new(std::nothrow) QAction(INTERCEP_TAB_STRING, newMenu);
+//    if (newInterceptTabAction == NULL) {
+//    	qFatal("Cannot allocate memory for QAction NEW_INTERCEP X{");
 //    }
-//    newMenu->addAction(action);
+//    newMenu->addAction(newInterceptTabAction);
 
     newPushButton->setMenu(newMenu);
 
@@ -228,8 +297,6 @@ void MainWindow::buildToolBar()
 
     ui->mainToolBar->insertWidget(ui->mainToolBar->actions().at(1),newPushButton );
    // ui->mainToolBar->insertSeparator(ui->action_Analyse);
-
-    connect(ui->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
 
     connect(ui->actionHelp_with_RegExp, SIGNAL(triggered()), this, SLOT(onHelpWithRegExp()));
     connect(ui->actionAbout_Pip3line, SIGNAL(triggered()), this, SLOT(onAboutPip3line()));
@@ -244,22 +311,24 @@ void MainWindow::buildToolBar()
 
 void MainWindow::initializeLibTransform()
 {
-    transformFactory = new(std::nothrow) TransformMgmt();
-    if (transformFactory == NULL) {
-        qFatal("Cannot allocate memory for the Transform Factory X{");
+    if (transformFactory != NULL) {
+        transformFactory = new(std::nothrow) TransformMgmt();
+        if (transformFactory == NULL) {
+            qFatal("Cannot allocate memory for the Transform Factory X{");
+        }
+        connect(transformFactory,SIGNAL(error(QString, QString)),logger,SLOT(logError(QString,QString)), Qt::UniqueConnection);
+        connect(transformFactory,SIGNAL(warning(QString,QString)),logger,SLOT(logWarning(QString,QString)), Qt::UniqueConnection);
+        connect(transformFactory,SIGNAL(status(QString,QString)),logger,SLOT(logStatus(QString,QString)), Qt::UniqueConnection);
     }
-    connect(transformFactory,SIGNAL(error(QString, QString)),logger,SLOT(logError(QString,QString)));
-    connect(transformFactory,SIGNAL(warning(QString,QString)),logger,SLOT(logWarning(QString,QString)));
-    connect(transformFactory,SIGNAL(status(QString,QString)),logger,SLOT(logStatus(QString,QString)));
 
     transformFactory->initialize(QCoreApplication::applicationDirPath());
 }
 
 void MainWindow::loadFile(QString fileName)
 {
-    qDebug() << "loading file" << fileName;
-    newFileTab(fileName);
-    //mainTabs->loadFile(fileName);
+    TabAbstract * tab = mainTabs->newHexEditorTab();
+    if (tab != NULL)
+        tab->loadFromFile(fileName);
 }
 
 void MainWindow::onAboutPip3line()
@@ -271,7 +340,7 @@ void MainWindow::onAboutPip3line()
 void MainWindow::onHelpWithRegExp()
 {
     if (!regexphelpDialog) {
-        regexphelpDialog = new(std::nothrow) RegExpHelpDialog(this);
+        regexphelpDialog = new(std::nothrow) RegExpHelpDialog(guiHelper, this);
         if (regexphelpDialog == NULL) {
             qFatal("Cannot allocate memory for regexphelpDialog X{");
             return;
@@ -292,7 +361,8 @@ void MainWindow::onSettingsDialogOpen(bool checked)
                 qFatal("Cannot allocate memory for settingsDialog X{");
                 return;
             }
-            connect(settingsDialog, SIGNAL(updateCheckRequested()), this, SLOT(checkForUpdates()));
+            connect(settingsDialog, SIGNAL(updateCheckRequested()), this, SLOT(checkForUpdates()), Qt::QueuedConnection);
+            connect(guiHelper, SIGNAL(globalUpdates()), settingsDialog, SLOT(initializeConf()), Qt::QueuedConnection);
             settingsDialog->attachAction(ui->actionPip3line_settings);
         }
 
@@ -415,12 +485,241 @@ void MainWindow::showWindow()
         showNormal();
         activateWindow();
     }
-
 }
 
 void MainWindow::onExternalBlockReceived(const Block &block)
 {
     guiHelper->routeExternalDataBlock(block.data);
+}
+
+void MainWindow::saveLoadState(QString filename, quint64 flags)
+{
+    if (stateOrchestrator == NULL) {
+        qDebug() << "starting save load";
+
+        if (!filename.isEmpty()) {
+
+            stateOrchestrator = new(std::nothrow) StateOrchestrator(filename, flags);
+            if (stateOrchestrator == NULL) {
+                qFatal("Cannot allocate memory for StateOrchestrator X{");
+            }
+
+            connect(stateOrchestrator, SIGNAL(finished()), SLOT(onSaveLoadFinished()));
+            connect(stateOrchestrator, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)),
+                    logger, SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)));
+            mainTabs->setEnabled(false);
+
+            if (!stateOrchestrator->initialize()) {
+                delete stateOrchestrator;
+                stateOrchestrator = NULL;
+                mainTabs->setEnabled(true);
+                return;
+            }
+
+            stateDialog = new(std::nothrow) StateDialog(this);
+            stateDialog->setModal(true);
+            stateDialog->show();
+            connect(stateOrchestrator, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)),
+                    stateDialog, SLOT(log(QString,QString,Pip3lineConst::LOGLEVEL)));
+
+            BaseStateAbstract *stateObj = new(std::nothrow) MainWinStateObj(this);
+            if (stateObj == NULL) {
+                qFatal("Cannot allocate memory for MainWinStateObj X{");
+            }
+
+            stateOrchestrator->addState(stateObj);
+
+            stateObj = new(std::nothrow) GlobalConfStateObj(transformFactory);
+            if (stateObj == NULL) {
+                qFatal("Cannot allocate memory for GlobalConfStateObj X{");
+            }
+
+            connect(stateObj, SIGNAL(settingsUpdated()), guiHelper, SLOT(refreshAll()));
+
+            stateOrchestrator->addState(stateObj);
+
+            stateObj = new(std::nothrow) ClearAllStateObj(this);
+            if (stateObj == NULL) {
+                qFatal("Cannot allocate memory for ClearAllStateObj X{");
+            }
+
+            stateOrchestrator->addState(stateObj);
+            stateOrchestrator->start();
+        }
+    } else {
+        qWarning() << "A Save/Load is already running, ignoring the request";
+    }
+}
+
+MainTabs *MainWindow::getMainTabs() const
+{
+    return mainTabs;
+}
+
+
+
+void MainWindow::handleUnixSignal()
+{
+#ifdef Q_OS_LINUX
+    snExit->setEnabled(false);
+    char tmp;
+    ssize_t rb = ::read(sigFd[1], &tmp, sizeof(tmp));
+    if (rb != 1)
+        qCritical() << "Reading from the signal handler pipe failed T_T";
+    qApp->exit();
+    snExit->setEnabled(true);
+#else
+    qWarning() << "UNIX Signals not handle on this platform";
+#endif
+}
+
+#ifdef Q_OS_LINUX
+
+void MainWindow::exitSignalHandler(int signal)
+{
+    if (appExiting) { // just ignoring the signal
+        return;
+    }
+
+    qWarning() << "Received signal " << signal << "Quitting";
+    if (signal == SIGTERM || signal == SIGINT) {
+        char a = '1';
+        ssize_t rb = ::write(MainWindow::sigFd[0], &a, sizeof(a));
+        if (rb != 1)
+            qCritical() << "Writing into the signal handler pipe failed T_T";
+    } else {
+        fprintf(stdout, "Received signal %d, force exit the app without saving\n",signal);
+        exit(1);
+    }
+}
+
+#endif
+
+DebugDialog *MainWindow::getDebugDialog() const
+{
+    return debugDialog;
+}
+
+ComparisonDialog *MainWindow::getComparisonView() const
+{
+    return comparisonView;
+}
+
+QuickViewDialog *MainWindow::getQuickView() const
+{
+    return quickView;
+}
+
+RegExpHelpDialog *MainWindow::getRegexphelpDialog() const
+{
+    return regexphelpDialog;
+}
+
+AnalyseDialog *MainWindow::getAnalyseDialog() const
+{
+    return analyseDialog;
+}
+
+SettingsDialog *MainWindow::getSettingsDialog() const
+{
+    return settingsDialog;
+}
+
+void MainWindow::onSaveState()
+{
+    QString conffileName = QFileDialog::getSaveFileName(this,tr("Choose file to save to"),QDir::home().absolutePath(), tr("all (*)"));
+    if (!conffileName.isEmpty()) {
+        QFileInfo finfo(conffileName);
+        if (finfo.exists()) // resetting the file if exist
+            QFile::resize(conffileName,0);
+
+        saveLoadState(conffileName, guiHelper->getDefaultSaveStateFlags());
+    }
+
+}
+
+void MainWindow::onLoadState()
+{
+    QString conffileName = QFileDialog::getOpenFileName(this,tr("Choose state file to load from"),QDir::home().absolutePath(), tr("all (*)"));
+    if (!conffileName.isEmpty()) {
+        saveLoadState(conffileName, guiHelper->getDefaultLoadStateFlags());
+    }
+}
+
+void MainWindow::onSaveLoadFinished()
+{
+    if (stateOrchestrator != NULL) {
+        QString actions;
+        if (stateOrchestrator->isSaving()) {
+            QTimer::singleShot(100, this, SLOT(repaint()));
+            actions.append("Save");
+        } else {
+           actions.append("Load");
+        }
+
+        delete stateOrchestrator;
+        stateOrchestrator = NULL;
+        QTimer::singleShot(100, this, SLOT(repaint()));
+        logger->logStatus(tr("%1 state finished").arg(actions));
+    }
+
+    mainTabs->setEnabled(true);
+
+    if (stateDialog != NULL) {
+        stateDialog->hide();
+        delete stateDialog;
+        stateDialog = NULL;
+    }
+
+    if (appExiting)
+        cleaningAndExit();
+}
+
+void MainWindow::autoSave()
+{
+    QString conffileName = guiHelper->getAutoSaveFileName();
+    if (conffileName.isEmpty()) {
+        logger->logError(tr("The filename for saving is empty, abording action."), tr("AutoSave"));
+    } else {
+        qDebug() << "autoSave called" << conffileName;
+        QFileInfo finfo(conffileName);
+        if (finfo.exists()) // resetting the file if exist
+            QFile::resize(conffileName,0);
+        saveLoadState(conffileName, guiHelper->getDefaultSaveStateFlags());
+    }
+}
+
+void MainWindow::autoRestore()
+{
+    QString conffileName = guiHelper->getAutoSaveFileName();
+    if (conffileName.isEmpty()) {
+        logger->logError(tr("The filename for restoring is empty, abording action."), tr("AutoRestore"));
+    } else {
+        qDebug() << "autoRestore called" << conffileName;
+
+        QFileInfo fi = QFileInfo(conffileName);
+        if (fi.exists()) {
+            saveLoadState(conffileName, guiHelper->getDefaultLoadStateFlags());
+        } else {
+            logger->logError(tr("The state file [%1] does not exist, nothing to restore.").arg(conffileName), tr("AutoRestore"));
+        }
+    }
+}
+
+void MainWindow::onExit()
+{
+    if (guiHelper->getAutoSaveState() && guiHelper->getAutoSaveOnExit()) {
+        MainWindow::appExiting = true;
+        autoSave();
+    } else {
+        cleaningAndExit();
+    }
+}
+
+void MainWindow::cleaningAndExit()
+{
+    emit exiting();
+    qApp->exit();
 }
 
 void MainWindow::hideEvent(QHideEvent *event)
@@ -438,27 +737,6 @@ void MainWindow::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
 }
 
-void MainWindow::newFileTab(QString fileName)
-{
-    LargeFile *fs = new(std::nothrow) LargeFile();
-    if (fs == NULL) {
-        qFatal("Cannot allocate memory for FileSource X{");
-    }
-    connect(fs,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
-    if (!fileName.isEmpty()) {
-        fs->fromLocalFile(fileName);
-    }
-    TabAbstract *newTab = new(std::nothrow) RandomAccessTab(fs, guiHelper,this);
-    if (newTab == NULL) {
-        qFatal("Cannot allocate memory for RandomAccessTab X{");
-    }
-    if (!fileName.isEmpty()) {
-        newTab->setName(QFileInfo(fileName).fileName());
-    }
-
-    mainTabs->integrateTab(newTab);
-}
-
 void MainWindow::updateTrayIcon()
 {
     if (trayIconMenu != NULL) {
@@ -470,7 +748,7 @@ void MainWindow::updateTrayIcon()
         }
         trayIconLabel->setDisabled(true);
         trayIconMenu->addAction(trayIconLabel);
-        QAction * action = new(std::nothrow) QAction(GuiHelper::UTF8_STRING_ACTION, trayIconMenu);
+        QAction * action = new(std::nothrow) QAction(UTF8_STRING_ACTION, trayIconMenu);
         if (action == NULL) {
             qFatal("Cannot allocate memory for QAction in mainwindow 1 X{");
             return;
@@ -491,7 +769,6 @@ void MainWindow::updateTrayIcon()
 
         trayIconMenu->addSeparator();
         trayIconMenu->addAction(ui->actionGet_data_from_URL);
-        connect(ui->actionGet_data_from_URL, SIGNAL(triggered()), this, SLOT(onDataFromURL()));
         trayIconMenu->addSeparator();
         trayIconMenu->addAction(ui->actionExit);
 
@@ -520,62 +797,26 @@ void MainWindow::onDebugDestroyed()
 
 void MainWindow::onNewAction(QAction *action)
 {
-    if (action->text() == NEW_FILE) {
+    if (action == newLargeFileTabAction) {
+        TabAbstract *ftab = mainTabs->newFileTab();
         QString fileName = QFileDialog::getOpenFileName(this,tr("Choose file to load from"));
         if (!fileName.isEmpty()) {
-            newFileTab(fileName);
+            ftab->loadFromFile(fileName);
         }
-    } else if (action->text() == NEW_TRANSFORMTAB) {
+    } else if (action == newTransformTabAction) {
         mainTabs->newTabTransform();
-    } else if (action->text() == NEW_CURRENTMEM) {
-        CurrentMemorysource *source = new(std::nothrow) CurrentMemorysource();
-        if (source == NULL) {
-            qFatal("Cannot allocate memory for CurrentMemorysource X{");
-        }
-        connect(source,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
-
-        RandomAccessTab *raTab = new(std::nothrow) RandomAccessTab(source,guiHelper,mainTabs);
-        if (raTab == NULL) {
-            qFatal("Cannot allocate memory for RandomAccessTab X{");
-        }
-        raTab->setName("Current memory");
-
-        mainTabs->integrateTab(raTab);
-    } else if (action->text() == NEW_BASEHEX) {
-        BasicSource * bs = new(std::nothrow) BasicSource();
-        if (bs == NULL) {
-            qFatal("Cannot allocate memory for BasicSearch X{");
-        }
-        connect(bs,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
-
-        GenericTab *tab = new(std::nothrow) GenericTab(bs,guiHelper,mainTabs);
-        if (tab == NULL) {
-            qFatal("Cannot allocate memory for GenericTab X{");
-        }
-        tab->setName("");
-
-        mainTabs->integrateTab(tab);
-
-    } else if (action->text() == NEW_INTERCEP) {
-        IntercepSource * is = new(std::nothrow) IntercepSource();
-        if (is == NULL) {
-            qFatal("Cannot allocate memory for IntercepSource X{");
-        }
-        connect(is,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
-
-        GenericTab *tab = new(std::nothrow) GenericTab(is,guiHelper,mainTabs);
-        if (tab == NULL) {
-            qFatal("Cannot allocate memory for GenericTab X{");
-        }
-        tab->setName("");
-
-        mainTabs->integrateTab(tab);
+    } else if (action == newCurrentMemTabAction) {
+        mainTabs->newCurrentMemTab();
+    } else if (action == newHexeditorTabAction) {
+        mainTabs->newHexEditorTab();
+    } else if (action == newInterceptTabAction) {
+        mainTabs->newInterceptTab();
     }
 }
 
 void MainWindow::onNewDefault()
 {
-    mainTabs->newTabTransform();
+    mainTabs->newPreTab(guiHelper->getDefaultNewTab());
 }
 
 void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
@@ -604,10 +845,12 @@ void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
 
 void MainWindow::onImport(QAction *action)
 {
-    if (action != ui->actionExit) {
+    if (action == ui->actionGet_data_from_URL) {
+        onDataFromURL();
+    } else if (action != ui->actionExit) {
         QClipboard *clipboard = QApplication::clipboard();
         QString input = clipboard->text();
-        if (action->text() == GuiHelper::UTF8_STRING_ACTION) {
+        if (action->text() == UTF8_STRING_ACTION) {
             mainTabs->newTabTransform(input.toUtf8());
         } else {
             TransformAbstract *ta  = guiHelper->getImportExportFunction(action->text());
@@ -696,4 +939,277 @@ void MainWindow::onAnalyse(bool checked)
 void MainWindow::on_actionLogs_triggered()
 {
     mainTabs->showLogs();
+}
+
+const QString MainWinStateObj::NAME = QObject::tr("Main Window");
+
+MainWinStateObj::MainWinStateObj(MainWindow *target) :
+    mwin(target)
+{
+    setName(NAME);
+}
+
+MainWinStateObj::~MainWinStateObj()
+{
+
+}
+
+void MainWinStateObj::run()
+{
+    QByteArray sdata;
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+
+        if (flags & GuiConst::STATE_LOADSAVE_DIALOG_POS) {
+            writer->writeStartElement(GuiConst::STATE_MAIN_WINDOW);
+
+            writer->writeAttribute(GuiConst::STATE_WIDGET_GEOM, write(mwin->saveGeometry()));
+
+            writer->writeAttribute(GuiConst::STATE_WIDGET_STATE, write(mwin->saveState()));
+            if (!genCloseElement()) return;
+        }
+
+        writer->writeStartElement(GuiConst::STATE_DIALOGS_RUNNING);
+
+        writer->writeAttribute(GuiConst::STATE_ANALYSE_DIALOG, write(mwin->getAnalyseDialog() != NULL));
+        writer->writeAttribute(GuiConst::STATE_REGEXPHELP_DIALOG, write(mwin->getRegexphelpDialog() != NULL));
+        writer->writeAttribute(GuiConst::STATE_QUICKVIEW_DIALOG, write(mwin->getQuickView() != NULL));
+        writer->writeAttribute(GuiConst::STATE_COMPARISON_DIALOG, write(mwin->getComparisonView() != NULL));
+        writer->writeAttribute(GuiConst::STATE_DEBUG_DIALOG, write(mwin->getDebugDialog() != NULL));
+        writer->writeAttribute(GuiConst::STATE_SETTINGS_DIALOG, write(mwin->getSettingsDialog() != NULL));
+
+    } else { // loading
+        if (reader->name() != GuiConst::STATE_MAIN_WINDOW) {
+            if (!reader->readNextStartElement()) {
+                emit log(tr("Cannot read next element"), metaObject()->className(), Pip3lineConst::LERROR);
+                return;
+            }
+        }
+
+        if (flags & GuiConst::STATE_LOADSAVE_DIALOG_POS &&
+                reader->name() == GuiConst::STATE_MAIN_WINDOW) { // loading mainwindow state
+
+            qDebug() << "Main window state found";
+
+            QXmlStreamAttributes attrList = reader->attributes();
+            sdata = readByteArray(attrList.value(GuiConst::STATE_WIDGET_GEOM));
+            if (!sdata.isEmpty())
+                mwin->restoreGeometry(sdata);
+
+            sdata = readByteArray(attrList.value(GuiConst::STATE_WIDGET_STATE));
+            if (!sdata.isEmpty())
+                mwin->restoreState(sdata);
+
+            genCloseElement();
+            if (!reader->readNextStartElement()) {
+                emit log(tr("Cannot read next element %1").arg(reader->errorString()), metaObject()->className(), Pip3lineConst::LERROR);
+                return;
+            }
+
+        } else {
+            qDebug() << GuiConst::STATE_MAIN_WINDOW << "not loaded";
+        }
+
+        if (reader->name() == GuiConst::STATE_DIALOGS_RUNNING) {
+            QXmlStreamAttributes attrList = reader->attributes();
+            if (attrList.hasAttribute(GuiConst::STATE_ANALYSE_DIALOG) &&
+                    readBool(attrList.value(GuiConst::STATE_ANALYSE_DIALOG)))
+                mwin->onAnalyse(true);
+
+            if (attrList.hasAttribute(GuiConst::STATE_REGEXPHELP_DIALOG) &&
+                    readBool(attrList.value(GuiConst::STATE_REGEXPHELP_DIALOG)))
+                mwin->onHelpWithRegExp();
+
+            if (attrList.hasAttribute(GuiConst::STATE_QUICKVIEW_DIALOG) &&
+                    readBool(attrList.value(GuiConst::STATE_QUICKVIEW_DIALOG)))
+                mwin->onQuickView(true);
+
+            if (attrList.hasAttribute(GuiConst::STATE_COMPARISON_DIALOG) &&
+                    readBool(attrList.value(GuiConst::STATE_COMPARISON_DIALOG)))
+                mwin->onCompare(true);
+
+            if (attrList.hasAttribute(GuiConst::STATE_DEBUG_DIALOG) &&
+                    readBool(attrList.value(GuiConst::STATE_DEBUG_DIALOG)))
+                mwin->onDebug();
+
+            if (attrList.hasAttribute(GuiConst::STATE_SETTINGS_DIALOG) &&
+                    readBool(attrList.value(GuiConst::STATE_SETTINGS_DIALOG)))
+                mwin->onSettingsDialogOpen(true);
+        }
+    }
+
+    BaseStateAbstract *temp = mwin->getMainTabs()->getStateMngtObj(); // need to be first to be executed after the closingstate
+    emit addNewState(temp);
+
+    temp = new(std::nothrow) ClosingState();
+    if (temp == NULL) {
+        qFatal("Cannot allocate memory for ClosingState X{");
+    }
+    emit addNewState(temp);
+
+
+    AppDialog * dialog = NULL;
+
+    dialog = mwin->getSettingsDialog();
+    if (dialog != NULL) {
+        temp = dialog->getStateMngtObj();
+        emit addNewState(temp);
+    }
+
+    dialog = mwin->getDebugDialog();
+    if (dialog != NULL) {
+        temp = dialog->getStateMngtObj();
+        emit addNewState(temp);
+    }
+
+    dialog = mwin->getComparisonView();
+    if (dialog != NULL) {
+        temp = dialog->getStateMngtObj();
+        emit addNewState(temp);
+    }
+
+    dialog = mwin->getQuickView();
+    if (dialog != NULL) {
+        temp = dialog->getStateMngtObj();
+        emit addNewState(temp);
+    }
+
+    dialog = mwin->getRegexphelpDialog();
+    if (dialog != NULL) {
+        temp = dialog->getStateMngtObj();
+        emit addNewState(temp);
+    }
+
+    dialog = mwin->getAnalyseDialog();
+    if (dialog != NULL) {
+        temp = dialog->getStateMngtObj();
+        emit addNewState(temp);
+    }
+}
+
+
+GlobalConfStateObj::GlobalConfStateObj(TransformMgmt *transformMgmt) :
+    transformMgmt(transformMgmt)
+{
+
+}
+
+GlobalConfStateObj::~GlobalConfStateObj()
+{
+
+}
+
+void GlobalConfStateObj::run()
+{
+    QSettings *globalConf = transformMgmt->getSettingsObj();
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+        if (flags & GuiConst::STATE_LOADSAVE_GLOBAL_CONF) {
+
+            QTemporaryFile tempfile;
+            if (!tempfile.open()) {
+                emit log(tr("Cannot open temporary file to save the global conf"), metaObject()->className(), Pip3lineConst::LERROR);
+                return;
+            }
+            QSettings * tempSettings = new(std::nothrow) QSettings(tempfile.fileName(),QSettings::IniFormat);
+            if (tempSettings == NULL) {
+                qFatal("Cannot allocate memory for QSettings when saving state X{");
+            }
+
+            QStringList keys = globalConf->allKeys();
+
+            foreach (const QString &key, keys) {
+                    tempSettings->setValue(key, globalConf->value(key));
+            }
+
+            keys.clear();
+
+            tempSettings->sync();
+            delete tempSettings; // just deleting the object refered to, not the file
+            tempSettings = NULL;
+
+            tempfile.seek(0);
+            writer->writeTextElement(GuiConst::STATE_GLOBAL_CONF, write(tempfile.readAll()));
+            tempfile.close();
+        }
+    } else {
+        if (reader->name() != GuiConst::STATE_GLOBAL_CONF) {
+            if (!reader->readNextStartElement()) {
+                emit log(tr("Cannot read next element"), metaObject()->className(), Pip3lineConst::LERROR);
+                return;
+            }
+        }
+
+        if ((flags & GuiConst::STATE_LOADSAVE_GLOBAL_CONF) &&
+                reader->name() == GuiConst::STATE_GLOBAL_CONF) { // got a globalconf
+
+            qDebug() << "Global conf found";
+
+            QByteArray sdata = readByteArray(reader->readElementText());
+            QTemporaryFile tempfile;
+            if (!tempfile.open()) {
+                emit log(tr("Cannot open temporary file to load the global conf"), metaObject()->className(), Pip3lineConst::LERROR);
+                return;
+            }
+
+            tempfile.write(sdata);
+            tempfile.flush();
+            QSettings * tempSettings = new(std::nothrow) QSettings(tempfile.fileName(),QSettings::IniFormat);
+            if (tempSettings == NULL) {
+                qFatal("Cannot allocate memory for QSettings when loading state X{");
+            }
+
+            QStringList keys = tempSettings->allKeys();
+
+            foreach (const QString &key, keys) {
+                globalConf->setValue( key, tempSettings->value( key ) );
+            }
+
+            delete tempSettings;
+            transformMgmt->reset();
+
+            emit settingsUpdated();
+
+            if (!reader->readNextStartElement()) {
+                emit log(tr("Cannot read next element %1").arg(reader->errorString()), metaObject()->className(), Pip3lineConst::LERROR);
+                return;
+            }
+
+        } else {
+            qDebug() << GuiConst::STATE_GLOBAL_CONF << "not loaded";
+        }
+    }
+    delete globalConf;
+}
+
+
+ClearAllStateObj::ClearAllStateObj(MainWindow *target) :
+    mwin(target)
+{
+
+}
+
+ClearAllStateObj::~ClearAllStateObj()
+{
+
+}
+
+void ClearAllStateObj::run()
+{
+    if (!(flags & GuiConst::STATE_SAVE_REQUEST)) {
+        //clearing everything out
+        delete mwin->settingsDialog;
+        mwin->settingsDialog = NULL;
+        delete mwin->analyseDialog;
+        mwin->analyseDialog = NULL;
+        delete mwin->regexphelpDialog;
+        mwin->regexphelpDialog = NULL;
+        delete mwin->quickView;
+        mwin->quickView = NULL;
+        delete mwin->comparisonView;
+        mwin->comparisonView = NULL;
+        delete mwin->debugDialog;
+        mwin->debugDialog = NULL;
+
+        mwin->mainTabs->clearTabs();
+        mwin->guiHelper->deleteImportExportFuncs();
+    }
 }

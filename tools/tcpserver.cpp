@@ -11,7 +11,8 @@ Released under AGPL see LICENSE for more information
 #include "tcpserver.h"
 #include <QHostAddress>
 #include <commonstrings.h>
-using namespace Pip3lineConst;
+#include "shared/guiconst.h"
+using namespace GuiConst;
 
 #include <QDebug>
 

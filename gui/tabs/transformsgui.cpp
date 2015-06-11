@@ -25,6 +25,7 @@ Released under AGPL see LICENSE for more information
 #include "ui_transformsgui.h"
 #include "../shared/detachtabbutton.h"
 #include "../shared/universalreceiverbutton.h"
+#include "../state/closingstate.h"
 
 TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
     TabAbstract(guiHelper,parent)
@@ -39,6 +40,9 @@ TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
 
     firstTransformWidget = NULL;
     massProcessingDialog = NULL;
+
+    // need to be before the transformwidget initialization
+    ui->autoCopyLastPushButton->setChecked(guiHelper->isAutoCopyTextTransformGui());
 
     firstTransformWidget = new(std::nothrow) TransformWidget(guiHelper, this);
 
@@ -64,13 +68,17 @@ TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
 
     ui->savedComboBox->installEventFilter(guiHelper);
     buildSavedCombo();
+
+
+
     connect(ui->savedComboBox, SIGNAL(currentIndexChanged(QString)), SLOT(onSavedSelected(QString)));
     connect(ui->loadPushButton, SIGNAL(clicked()), SLOT(onLoadState()));
     connect(ui->savePushButton, SIGNAL(clicked()), SLOT(onSaveState()));
     connect(ui->resetPushButton, SIGNAL(clicked()), SLOT(resetAll()));
-    connect(ui->registerPushButton,SIGNAL(clicked()), SLOT(onSaveToMemory()));
+    connect(ui->registerPushButton,SIGNAL(clicked()), SLOT(onRegisterChain()));
     connect(ui->massProcessingPushButton, SIGNAL(clicked()), SLOT(onMassProcessing()));
     connect(transformFactory, SIGNAL(savedUpdated()), SLOT(buildSavedCombo()));
+    connect(ui->autoCopyLastPushButton, SIGNAL(toggled(bool)), this, SLOT(onAutoCopychanged(bool)));
 }
 
 TransformsGui::~TransformsGui()
@@ -102,7 +110,7 @@ QString TransformsGui::getCurrentChainConf()
     return ret;
 }
 
-void TransformsGui::setCurrentChainConf(const QString &conf)
+void TransformsGui::setCurrentChainConf(const QString &conf, bool ignoreErrors)
 {
     if (conf.isEmpty())
         return;
@@ -112,10 +120,13 @@ void TransformsGui::setCurrentChainConf(const QString &conf)
     QXmlStreamReader reader(conf);
 
     TransformChain talist = transformFactory->loadConfFromXML(&reader);
-    if (talist.isEmpty())
-        QMessageBox::critical(this,tr("Error"),tr("The loaded chain is empty. Check the logs."),QMessageBox::Ok);
+    if (talist.isEmpty()) {
+        if (!ignoreErrors) {
+            QMessageBox::critical(this,tr("Error"),tr("The loaded chain is empty. Check the logs."),QMessageBox::Ok);
+        }
+    }
     else {
-        if (errorDialog.hasMessages()) {
+        if (errorDialog.hasMessages() && !ignoreErrors) {
             errorDialog.setWindowTitle(tr("Error(s) while loading the configuration"));
             if (errorDialog.exec() == QDialog::Rejected) {
                 while (!talist.isEmpty())
@@ -127,6 +138,7 @@ void TransformsGui::setCurrentChainConf(const QString &conf)
         setCurrentTransformChain(talist);
         emit chainChanged(conf);
     }
+
 }
 
 TransformChain TransformsGui::getCurrentTransformChain()
@@ -222,6 +234,15 @@ ByteTableView *TransformsGui::getHexTableView(int blockIndex)
     return transformWidgetList.at(blockIndex)->getHexTableView();
 }
 
+BaseStateAbstract *TransformsGui::getStateMngtObj()
+{
+    TransformGuiStateObj *stateObj = new(std::nothrow) TransformGuiStateObj(this);
+    if (stateObj == NULL) {
+        qFatal("Cannot allocate memory for TransformGuiStateObj X{");
+    }
+    return stateObj;
+}
+
 
 void TransformsGui::processNewTransformation(TransformWidget *transformWidget)
 {
@@ -296,9 +317,11 @@ void TransformsGui::addWidget(TransformWidget *transformWidget)
 {
     if (!transformWidgetList.isEmpty()) { // only if there is already another TransformWidget
         TransformWidget *previousTw = transformWidgetList.last();
+        previousTw->setAutoCopyTextToClipboard(false);
         connect(previousTw,SIGNAL(updated()),transformWidget,SLOT(updatingFrom()));
     }
 
+    transformWidget->setAutoCopyTextToClipboard(ui->autoCopyLastPushButton->isChecked());
     transformWidgetList.append(transformWidget); // updating the list
 
     // Adding the widget to the gui
@@ -377,7 +400,7 @@ void TransformsGui::onLoadState()
     }
 }
 
-void TransformsGui::onSaveToMemory()
+void TransformsGui::onRegisterChain()
 {
     if (transformWidgetList.size() == 1) {
         QMessageBox::critical(this,tr("Error"),tr("No transformation selected, nothing to register!"),QMessageBox::Ok);
@@ -456,6 +479,16 @@ void TransformsGui::resetAll()
     ui->savedComboBox->blockSignals(false);
 }
 
+void TransformsGui::onAutoCopychanged(bool val)
+{
+    if (!transformWidgetList.isEmpty()) { // only if there is a TransformWidget
+        TransformWidget *last = transformWidgetList.last();
+        last->setAutoCopyTextToClipboard(val);
+    } else {
+        qCritical() << tr("No TransformWidget in the list T_T");
+    }
+}
+
 void TransformsGui::onTransformChanged()
 {
     emit chainChanged(getCurrentChainConf());
@@ -470,3 +503,76 @@ void TransformsGui::onNameChangeRequest(QString name)
     }
 }
 
+
+
+TransformGuiStateObj::TransformGuiStateObj(TransformsGui *tg) :
+    TabStateObj(tg)
+{
+    name = tg->metaObject()->className();
+}
+
+TransformGuiStateObj::~TransformGuiStateObj()
+{
+
+}
+
+void TransformGuiStateObj::run()
+{
+    TabStateObj::run();
+    QString conf;
+    int size = 0;
+
+    TransformsGui *tgtab = dynamic_cast<TransformsGui *>(tab);
+
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+        conf = tgtab->getCurrentChainConf();
+
+        writer->writeAttribute(GuiConst::STATE_TRANSFORM_CONF, write(conf,true));
+        size = tgtab->getBlockCount();
+
+        // first saving the transformWidget states so that they are saved last.
+        for (int i = size - 1  ; i > -1; i--) { // need to reverse the order due to the stack behaviour
+            BaseStateAbstract *state = tgtab->transformWidgetList.at(i)->getStateMngtObj();
+            emit addNewState(state);
+        }
+
+        writer->writeAttribute(GuiConst::STATE_SIZE, write(size));
+        for (int i = size - 1  ; i > -1; i--) { // need to reverse the order due to the stack behaviour
+            BaseStateAbstract *state = tgtab->getSource(i)->getStateMngtObj();
+            emit addNewState(state);
+        }
+
+
+    } else {
+        QXmlStreamAttributes attrList = reader->attributes();
+        conf = readString(attrList.value(GuiConst::STATE_TRANSFORM_CONF));
+
+        if (!conf.isEmpty()) {
+            tgtab->setCurrentChainConf(conf, true);
+        }
+        int bsize = tgtab->getBlockCount();
+        bool ok = false;
+        size = readInt(attrList.value(GuiConst::STATE_SIZE),&ok);
+        if (!ok) {
+            emit log(tr("Error while parsing the number of blocks from the saved state, stopping restore."), tr("TransformGuiLoader"), Pip3lineConst::LERROR);
+            return;
+        }
+
+        if (bsize != size) {
+            emit log(tr("The number of transform blocks (%1) is different from the array size. Taking the smaller number."), tr("TransformGuiLoader"), Pip3lineConst::LWARNING);
+            size = qMin(bsize, size);
+        }
+
+        // first restoring the transformWidget states (so that they are executed last)
+        for (int i = size - 1  ; i > -1; i--) { // need to reverse the order due to the stack behaviour
+            BaseStateAbstract *state = tgtab->transformWidgetList.at(i)->getStateMngtObj();
+            emit addNewState(state);
+        }
+
+        // then the data (executed first)
+        for (int i = size - 1  ; i > -1; i--) { // need to reverse the order due to the stack behaviour
+            BaseStateAbstract *tempState = tgtab->getSource(i)->getStateMngtObj();
+            emit addNewState(tempState);
+        }
+    }
+}

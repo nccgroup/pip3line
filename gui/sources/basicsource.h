@@ -13,25 +13,45 @@ Released under AGPL see LICENSE for more information
 
 #include "bytesourceabstract.h"
 
-class BasicSearch : public SearchAbstract {
+#include <QBuffer>
+
+class BasicSourceReader : public SourceReader
+{
+    public:
+        explicit BasicSourceReader(QByteArray *source);
+        ~BasicSourceReader();
+        bool seek(quint64 pos);
+        int read(char * cbuf, int maxLen);
+        bool isReadable();
+    private:
+        const char * rawSource;
+        quint64 size;
+        quint64 offset;
+        QBuffer buffer;
+};
+
+class BasicSearch : public SearchAbstract
+{
     Q_OBJECT
     public:
-        BasicSearch(QByteArray *data, QObject *parent = 0);
+        explicit BasicSearch(QByteArray *data);
         ~BasicSearch();
     private:
         void internalStart();
         QByteArray *sdata;
+        static const int SearchBlockSize;
 };
 
 class BasicSource : public ByteSourceAbstract
 {
         Q_OBJECT
     public:
-        BasicSource(QObject *parent = 0);
+        explicit BasicSource(QObject *parent = 0);
         virtual ~BasicSource();
         QString description();
         virtual void setData(QByteArray data, quintptr source = INVALID_SOURCE);
         QByteArray getRawData();
+        void setRawData(QByteArray data, quintptr source = INVALID_SOURCE);
         quint64 size();
         virtual QByteArray extract(quint64 offset, int length);
         char extract(quint64 offset);
@@ -43,6 +63,8 @@ class BasicSource : public ByteSourceAbstract
         int preferredTabType();
         bool isOffsetValid(quint64 offset);
         bool isReadableText();
+        virtual void fromLocalFile(QString fileName);
+        BaseStateAbstract *getStateMngtObj();
     protected:
         QByteArray rawData;
     private:
@@ -52,7 +74,16 @@ class BasicSource : public ByteSourceAbstract
         bool validateOffsetAndSize(quint64 offset, int length);
         SearchAbstract *requestSearchObject(QObject *parent = 0);
         BasicSearch *bsearchObj;
+};
 
+class BasicSourceStateObj : public ByteSourceStateObj
+{
+        Q_OBJECT
+    public:
+        explicit BasicSourceStateObj(BasicSource *bs);
+        ~BasicSourceStateObj();
+    protected:
+        void internalRun();
 };
 
 #endif // BASICSOURCE_H

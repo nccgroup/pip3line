@@ -35,7 +35,7 @@ class RandomAccessTab : public TabAbstract
         Q_OBJECT
         
     public:
-        explicit RandomAccessTab(ByteSourceAbstract *bytesource, GuiHelper *guiHelper, QWidget *parent = 0);
+        explicit RandomAccessTab(ByteSourceAbstract *nbytesource, GuiHelper *guiHelper, QWidget *parent = 0);
         ~RandomAccessTab();
         int getBlockCount() const;
         ByteSourceAbstract *getSource(int blockIndex);
@@ -43,6 +43,10 @@ class RandomAccessTab : public TabAbstract
         void loadFromFile(QString);
         void setData(const QByteArray &);
         bool canReceiveData();
+        BaseStateAbstract *getStateMngtObj();
+
+        OffsetGotoWidget *getGotoWidget() const;
+        SearchWidget *getSearchWidget() const;
 
     private slots:
         void fileLoadRequest();
@@ -50,12 +54,13 @@ class RandomAccessTab : public TabAbstract
         void onGotoOffset(quint64 offset, bool absolute, bool negative, bool select);
         void log(QString mess,QString source,Pip3lineConst::LOGLEVEL level);
         void onCloseLogView();
+        void onSourceUpdated();
 
     private:
         Q_DISABLE_COPY(RandomAccessTab)
         static const QString LOGID;
         void integrateByteSource();
-        ByteSourceAbstract *byteSource;
+        ByteSourceAbstract *bytesource;
         HexView *hexView;
         OffsetGotoWidget * gotoWidget;
         SearchWidget *searchWidget;
@@ -65,6 +70,32 @@ class RandomAccessTab : public TabAbstract
         ByteSourceGuiButton * guiButton;
         DetachTabButton *detachButton;
         bool eventFilter(QObject *obj, QEvent *event);
+
+        friend class RandomAccessStateObj;
+        friend class RandomAccessClosingStateObj;
+};
+
+class RandomAccessStateObj : public TabStateObj
+{
+        Q_OBJECT
+    public:
+        explicit RandomAccessStateObj(RandomAccessTab *tab);
+        ~RandomAccessStateObj();
+        void run();
+};
+
+class RandomAccessClosingStateObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit RandomAccessClosingStateObj(RandomAccessTab *tab);
+        ~RandomAccessClosingStateObj();
+        void run();
+        void setScrollIndex(int value);
+
+    protected:
+        RandomAccessTab *tab;
+        int scrollIndex;
 };
 
 #endif // RANDOMACCESSTAB_H

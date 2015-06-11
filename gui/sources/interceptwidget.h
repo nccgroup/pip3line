@@ -33,6 +33,7 @@ class InterceptWidget : public QWidget
         static const QString CHOOSE_TEXT;
         static const QString UDP_EXTERNAL_SOURCE_TEXT;
         static const QString TCP_EXTERNAL_SOURCE_TEXT;
+        static const QString RAW_TCP_SOURCE_TEXT;
         static const QFont RegularFont;
         static const int TIMESTAMP_COLUMN_WIDTH;
         Ui::InterceptWidget *ui;

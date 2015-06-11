@@ -28,6 +28,7 @@ class TimestampWidget : public QWidget
 
     private slots:
         void formatChanged(QString format);
+        void outBoundTZLocalChanged(bool checked);
         
     private:
         Ui::TimestampWidget *ui;

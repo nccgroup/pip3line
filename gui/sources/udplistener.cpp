@@ -82,10 +82,10 @@ bool UdpListener::startListening()
     }
     if (currentSocket->bind(listeningAddress, port)) {
         connect(currentSocket, SIGNAL(readyRead()), SLOT(readPendingDatagrams()));
-        emit status(tr("UDP server started %1:%2").arg(listeningAddress.toString()).arg(port), "");
+        emit log(tr("UDP server started %1:%2").arg(listeningAddress.toString()).arg(port), "", Pip3lineConst::LSTATUS);
         emit started();
     } else {
-        emit error(currentSocket->errorString(),metaObject()->className());
+        emit log(currentSocket->errorString(),metaObject()->className(),Pip3lineConst::LERROR);
         delete currentSocket;
         currentSocket = NULL;
         return false;
@@ -99,7 +99,7 @@ void UdpListener::stopListening()
         currentSocket->close();
         delete currentSocket;
         currentSocket = NULL;
-        emit status(tr("UDP server stopped %1:%2").arg(listeningAddress.toString()).arg(port), "");
+        emit log(tr("UDP server stopped %1:%2").arg(listeningAddress.toString()).arg(port), "", Pip3lineConst::LSTATUS);
     }
     emit stopped();
 }
@@ -200,9 +200,10 @@ bool UDPClient::operator==(const UDPClient &other) const
     return other.adress == adress && other.port == port;
 }
 
-void UDPClient::operator=(const UDPClient &other)
+UDPClient& UDPClient::operator=(const UDPClient &other)
 {
     adress = other.adress;
     port = other.port;
+    return *this;
 }
 

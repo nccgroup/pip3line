@@ -17,6 +17,7 @@ unix {
 }
 
 win32 {
+    QMAKE_LFLAGS_WINDOWS += /FS
     LIBS += -L"../../lib/" -ltransform
 }
 

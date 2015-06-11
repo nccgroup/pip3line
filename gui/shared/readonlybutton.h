@@ -20,10 +20,10 @@ class ReadOnlyButton : public QPushButton
         Q_OBJECT
     public:
         explicit ReadOnlyButton(ByteSourceAbstract * bytesource, QWidget *parent = 0);
-        void refreshStateValue();
     signals:
         void logError(QString message);
-    private slots:
+    public slots:
+        void refreshStateValue();
         void onToggle(bool val);
 
     private:
@@ -32,8 +32,7 @@ class ReadOnlyButton : public QPushButton
         static const QString ReadOnly;
         static const QString ButtonToolTipRW;
         static const QString ButtonToolTipRO;
-        static const QString CAP_WRITE_ToolTip;
-
+        static const QString CAP_WRITE_DISABLED_ToolTip;
 };
 
 #endif // READONLYBUTTON_H

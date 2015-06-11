@@ -41,6 +41,7 @@ class LIBTRANSFORMSHARED_EXPORT Pip3lineCallback : public QObject
         void notifyNewTransform();
     private:
         Q_DISABLE_COPY(Pip3lineCallback)
+        explicit Pip3lineCallback() {}
         explicit Pip3lineCallback(TransformMgmt *tfactory, const QString &confFile, const QString &pluginName, QObject *parent = 0);
         QString pluginName;
         QSettings settings;

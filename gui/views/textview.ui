@@ -85,6 +85,19 @@
     </widget>
    </item>
   </layout>
+  <action name="saveAllToFileAction">
+   <property name="text">
+    <string>Save All to File</string>
+   </property>
+   <property name="toolTip">
+    <string>Save All to File</string>
+   </property>
+  </action>
+  <action name="saveSelectedToFileAction">
+   <property name="text">
+    <string>Save Selected to File</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

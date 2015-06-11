@@ -24,7 +24,7 @@ class SingleViewAbstract : public QWidget
 {
         Q_OBJECT
     public:
-        explicit SingleViewAbstract(ByteSourceAbstract *dataModel,GuiHelper *guiHelper, QWidget *parent = 0);
+        explicit SingleViewAbstract(ByteSourceAbstract *dataModel, GuiHelper *guiHelper, QWidget *parent = 0, bool takeByteSourceOwnership = false);
         virtual ~SingleViewAbstract();
         ByteSourceAbstract *getByteSource() const;
     public slots:
@@ -40,6 +40,7 @@ class SingleViewAbstract : public QWidget
         LoggerWidget *logger;
         QByteArray previousSearch;
         QBitArray previousMask;
+        bool hasSourceOwnership;
         
 };
 

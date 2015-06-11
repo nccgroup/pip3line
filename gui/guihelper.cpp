@@ -31,19 +31,13 @@ Released under AGPL see LICENSE for more information
 #include <transformmgmt.h>
 #include <QDragEnterEvent>
 #include <threadedprocessor.h>
+#include <QNetworkProxy>
+#include <QTimer>
+#include "shared/guiconst.h"
 
-using namespace Pip3lineConst;
+using namespace GuiConst;
 
-const QString GuiHelper::SETTINGS_QUICKVIEWS = "QuickView";
-const QString GuiHelper::SETTINGS_FILTER_BLACKLIST = "FilterBlacklist";
-const QString GuiHelper::SETTINGS_MARKINGS_COLORS = "MarkingsColors";
-const QString GuiHelper::SETTINGS_EXPORT_IMPORT_FUNC = "ExportImportFunctions";
-const QString GuiHelper::SETTINGS_OFFSET_BASE = "OffsetBase";
-const QString GuiHelper::UTF8_STRING_ACTION = "UTF-8";
 const QString GuiHelper::LOGID = "GuiHelper";
-const QString GuiHelper::NEW_BYTE_ACTION = "New Byte(s)";
-const QString GuiHelper::SEND_TO_NEW_TAB_ACTION = "New tab";
-const int GuiHelper::DEFAULT_OFFSET_BASE = 16;
 
 GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nmanager, LoggerWidget *nlogger)
 {
@@ -52,48 +46,30 @@ GuiHelper::GuiHelper(TransformMgmt *ntransformFactory, QNetworkAccessManager *nm
     logger = nlogger;
     centralTransProc = NULL;
     universalReceiver = NULL;
-    settings = transformFactory->getSettingsObj();
-    bool ok = false;
-    defaultServerPort = settings->value(SETTINGS_SERVER_PORT,DEFAULT_PORT).toInt(&ok);
-    if (!ok || defaultServerPort < 1)
-        defaultServerPort = DEFAULT_PORT;
+    autoSaveTimer = NULL;
+    debugMode = false;
+    defaultNewTab = GuiConst::TRANSFORM_PRETAB;
+    offsetDefaultBase = GuiConst::DEFAULT_OFFSET_BASE;
+    ignoreSSLErrors = GuiConst::DEFAULT_IGNORE_SSL;
+    enableNetworkProxy = GuiConst::DEFAULT_PROXY_ENABLE;
+    autoCopyTextTransformGui = GuiConst::DEFAULT_AUTO_COPY_TEXT;
+    proxyInterface = GuiConst::DEFAULT_GLOBAL_PROXY_IP;
+    proxyPort = GuiConst::DEFAULT_GLOBAL_PROXY_PORT;
+    defaultServerPort = GuiConst::DEFAULT_PORT;
+    defaultServerSeparator = GuiConst::DEFAULT_BLOCK_SEPARATOR;
+    defaultServerPipeName = GuiConst::DEFAULT_PIPE_MASS;
+    defaultServerDecode = GuiConst::DEFAULT_SERVER_DECODE;
+    defaultServerEncode = GuiConst::DEFAULT_SERVER_ENCODE;
+    defaultStateFlags = GuiConst::STATE_LOADSAVE_SAVE_ALL;
+    autoSaveState = GuiConst::DEFAULT_AUTO_SAVE_ENABLED;
+    autoSaveOnExit = GuiConst::DEFAULT_AUTO_SAVE_ON_EXIT;
+    autoSaveTimerEnable = GuiConst::DEFAULT_AUTO_SAVE_TIMER_ENABLE;
+    autoSaveTimerInterval = GuiConst::DEFAULT_AUTO_SAVE_TIMER_INTERVAL;
+    settings = NULL;
 
-    QByteArray temp = settings->value(SETTINGS_SERVER_SEPARATOR,QByteArray()).toByteArray();
-    temp = QByteArray::fromHex(temp);
-    if (temp.isEmpty())
-        defaultServerSeparator = DEFAULT_BLOCK_SEPARATOR;
-    else
-        defaultServerSeparator = temp.at(0);
+    refreshAll();
 
-    defaultServerDecode = settings->value(SETTINGS_SERVER_DECODE,false).toBool();
-    defaultServerEncode = settings->value(SETTINGS_SERVER_ENCODE, false).toBool();
-    defaultServerPipeName = settings->value(SETTINGS_SERVER_PIPE_NAME, DEFAULT_PIPE_MASS).toString();
 
-    offsetDefaultBase = settings->value(SETTINGS_OFFSET_BASE, DEFAULT_OFFSET_BASE).toInt(&ok);
-    if (!ok || (offsetDefaultBase != 8 && offsetDefaultBase != 10 && offsetDefaultBase != 16)) {
-        offsetDefaultBase = DEFAULT_OFFSET_BASE;
-    }
-
-    QStringList blacklist = settings->value(SETTINGS_FILTER_BLACKLIST, QStringList()).toStringList();
-    typesBlacklist = blacklist.toSet();
-
-    QHash<QString, QVariant> hash = settings->value(SETTINGS_MARKINGS_COLORS).toHash();
-    if (hash.isEmpty())
-        markingColors = getDefaultMarkingsColor();
-    else {
-        QHashIterator<QString, QVariant> i(hash);
-        while (i.hasNext()) {
-            i.next();
-            QColor color(i.value().toUInt(&ok));
-            if (!ok) {
-                logger->logError(tr("Invalid color for marking from persistant conf"), LOGID);
-                continue;
-            }
-            markingColors.insert(i.key(),color);
-        }
-    }
-
-    loadImportExportFunctions();
     centralTransProc = new(std::nothrow) ThreadedProcessor();
     if (centralTransProc == NULL) {
         qFatal("Cannot allocate memory for action CentralProcessor X{");
@@ -106,6 +82,8 @@ GuiHelper::~GuiHelper()
     centralTransProc = NULL;
     saveImportExportFunctions();
     deleteImportExportFuncs();
+    deletedTabs.clear();
+    // clearDeletedTabs(); // not needed because the maintab will delete them anyway;
     delete settings;
     logger = NULL;
 }
@@ -142,8 +120,13 @@ void GuiHelper::setUniveralReceiver(TabAbstract *tab)
 
 void GuiHelper::addTab(TabAbstract *tab)
 {
+    connect(tab, SIGNAL(destroyed()), this, SLOT(onTabDestroyed()), Qt::UniqueConnection);
+    tabNameUpdated(tab);
+}
+
+void GuiHelper::tabNameUpdated(TabAbstract *tab)
+{
     tabs.insert(tab);
-    connect(tab, SIGNAL(destroyed()), this, SLOT(onTabDeleted()), Qt::UniqueConnection);
     updateSortedTabs();
     emit tabsUpdated();
 }
@@ -151,6 +134,7 @@ void GuiHelper::addTab(TabAbstract *tab)
 void GuiHelper::removeTab(TabAbstract *tab)
 {
     tabs.remove(tab);
+    disconnect(tab, SIGNAL(destroyed()), this, SLOT(onTabDestroyed()));
     updateSortedTabs();
     emit tabsUpdated();
 }
@@ -160,7 +144,7 @@ QList<TabAbstract *> GuiHelper::getTabs()
     return sortedTabs.values();
 }
 
-void GuiHelper::onTabDeleted()
+void GuiHelper::onTabDestroyed()
 {
     TabAbstract * tg = static_cast<TabAbstract *>(sender());
     if (tg == NULL) {
@@ -293,9 +277,9 @@ void GuiHelper::saveQuickViewConf(QStringList conf)
 QHash<QString, QColor> GuiHelper::getDefaultMarkingsColor()
 {
     QHash<QString, QColor> defaultColors;
-    defaultColors.insert("Data",QColor(11449599));
-    defaultColors.insert("Size",QColor(16755616));
-    defaultColors.insert("Type",QColor(9043881));
+    defaultColors.insert(tr("Data"),GuiStyles::DEFAULT_MARKING_COLOR_DATA);
+    defaultColors.insert(tr("Size"),GuiStyles::DEFAULT_MARKING_COLOR_SIZE);
+    defaultColors.insert(tr("Type"),GuiStyles::DEFAULT_MARKING_COLOR_TYPE);
     return defaultColors;
 }
 
@@ -328,6 +312,16 @@ void GuiHelper::removeMarkingColor(const QString &name)
     }
 }
 
+void GuiHelper::saveMarkingsColor()
+{
+    QHash<QString, QVariant> colors;
+    QHashIterator<QString, QColor> i(markingColors);
+    while (i.hasNext()) {
+        i.next();
+        colors.insert(i.key(),i.value().rgb());
+    }
+    settings->setValue(SETTINGS_MARKINGS_COLORS, colors);
+}
 
 void GuiHelper::loadImportExportFunctions()
 {
@@ -359,9 +353,7 @@ void GuiHelper::loadImportExportFunctions()
             }
             importExportFunctions.insert(talist.getName(), ta);
         }
-
     }
-
 }
 
 void GuiHelper::saveImportExportFunctions()
@@ -469,6 +461,368 @@ void GuiHelper::deleteImportExportFuncs()
     }
 }
 
+void GuiHelper::refreshNetworkProxySettings()
+{
+    QNetworkProxy networkProxy = networkManager->proxy();
+    if (enableNetworkProxy) {
+        networkProxy.setType(QNetworkProxy::HttpProxy);
+        networkProxy.setHostName(proxyInterface);
+        networkProxy.setPort(proxyPort);
+    } else {
+        networkProxy = QNetworkProxy::DefaultProxy;
+    }
+    networkManager->setProxy(networkProxy);
+}
+
+void GuiHelper::refreshIgnoreSSLSetting()
+{
+    QSslConfiguration currentConf = QSslConfiguration::defaultConfiguration();
+    if (ignoreSSLErrors) {
+        currentConf.setPeerVerifyMode(QSslSocket::VerifyNone);
+    }
+    else {
+        currentConf.setPeerVerifyMode(QSslSocket::AutoVerifyPeer);
+    }
+    QSslConfiguration::setDefaultConfiguration(currentConf);
+}
+
+void GuiHelper::refreshAutoSaveTimer()
+{
+    if (autoSaveTimerEnable) {
+        if (autoSaveTimer == NULL) {
+           autoSaveTimer = new(std::nothrow) QTimer();
+           if (autoSaveTimer == NULL) {
+               qFatal("Cannot allocate memory for auto save QTimer X{");
+           }
+           connect(autoSaveTimer, SIGNAL(timeout()), this, SIGNAL(requestSaveState()), Qt::UniqueConnection);
+        }
+
+        // value is initially in minutes, have to convert in ms
+        autoSaveTimer->start(autoSaveTimerInterval * 60 * 1000);
+
+    } else if (autoSaveTimer != NULL) {
+        autoSaveTimer->stop();
+        delete autoSaveTimer;
+        autoSaveTimer = NULL;
+    }
+}
+bool GuiHelper::getAutoRestoreOnStartup() const
+{
+    return autoRestoreOnStartup;
+}
+
+void GuiHelper::setAutoRestoreOnStartup(bool value)
+{
+    autoRestoreOnStartup = value;
+    settings->setValue(GuiConst::SETTINGS_AUTO_RESTORE_ON_STARTUP, autoRestoreOnStartup);
+
+}
+
+int GuiHelper::getAutoSaveTimerInterval() const
+{
+    return autoSaveTimerInterval;
+}
+
+void GuiHelper::setAutoSaveTimerInterval(int value)
+{
+    if (autoSaveTimerInterval != value
+            && value >= GuiConst::MIN_AUTO_SAVE_TIMER_INTERVAL
+            && value <= GuiConst::MAX_AUTO_SAVE_TIMER_INTERVAL) {
+        autoSaveTimerInterval = value;
+        settings->setValue(GuiConst::SETTINGS_AUTO_SAVE_TIMER_INTERVAL, autoSaveTimerInterval);
+        refreshAutoSaveTimer();
+    } else {
+        logger->logWarning(tr("Invalid timer value for auto save: %1. Ignoring it.").arg(value));
+    }
+}
+
+bool GuiHelper::getAutoSaveTimerEnable() const
+{
+    return autoSaveTimerEnable;
+}
+
+void GuiHelper::setAutoSaveTimerEnable(bool value)
+{
+    autoSaveTimerEnable = value;
+    settings->setValue(GuiConst::SETTINGS_AUTO_SAVE_TIMER_ENABLE, autoSaveTimerEnable);
+    refreshAutoSaveTimer();
+}
+
+bool GuiHelper::getAutoSaveOnExit() const
+{
+    return autoSaveOnExit;
+}
+
+void GuiHelper::setAutoSaveOnExit(bool value)
+{
+    autoSaveOnExit = value;
+    settings->setValue(GuiConst::SETTINGS_AUTO_SAVE_ON_EXIT, autoSaveOnExit);
+}
+
+QString GuiHelper::getAutoSaveFileName() const
+{
+    return autoSaveFileName;
+}
+
+void GuiHelper::setAutoSaveFileName(const QString &value)
+{
+    autoSaveFileName = value;
+    settings->setValue(GuiConst::SETTINGS_AUTO_SAVE_SINGLE_FILENAME, autoSaveFileName);
+}
+
+bool GuiHelper::getAutoSaveState() const
+{
+    return autoSaveState;
+}
+
+void GuiHelper::setAutoSaveState(bool value)
+{
+    if (autoSaveState != value) {
+        autoSaveState = value;
+        settings->setValue(GuiConst::SETTINGS_AUTO_SAVE_ENABLE, autoSaveState);
+    }
+}
+
+quint64 GuiHelper::getDefaultSaveStateFlags() const
+{
+    return defaultStateFlags | GuiConst::STATE_SAVE_REQUEST;
+}
+
+quint64 GuiHelper::getDefaultLoadStateFlags() const
+{
+    return defaultStateFlags & (~GuiConst::STATE_SAVE_REQUEST);
+}
+
+void GuiHelper::setDefaultStateFlags(const quint64 &value)
+{
+    defaultStateFlags = value;
+    settings->setValue(GuiConst::SETTINGS_DEFAULT_SAVELOAD_FLAGS, defaultStateFlags);
+}
+
+bool GuiHelper::isAutoCopyTextTransformGui() const
+{
+    return autoCopyTextTransformGui;
+}
+
+void GuiHelper::setAutoCopyTextTransformGui(bool value)
+{
+    if (autoCopyTextTransformGui != value) {
+        autoCopyTextTransformGui = value;
+        settings->setValue(SETTINGS_AUTO_COPY_TRANSFORM, value);
+    }
+}
+
+QList<TabAbstract *> GuiHelper::getDeletedTabs() const
+{
+    return deletedTabs;
+}
+
+TabAbstract *GuiHelper::takeDeletedTab(int index)
+{
+    if (!(index < deletedTabs.size())) {
+        qWarning() << "[GuiHelper::takeDeletedTab] could not find the tab at index T_T" << index;
+        return NULL;
+    }
+    TabAbstract * tab = deletedTabs.takeAt(index);
+    emit deletedTabsUpdated();
+    return tab;
+}
+
+void GuiHelper::addDeletedTab(TabAbstract *dtab)
+{
+    if (deletedTabs.size() > MAX_DELETED_TABS_KEPT) {
+        logger->logStatus(tr("Maximum number of deleted tabs reached, destroying the first one for good."));
+        delete deletedTabs.takeFirst();
+    }
+
+    deletedTabs.append(dtab);
+    emit deletedTabsUpdated();
+}
+
+void GuiHelper::reviveTab(int index)
+{
+    TabAbstract * tab = takeDeletedTab(index);
+
+    if (tab != NULL) {
+        emit tabRevived(tab);
+    }
+}
+
+void GuiHelper::clearDeletedTabs()
+{
+    while (!deletedTabs.isEmpty())
+         delete deletedTabs.takeFirst();
+    emit deletedTabsUpdated();
+}
+
+quint16 GuiHelper::getProxyPort() const
+{
+    return proxyPort;
+}
+
+void GuiHelper::setProxyPort(const quint16 &value)
+{
+    if (proxyPort != value) {
+        proxyPort = value;
+        refreshNetworkProxySettings();
+        settings->setValue(SETTINGS_GLOBAL_PROXY_PORT, value);
+    }
+}
+
+QString GuiHelper::getProxyInterface() const
+{
+    return proxyInterface;
+}
+
+void GuiHelper::setProxyInterface(const QString &value)
+{
+    if (proxyInterface != value) {
+        proxyInterface = value;
+        refreshNetworkProxySettings();
+        settings->setValue(SETTINGS_GLOBAL_PROXY_IP, value);
+    }
+}
+
+bool GuiHelper::getEnableNetworkProxy() const
+{
+    return enableNetworkProxy;
+}
+
+void GuiHelper::setEnableNetworkProxy(bool value)
+{
+    if (enableNetworkProxy != value) {
+        enableNetworkProxy = value;
+
+        refreshNetworkProxySettings();
+
+        settings->setValue(SETTINGS_ENABLE_NETWORK_PROXY, value);
+    }
+}
+
+bool GuiHelper::getIgnoreSSLErrors() const
+{
+    return ignoreSSLErrors;
+}
+
+void GuiHelper::setIgnoreSSLErrors(bool value)
+{
+    if (ignoreSSLErrors != value) {
+        ignoreSSLErrors = value;
+        refreshIgnoreSSLSetting();
+        settings->setValue(SETTINGS_IGNORE_SSL_ERRORS, value);
+    }
+}
+
+bool GuiHelper::getDebugMode() const
+{
+    return debugMode;
+}
+
+void GuiHelper::setDebugMode(bool value)
+{
+    debugMode = value;
+}
+
+void GuiHelper::refreshAll()
+{
+    bool ok = false;
+    delete settings;
+    settings = transformFactory->getSettingsObj();
+
+    int vl = settings->value(GuiConst::SETTINGS_DEFAULT_TAB, GuiConst::TRANSFORM_PRETAB).toInt(&ok);
+
+    if (ok && vl >= 0 && vl < GuiConst::AVAILABLE_TAB_STRINGS.size()) {
+        defaultNewTab = (GuiConst::AVAILABLE_PRETABS)vl;
+    }
+
+    defaultServerPort = settings->value(GuiConst::SETTINGS_SERVER_PORT,GuiConst::DEFAULT_PORT).toInt(&ok);
+    if (!ok || defaultServerPort < 1)
+        defaultServerPort = GuiConst::DEFAULT_PORT;
+
+    QByteArray temp = settings->value(GuiConst::SETTINGS_SERVER_SEPARATOR,QByteArray()).toByteArray();
+    temp = QByteArray::fromHex(temp);
+    if (temp.isEmpty())
+        defaultServerSeparator = GuiConst::DEFAULT_BLOCK_SEPARATOR;
+    else
+        defaultServerSeparator = temp.at(0);
+
+    defaultServerDecode = settings->value(GuiConst::SETTINGS_SERVER_DECODE,GuiConst::DEFAULT_SERVER_DECODE).toBool();
+    defaultServerEncode = settings->value(GuiConst::SETTINGS_SERVER_ENCODE, GuiConst::DEFAULT_SERVER_ENCODE).toBool();
+    defaultServerPipeName = settings->value(GuiConst::SETTINGS_SERVER_PIPE_NAME, GuiConst::DEFAULT_PIPE_MASS).toString();
+
+    offsetDefaultBase = settings->value(GuiConst::SETTINGS_OFFSET_BASE, GuiConst::DEFAULT_OFFSET_BASE).toInt(&ok);
+    if (!ok || (offsetDefaultBase != 8 && offsetDefaultBase != 10 && offsetDefaultBase != 16)) {
+        offsetDefaultBase = DEFAULT_OFFSET_BASE;
+    }
+
+    ignoreSSLErrors = settings->value(GuiConst::SETTINGS_IGNORE_SSL_ERRORS, GuiConst::DEFAULT_IGNORE_SSL).toBool();
+    refreshIgnoreSSLSetting();
+
+    enableNetworkProxy = settings->value(GuiConst::SETTINGS_ENABLE_NETWORK_PROXY, GuiConst::DEFAULT_PROXY_ENABLE).toBool();
+    proxyInterface = settings->value(GuiConst::SETTINGS_GLOBAL_PROXY_IP, GuiConst::DEFAULT_GLOBAL_PROXY_IP).toString();
+    proxyPort = settings->value(GuiConst::SETTINGS_GLOBAL_PROXY_PORT, GuiConst::DEFAULT_GLOBAL_PROXY_PORT).toUInt(&ok);
+    if (!ok)
+        proxyPort = GuiConst::DEFAULT_GLOBAL_PROXY_PORT;
+
+    refreshNetworkProxySettings();
+
+    autoCopyTextTransformGui = settings->value(GuiConst::SETTINGS_AUTO_COPY_TRANSFORM, GuiConst::DEFAULT_AUTO_COPY_TEXT).toBool();
+
+    defaultStateFlags = settings->value(GuiConst::SETTINGS_DEFAULT_SAVELOAD_FLAGS, GuiConst::STATE_LOADSAVE_SAVE_ALL).toULongLong(&ok);
+    if (!ok)
+        defaultStateFlags = GuiConst::STATE_LOADSAVE_SAVE_ALL;
+
+    autoSaveState = settings->value(GuiConst::SETTINGS_AUTO_SAVE_ENABLE, GuiConst::DEFAULT_AUTO_SAVE_ENABLED).toBool();
+    autoSaveFileName = settings->value(GuiConst::SETTINGS_AUTO_SAVE_SINGLE_FILENAME,  transformFactory->getHomeDirectory().append(QDir::separator()).append(GuiConst::SETTINGS_AUTO_SAVE_FILENAME)).toString();
+    autoSaveOnExit = settings->value(GuiConst::SETTINGS_AUTO_SAVE_ON_EXIT, GuiConst::DEFAULT_AUTO_SAVE_ON_EXIT).toBool();
+    autoSaveTimerEnable = settings->value(GuiConst::SETTINGS_AUTO_SAVE_TIMER_ENABLE, GuiConst::DEFAULT_AUTO_SAVE_TIMER_ENABLE).toBool();
+    autoSaveTimerInterval = settings->value(GuiConst::SETTINGS_AUTO_SAVE_TIMER_INTERVAL, GuiConst::DEFAULT_AUTO_SAVE_TIMER_INTERVAL).toInt(&ok);
+
+    autoRestoreOnStartup = settings->value(GuiConst::SETTINGS_AUTO_RESTORE_ON_STARTUP, GuiConst::DEFAULT_AUTO_RESTORE_ENABLED).toBool();
+
+    if (!ok || autoSaveTimerInterval < GuiConst::MIN_AUTO_SAVE_TIMER_INTERVAL || autoSaveTimerInterval > GuiConst::MAX_AUTO_SAVE_TIMER_INTERVAL) {
+        autoSaveTimerInterval = GuiConst::DEFAULT_AUTO_SAVE_TIMER_INTERVAL;
+    }
+    refreshAutoSaveTimer();
+
+    QStringList blacklist = settings->value(SETTINGS_FILTER_BLACKLIST, QStringList()).toStringList();
+    typesBlacklist = blacklist.toSet();
+
+    QHash<QString, QVariant> hash = settings->value(SETTINGS_MARKINGS_COLORS).toHash();
+    if (hash.isEmpty())
+        markingColors = getDefaultMarkingsColor();
+    else {
+        QHashIterator<QString, QVariant> i(hash);
+        while (i.hasNext()) {
+            i.next();
+            QColor color(i.value().toUInt(&ok));
+            if (!ok) {
+                logger->logError(tr("Invalid color for marking from persistant conf"), LOGID);
+                continue;
+            }
+            markingColors.insert(i.key(),color);
+        }
+    }
+
+    deleteImportExportFuncs();
+    loadImportExportFunctions();
+    emit globalUpdates();
+}
+
+GuiConst::AVAILABLE_PRETABS GuiHelper::getDefaultNewTab() const
+{
+    return defaultNewTab;
+}
+
+void GuiHelper::setDefaultNewTab(AVAILABLE_PRETABS value)
+{
+    if (value != defaultNewTab) {
+        defaultNewTab = value;
+        settings->setValue(SETTINGS_DEFAULT_TAB, QVariant((int)value));
+    }
+}
+
+
 ThreadedProcessor *GuiHelper::getCentralTransProc() const
 {
     return centralTransProc;
@@ -496,9 +850,9 @@ void GuiHelper::processDropEvent(QDropEvent *event, ByteSourceAbstract *byteSour
     }
     QStringList formats  = event->mimeData()->formats();
 
-    for (int i = 0; i < formats.size(); i++) {
-        qDebug() << formats.at(i);
-    }
+//    for (int i = 0; i < formats.size(); i++) {
+//        qDebug() << formats.at(i);
+//    }
 
     if (event->mimeData()->hasImage()) {
             qDebug() << event->mimeData()->imageData();
@@ -599,17 +953,6 @@ QSet<QString> GuiHelper::getTypesBlacklist() const
     return typesBlacklist;
 }
 
-void GuiHelper::saveMarkingsColor()
-{
-    QHash<QString, QVariant> colors;
-    QHashIterator<QString, QColor> i(markingColors);
-    while (i.hasNext()) {
-        i.next();
-        colors.insert(i.key(),i.value().rgb());
-    }
-    settings->setValue(SETTINGS_MARKINGS_COLORS, colors);
-}
-
 void GuiHelper::setDefaultServerPort(int port)
 {
     defaultServerPort = port;
@@ -676,7 +1019,10 @@ int GuiHelper::getDefaultOffsetBase() const
 
 void GuiHelper::setDefaultOffsetBase(int val)
 {
-    if (offsetDefaultBase != val && (offsetDefaultBase == 8 || offsetDefaultBase == 10 || offsetDefaultBase == 16)) {
+    if (offsetDefaultBase != val &&
+            (offsetDefaultBase == 8 ||
+             offsetDefaultBase == 10 ||
+             offsetDefaultBase == 16)) {
         offsetDefaultBase = val;
         settings->setValue(SETTINGS_OFFSET_BASE,  offsetDefaultBase);
     }
@@ -708,7 +1054,7 @@ void GuiHelper::updateCopyContextMenu(QMenu *copyMenu)
     QAction * action = NULL;
     copyMenu->clear();
 
-    action = new(std::nothrow) QAction(GuiHelper::UTF8_STRING_ACTION, copyMenu);
+    action = new(std::nothrow) QAction(UTF8_STRING_ACTION, copyMenu);
     if (action == NULL) {
         qFatal("Cannot allocate memory for action updateImportExportMenus UTF8 X{");
         return;
@@ -731,7 +1077,7 @@ void GuiHelper::updateLoadContextMenu(QMenu *loadMenu)
 {
     QAction * action = NULL;
     loadMenu->clear();
-    action = new(std::nothrow) QAction(GuiHelper::UTF8_STRING_ACTION, loadMenu);
+    action = new(std::nothrow) QAction(UTF8_STRING_ACTION, loadMenu);
     if (action == NULL) {
         qFatal("Cannot allocate memory for action updateImportExportMenus loadMenu UTF8 X{");
         return;
@@ -767,7 +1113,7 @@ void GuiHelper::loadAction(QString action, ByteSourceAbstract *byteSource)
         }
         delete dialog;
 
-    } else if (action == GuiHelper::UTF8_STRING_ACTION) {
+    } else if (action == UTF8_STRING_ACTION) {
         byteSource->setData(input.toUtf8());
     } else {
         TransformAbstract *ta  = getImportExportFunction(action);
@@ -781,7 +1127,7 @@ void GuiHelper::loadAction(QString action, ByteSourceAbstract *byteSource)
 void GuiHelper::copyAction(QString action, QByteArray value)
 {
     QClipboard *clipboard = QApplication::clipboard();
-    if (action == GuiHelper::UTF8_STRING_ACTION) {
+    if (action == UTF8_STRING_ACTION) {
         clipboard->setText(QString::fromUtf8(value));
     } else {
         TransformAbstract *ta  = getImportExportFunction(action);

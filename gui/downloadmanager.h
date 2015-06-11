@@ -47,6 +47,7 @@ class DownloadManager : public QObject
         QUrl previousRedirect;
         void createRequest(QUrl url);
         GuiHelper *guiHelper;
+        int redirects;
 };
 
 #endif // DOWNLOADMANAGER_H

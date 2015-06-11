@@ -25,6 +25,7 @@ DownloadManager::DownloadManager(QUrl &url, GuiHelper *guiHelper,QObject *parent
 {
     resource = url;
     networkManager = guiHelper->getNetworkManager();
+    redirects = 0;
 }
 
 DownloadManager::~DownloadManager()
@@ -65,15 +66,22 @@ void DownloadManager::requestFinished()
         guiHelper->getLogger()->logError(tr("[Failed to load \"%1\"] %2").arg(resource.toString()).arg(reply->errorString()),ID);
     } else {
         QUrl possibleRedirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
-        if (possibleRedirectUrl.isEmpty() || (!previousRedirect.isEmpty() && previousRedirect == possibleRedirectUrl)) {
+        if (!previousRedirect.isEmpty() && previousRedirect == possibleRedirectUrl) {
+            guiHelper->getLogger()->logError(tr("The URL %1 is redirected to the itself giving up...").arg(previousRedirect.toString()));
+        } else if (redirects > 10) {
+            guiHelper->getLogger()->logError(tr("There was more than 10 redirections when following the URL, giving up..."));
+        } else if (possibleRedirectUrl.isEmpty()) {
             // there should not be any need for a mutex here, as getData and requestFisnihed should never execute concurrently
             data = reply->readAll();
             qDebug() << tr("%1 successfully loaded (%2 bytes) ").arg(resource.toEncoded().constData()).arg(data.size());
             emit finished(data);
             deleteLater();
-        } else {
+        } else { // following redirection
+            redirects++;
+            guiHelper->getLogger()->logWarning(tr("URL redirected to %1").arg(possibleRedirectUrl.toString()));
             createRequest(possibleRedirectUrl);
         }
+
     }
     reply->deleteLater();
 }
@@ -89,7 +97,6 @@ void DownloadManager::createRequest(QUrl url)
 {
     QNetworkRequest request(url);
     request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
-    qDebug() << "ssl verify" << QSslConfiguration::defaultConfiguration().peerVerifyMode();
     QNetworkReply * reply = networkManager->get(request);
     connect(reply, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(networkSSLError(QList<QSslError>)));
     connect(reply,SIGNAL(finished()), this, SLOT(requestFinished()));

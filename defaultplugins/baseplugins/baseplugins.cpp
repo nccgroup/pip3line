@@ -73,6 +73,7 @@ const QString BasePlugins::HexaNum = "Hexadecimal (num)";
 
 BasePlugins::BasePlugins()
 {
+    callback = NULL;
 }
 
 

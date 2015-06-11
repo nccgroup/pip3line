@@ -35,13 +35,17 @@ void Pip3lineCallback::saveParameter(const QString &name, const QVariant &value)
 
 QVariant Pip3lineCallback::getParameter(const QString &name)
 {
+    QVariant ret;
     if (name.isEmpty()) {
         logError(tr("Empty name passed to getParameter, ignoring"));
-        return QVariant();
+        return ret;
     }
-    settings.beginGroup(pluginName);
-    QVariant ret = settings.value(name,QVariant());
-    settings.endGroup();
+    QStringList groups = settings.childGroups();
+    if (groups.contains(pluginName)) {
+        settings.beginGroup(pluginName);
+        ret = settings.value(name,QVariant());
+        settings.endGroup();
+    }
     return ret;
 }
 

@@ -38,14 +38,14 @@ void IPTranslateIPv4::transform(const QByteArray &input, QByteArray &output)
     QHostAddress ip;
 
     if (wayValue == TransformAbstract::INBOUND) {
-        quint32 num = input.toInt(&ok,base);
+        quint32 num = input.toUInt(&ok,base);
         if (ok) {
             if (littleEndian)
                 num = reverseBytes(num);
             ip.setAddress(num);
             output.append(ip.toString());
         } else {
-            emit error(tr("Invalid integer value for an IPv4 address"),id);
+            emit error(tr("Invalid unsigned integer value for an IPv4 address"),id);
         }
     } else {
 

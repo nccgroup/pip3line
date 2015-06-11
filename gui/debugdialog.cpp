@@ -126,7 +126,7 @@ void DebugDialog::loadQObject(QObject *obj)
         ui->nameValLabel->setText(tr("%1 (%2)").arg(obj->metaObject()->className()).arg(parentName));
 
         if (parentName == "TransformAbstract" || parentName == "ScriptTransformAbstract") {
-            TransformAbstract * ta = (TransformAbstract *) obj;
+            TransformAbstract * ta = static_cast<TransformAbstract *> (obj);
 
             QString stringConf;
             QHash<QString, QString> conf = ta->getConfiguration();
@@ -164,7 +164,6 @@ bool DebugDialog::eventFilter(QObject *o, QEvent *event)
             return false;
         }
         if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return) {
-            qDebug() << "enter pressed";
             onLoad();
             keyEvent->accept();
             return true;

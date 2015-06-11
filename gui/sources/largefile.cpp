@@ -17,13 +17,67 @@ Released under AGPL see LICENSE for more information
 #include <QtConcurrentRun>
 #include <QDebug>
 #include <string.h>
+#include <QHBoxLayout>
+#include <QPushButton>
 
-const quint32 FileSearch::MIN_SIZE_FOR_THREADS = 0x4000000;
-
-FileSearch::FileSearch(QString fileName, QObject *parent) : SearchAbstract(parent), filename(fileName)
+FileSourceReader::FileSourceReader(QString filename):
+    file(filename)
 {
-    singleSearch = true;
-    stopped = false;
+
+}
+
+FileSourceReader::~FileSourceReader()
+{
+    file.close();
+}
+
+bool FileSourceReader::seek(quint64 pos)
+{
+    if (pos > LONG_LONG_MAX) {
+        emit log(tr("pos is too large for seeking, ignoring"),metaObject()->className(),Pip3lineConst::LERROR);
+        return false;
+    }
+    return file.seek((qint64)pos);
+}
+
+int FileSourceReader::read(char *buffer, int maxLen)
+{
+    if (maxLen > MAX_READ_SIZE) { // we don't care if maxLen is over the file limit, as the QFile::read call will take care of it
+        emit log(tr("maxLen is too large for reading, reducing it."),metaObject()->className(),Pip3lineConst::LWARNING);
+        maxLen = MAX_READ_SIZE; // MAX_READ_SIZE is small
+    }
+    qint64 ret = file.read(buffer,(qint64) maxLen); // maxLen is small
+    if (ret < 0) {
+        emit log(tr("File read error: %1").arg(file.errorString()),metaObject()->className(),Pip3lineConst::LERROR);
+    }
+    return (int)ret;
+}
+
+bool FileSourceReader::isReadable()
+{
+    if (!open())
+        return false;
+
+    return file.isOpen() && file.isReadable();
+}
+
+bool FileSourceReader::open()
+{
+    if (!file.isOpen()) {
+        if (!file.open(QIODevice::ReadOnly)) {
+            emit log(tr("File open error: %1").arg(file.errorString()),metaObject()->className(),Pip3lineConst::LERROR);
+            return false;
+        }
+    }
+    return true;
+}
+
+const quint32 FileSearch::MIN_SIZE_FOR_THREADS = 0x4000000;// ~ 67Mb
+
+FileSearch::FileSearch(QString fileName) :
+    filename(fileName)
+{
+
 }
 
 FileSearch::~FileSearch()
@@ -31,115 +85,56 @@ FileSearch::~FileSearch()
 
 }
 
-void FileSearch::internalStart()
+void FileSearch::setFileName(QString nfileName)
 {
-  //  qDebug() << "initial params" << soffset << eoffset;
-    if (soffset > LONG_LONG_MAX || eoffset > LONG_LONG_MAX) {
-        emit log(tr("Hitting the LONG_LONG_MAX file offset limit for Qt, ignoring"),this->metaObject()->className(), Pip3lineConst::LERROR);
-        emit errorStatus(true);
-        return;
-    }
-    int searchSize = sitem.size();
-    if (searchSize <= 0) {
-        emit log(tr("Empty search Item, ignoring"),this->metaObject()->className(), Pip3lineConst::LERROR);
-        return;
-    }
-    if (eoffset > (quint64)(LONG_LONG_MAX - searchSize)) {
-        emit log(tr("End search offset is overflowing, ignoring"),this->metaObject()->className(), Pip3lineConst::LERROR);
-        emit errorStatus(true);
-        return;
-    }
-
-    QFile file(filename);
-
-    if (!file.open(QIODevice::ReadOnly)) {
-        emit log(tr("Failed to open %1:\n %2").arg(filename).arg(file.errorString()),this->metaObject()->className(),Pip3lineConst::LERROR);
-        emit errorStatus(true);
-        return;
-    }
-
-    qint64 fileSize = file.size();
-
-    if (fileSize < searchSize) {
-        emit log(tr("File size is inferior to the item size"),this->metaObject()->className(), Pip3lineConst::LERROR);
-        emit errorStatus(true);
-        file.close();
-        return;
-    }
-    qint64 curOffset = (qint64)soffset;
-    qint64 eOffset = eoffset;
-    if (curOffset >= eOffset || eOffset > fileSize - searchSize) { // setting to the end for both case
-        eOffset = fileSize - searchSize;
-    } else {
-        eOffset = eoffset - searchSize; // no need to
-    }
-    bool looping = singleSearch;
-    if (curOffset > fileSize - searchSize) { // if we are at the end of the file and there is not enough data to compare, go back to beginning
-        if (singleSearch)
-            curOffset = 0;
-        else { // this is the case where we don't loop and so return error
-            emit errorStatus(true);
-            file.close();
-            return;
-        }
-
-    }
-
-    //qDebug() << "from" << curOffset << eOffset;
-
-    statsSize = (quint64)file.size();
-    statsStep = (quint64)((double)statsSize * 0.001); // setting stats steps at 1% of the total size
-
-    bool found = fastSearch(&file,curOffset, eOffset);
-    if (!found && looping && curOffset + searchSize + 1 < fileSize) // trying again if looping is authorized
-    {
-        found = fastSearch(&file,0, curOffset + searchSize + 1);
-    }
-
-    emit errorStatus(!found);
-    file.close();
- //   qDebug() << "End of file search";
+    filename = nfileName;
 }
 
-void FileSearch::internalThreadedStart()
+void FileSearch::internalStart()
 {
     if (sitem.isEmpty())
         return;
     QFileInfo info(filename);
-    SearchAbstract * sobj = NULL;
     quint64 fsize = info.size();
-    statsSize = fsize;
+    totalSearchSize = fsize;
     quint64 blocksize = 0;
+    int threadCount;
 
     if (fsize < MIN_SIZE_FOR_THREADS)
         threadCount = 1;
-    else
+    else {
         threadCount = QThread::idealThreadCount();
-
-    blocksize = fsize / (quint64)threadCount;
-    int i = 0;
-    for (i = 0; i < threadCount - 1; i++) {
-        sobj = new (std::nothrow) FileSearch(info.absoluteFilePath());
-        if (sobj != NULL) {
-            registerSearchObject(sobj);
-            sobj->setStartOffset(i * blocksize);
-            sobj->setEndOffset((i+1) * blocksize + sitem.size());
-            QtConcurrent::run(sobj, &SearchAbstract::startSearch);
+        if (threadCount < 1) {
+            threadCount = 1; // just to be safe
+        } else if (threadCount > 15) { // really ????
+            threadCount = 10; // set a lower value
         }
     }
 
-    // last block which is usually smaller (limited by file size)
-    sobj = new (std::nothrow) FileSearch(info.absoluteFilePath());
-    if (sobj != NULL) {
-        registerSearchObject(sobj);
-        sobj->setStartOffset(i * blocksize);
-        sobj->setEndOffset(fsize);
-        QtConcurrent::run(sobj, &SearchAbstract::startSearch);
+    blocksize = fsize / ((quint64)threadCount);
+    int i = 0;
+    for (i = 0; i < threadCount; i++) {
+        SearchWorker * worker = NULL;
+        FileSourceReader * file = new(std::nothrow)FileSourceReader(filename);
+        if (file == NULL) {
+            qFatal("Cannot allocate memory for QFile X{");
+        }
+        connect(file, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)));
+        worker = new(std::nothrow) SearchWorker(file);
+
+        if (worker == NULL) {
+            qFatal("Cannot allocate memory for SearchWorker X{");
+        } else {
+            worker->setStartOffset(i * blocksize);
+            worker->setEndOffset(qMin((i+1) * blocksize + sitem.size(),fsize) - 1); // qMin is for the last block
+            worker->setStatsStep((quint64)((double)totalSearchSize * 0.01)); // setting stats steps at 1% of the total size
+            addSearchWorker(worker);
+        }
     }
 }
 
 const int LargeFile::BLOCKSIZE = 1024;
-const qint64 LargeFile::MAX_COMPARABLE_SIZE = 0x8000000;
+const qint64 LargeFile::MAX_COMPARABLE_SIZE = 0x40000000; // 1G
 
 LargeFile::LargeFile(QObject *parent) :
     LargeRandomAccessSource(parent)
@@ -169,7 +164,7 @@ QString LargeFile::name()
 
 quint64 LargeFile::size()
 {
-    if (isFileReadable()) {
+    if (file.isReadable()) {
         return (quint64)fileSize; // this should be a non-negative value
     }
     return 0;
@@ -182,69 +177,81 @@ void LargeFile::fromLocalFile(QString fileName)
 
 void LargeFile::fromLocalFile(QString fileName, quint64 startOffset)
 {
+    if (fileName.isEmpty()) {
+        qCritical() << tr("[LargeFile::fromLocalFile] file name string is empty, ignoring request T_T");
+        return;
+    }
+
     if (file.isOpen()) {
         watcher.removePath(infoFile.absoluteFilePath());
         file.close();
     }
 
     historyClear();
+    clearAllMarkings();
+
     capabilities = CAP_LOADFILE;
     file.setFileName(fileName);
     infoFile.setFile(file);
-
+    emit nameChanged(infoFile.fileName());
     if (!infoFile.isReadable()) {
         emit log(tr("File %1 is not readable").arg(fileName),metaObject()->className(),Pip3lineConst::LERROR);
-        return;
-    }
-
-    if (infoFile.isWritable()) {
-        emit log(tr("File %1 is writeable").arg(fileName),metaObject()->className(),Pip3lineConst::LSTATUS);
-
-        if (!file.open(QIODevice::ReadWrite)) {
-            emit log(tr("Failed to open %1:\n %2").arg(fileName).arg(file.errorString()),metaObject()->className(),Pip3lineConst::LERROR);
-            _readonly = true;
-        } else {
-            capabilities = capabilities | CAP_HISTORY | CAP_SEARCH | CAP_WRITE;
-            _readonly = false;
-        }
+        dataChunk.clear();
     } else {
-        emit log(tr("File %1 is not writeable").arg(fileName),metaObject()->className(),Pip3lineConst::LSTATUS);
-        _readonly = true;
-        if (!file.open(QIODevice::ReadOnly)) {
-            emit log(tr("Failed to open %1:\n %2").arg(fileName).arg(file.errorString()),metaObject()->className(),Pip3lineConst::LERROR);
-        } else {
-            capabilities = capabilities | CAP_SEARCH;
-        }
-    }
+        if (infoFile.isWritable()) {
+            emit log(tr("File %1 is writeable").arg(fileName),metaObject()->className(),Pip3lineConst::LSTATUS);
 
-    if (file.isOpen()) {
-        fileSize = infoFile.size();
-        if (fileSize < 0) {
-            emit log(tr("File size is negative, setting to zero"),metaObject()->className(),Pip3lineConst::LERROR);
-            fileSize = 0;
-        }
-        if (fileSize < MAX_COMPARABLE_SIZE) {
-            capabilities = capabilities | CAP_COMPARE;
+            if (!file.open(QIODevice::ReadWrite)) {
+                emit log(tr("Failed to open %1:\n %2").arg(fileName).arg(file.errorString()),metaObject()->className(),Pip3lineConst::LERROR);
+                _readonly = true;
+            } else {
+                capabilities = capabilities | CAP_HISTORY | CAP_SEARCH | CAP_WRITE;
+                _readonly = false;
+            }
         } else {
-            emit log(tr("File is too large to be used as a comparable sample in its entirety. Comparison with selected bytes will still work however."),metaObject()->className(),Pip3lineConst::LWARNING);
+            emit log(tr("File %1 is not writeable").arg(fileName),metaObject()->className(),Pip3lineConst::LSTATUS);
+            _readonly = true;
+            if (!file.open(QIODevice::ReadOnly)) {
+                emit log(tr("Failed to open %1:\n %2").arg(fileName).arg(file.errorString()),metaObject()->className(),Pip3lineConst::LERROR);
+            } else {
+                capabilities = capabilities | CAP_SEARCH;
+            }
         }
-        refreshData(false);
-        // file watcher
-        watcher.addPath(infoFile.absoluteFilePath());
-        emit nameChanged(infoFile.fileName());
+
+        if (file.isOpen()) {
+            fileSize = infoFile.size();
+            if (fileSize < 0) {
+                emit log(tr("File size is negative, setting to zero"),metaObject()->className(),Pip3lineConst::LERROR);
+                fileSize = 0;
+            }
+            if (fileSize < MAX_COMPARABLE_SIZE) {
+                capabilities = capabilities | CAP_COMPARE;
+            } else {
+                emit log(tr("File is too large to be used as a comparable sample in its entirety. Comparison with selected bytes will still work however."),metaObject()->className(),Pip3lineConst::LWARNING);
+            }
+            refreshData(false);
+            // file watcher
+            watcher.addPath(infoFile.absoluteFilePath());
+            if (searchObj != NULL) {
+                FileSearch * fsearch = qobject_cast<FileSearch *>(searchObj);
+                if (fsearch != NULL)
+                    fsearch->setFileName(infoFile.absoluteFilePath());
+            }
+        }
+        currentStartingOffset = startOffset;
     }
-    currentStartingOffset = startOffset;
     _readonly = true; // set it to default , to avoid accidents
 
     emit infoUpdated();
 
     emit updated(INVALID_SOURCE);
     emit sizeChanged();
+    emit reset();
 }
 
 QString LargeFile::fileName() const
 {
-    return (file.isReadable() ? infoFile.absoluteFilePath() : "INVALID");
+    return (file.exists() ? infoFile.absoluteFilePath() : "INVALID");
 }
 
 void LargeFile::saveToFile(QString destFilename, quint64 startOffset, quint64 endOffset)
@@ -321,6 +328,16 @@ bool LargeFile::tryMoveView(int sizeToMove)
     return true;
 }
 
+BaseStateAbstract *LargeFile::getStateMngtObj()
+{
+    LargeFileSourceStateObj *stateObj = new(std::nothrow) LargeFileSourceStateObj(this);
+    if (stateObj == NULL) {
+        qFatal("Cannot allocate memory for LargeFileSourceStateObj X{");
+    }
+
+    return stateObj;
+}
+
 void LargeFile::onFileChanged(QString path)
 {
     qDebug() << "File updated externally: " << path;
@@ -368,17 +385,45 @@ QWidget *LargeFile::requestGui(QWidget *parent, GUI_TYPE type)
         if (fw == NULL) {
             qFatal("Cannot allocate memory for FileWidget X{");
         }
+    } else if (type == ByteSourceAbstract::GUI_BUTTONS) {
+        fw = new(std::nothrow) QWidget(parent);
+        if (fw == NULL) {
+            qFatal("Cannot allocate memory for QWidget X{");
+        }
+
+        QHBoxLayout * layout = new(std::nothrow) QHBoxLayout(fw);
+        if (layout == NULL) {
+            qFatal("Cannot allocate memory for QHBoxLayout X{");
+        }
+
+        fw->setLayout(layout);
+
+        QPushButton * openFile = new(std::nothrow) QPushButton(fw);
+        if (openFile == NULL) {
+            qFatal("Cannot allocate memory for QPushButton X{");
+        }
+
+        openFile->setIcon(QIcon(":/Images/icons/document-open-8.png"));
+        openFile->setMaximumWidth(25);
+        openFile->setToolTip(tr("Open file"));
+        openFile->setFlat(true);
+        connect(openFile, SIGNAL(clicked()), SIGNAL(askFileLoad()));
+        layout->addWidget(openFile);
     }
+
     return fw;
 }
 
-SearchAbstract *LargeFile::requestSearchObject(QObject *parent)
+SearchAbstract *LargeFile::requestSearchObject(QObject *)
 {
-    FileSearch *sObj = new(std::nothrow) FileSearch(infoFile.absoluteFilePath(), parent);
+    qDebug() << "creating search object" << infoFile.fileName();
+    FileSearch *sObj = new(std::nothrow) FileSearch(infoFile.absoluteFilePath());
 
     if (sObj == NULL) {
         qFatal("Cannot allocate memory for FileSearch X{");
     }
+    connect(sObj, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), Qt::QueuedConnection);
+    connect(sObj, SIGNAL(foundList(BytesRangeList*)), SLOT(setNewMarkings(BytesRangeList*)), Qt::QueuedConnection);
 
     return sObj;
 }
@@ -386,11 +431,13 @@ SearchAbstract *LargeFile::requestSearchObject(QObject *parent)
 bool LargeFile::readData(quint64 offset, QByteArray &data, int length)
 {
     data.clear();
+    if (!file.isReadable())
+        return false;
    // qDebug() << "read Data: " << offset << length << fileSize;
     bool noError = true;
     if (length < 1 || offset > (quint64)fileSize)
         noError = false;
-    else if (isFileReadable()) {
+    else {
 
         if ((quint64)(LONG_LONG_MAX - length) < offset ) {
             qDebug() << tr("Hitting LONG_LONG_MAX limit");
@@ -402,7 +449,7 @@ bool LargeFile::readData(quint64 offset, QByteArray &data, int length)
             }
             if (offset + (quint64)length > (quint64)fileSize) {
                 length = (quint64)fileSize - offset; // just skip the last bytes if the requested block goes out-of-bound
-                qDebug() << "Reducing length";
+                //qDebug() << "Reducing length";
             }
          //   qDebug() << "read Data(2): " << offset << length << fileSize;
             qint64 bytesRead = file.read(buf, length);
@@ -491,3 +538,34 @@ bool LargeFile::writeData(quint64 offset, int length, const QByteArray &repData,
     return noError;
 }
 
+
+LargeFileSourceStateObj::LargeFileSourceStateObj(LargeFile *lf) :
+    LargeRandomAccessSourceStateObj(lf)
+{
+    name = metaObject()->className();
+}
+
+LargeFileSourceStateObj::~LargeFileSourceStateObj()
+{
+
+}
+
+void LargeFileSourceStateObj::internalRun()
+{
+
+    LargeFile *lf = static_cast<LargeFile *>(bs);
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+        writer->writeAttribute(GuiConst::STATE_LARGE_FILE_NAME, lf->fileName());
+    } else {
+        QXmlStreamAttributes attrList = reader->attributes();
+
+        QString temp = attrList.value(GuiConst::STATE_LARGE_FILE_NAME).toString();
+        if (!temp.isEmpty()) {
+            lf->fromLocalFile(temp);
+        }
+    }
+
+    // safe because we haven't change the current XML tag
+    LargeRandomAccessSourceStateObj::internalRun();
+
+}

@@ -82,6 +82,9 @@ class IntercepSource : public ByteSourceAbstract
         bool isReadableText();
         PayloadModel * getModel();
         bool getIntercepting() const;
+        void fromLocalFile(QString fileName);
+
+        BaseStateAbstract *getStateMngtObj();
 
     public slots:
         void setCurrentBlockSource(BlocksSource *value);
@@ -104,6 +107,16 @@ class IntercepSource : public ByteSourceAbstract
         bool intercepting;
         bool processingPayload;
         QQueue<Payload *> payloadQueue;
+};
+
+class IntercepSourceStateObj : public ByteSourceStateObj
+{
+        Q_OBJECT
+    public:
+        explicit IntercepSourceStateObj(IntercepSource *is);
+        ~IntercepSourceStateObj();
+    protected:
+        void internalRun();
 };
 
 #endif // INTERCEPSOURCE_H

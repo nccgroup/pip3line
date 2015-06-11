@@ -65,7 +65,7 @@ class LIBTRANSFORMSHARED_EXPORT TransformAbstract : public QObject
         // Utilities functions used for conversion
         QByteArray fromHex(QByteArray in);
         QString saveChar(const char c) const;
-        bool loadChar(const QString val, char *c);
+        bool loadChar(const QString &val, char *c);
     protected Q_SLOTS:
         // Convenience functions used to manage errors and warnings internally
         virtual void logError(const QString message, const QString source);

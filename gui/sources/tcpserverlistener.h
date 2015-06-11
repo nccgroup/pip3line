@@ -53,6 +53,7 @@ class TcpServerListener : public BlocksSource
         void setPort(const quint16 &value);
     signals:
         void blockToClient(Block block);
+        void shutdownAllClient();
     private slots:
         void clientFinished();
         void onClientReceivedBlock(Block block);

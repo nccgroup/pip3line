@@ -33,16 +33,9 @@ MemoryWidget::MemoryWidget(CurrentMemorysource *source, QWidget *parent) :
     msource = source;
     ui->setupUi(this);
 
-    SearchWidget *searchWidget = new(std::nothrow) SearchWidget(msource,this);
-    if (searchWidget == NULL) {
-        qFatal("Cannot allocate memory for SearchWidget X{");
-    }
-    ui->memLayout->insertWidget(0, searchWidget);
-    connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
-
     ui->mappingsTableWidget->verticalHeader()->setDefaultSectionSize(25);
 
-    MemRangeModel * ranges = msource->getMemRanges();
+    MemRangeModel * ranges = msource->getMemRangesModel();
     ui->mappingsTableWidget->setModel(ranges);
     ui->mappingsTableWidget->resizeColumnsToContents();
     ui->mappingsTableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -75,7 +68,7 @@ QSize MemoryWidget::sizeHint() const
 void MemoryWidget::onDoubleClick(QModelIndex index)
 {
     if (index.isValid()) {
-        MemRange * range = msource->getMemRanges()->getRange(index);
+        MemRange * range = msource->getMemRangesModel()->getRange(index);
         if (range != NULL) {
             msource->setStartingOffset(range->getLowerVal());
         }
@@ -102,7 +95,7 @@ void MemoryWidget::contextMenuAction(QAction *action)
     if (list.size() < 1)
         return;
 
-    MemRange * range = msource->getMemRanges()->getRange(list.at(0));
+    MemRange * range = msource->getMemRangesModel()->getRange(list.at(0));
     quint64 offset = range->getLowerVal();
     if (action->text() != GOTOSTART) {
         quint64 endoffset = range->getUpperVal();
@@ -112,7 +105,7 @@ void MemoryWidget::contextMenuAction(QAction *action)
     msource->setStartingOffset(offset);
 }
 
-void MemoryWidget::onSearch(QByteArray item, QBitArray mask, bool maybetext)
+void MemoryWidget::onSearch(QByteArray , QBitArray , bool )
 {
     //todo
 }

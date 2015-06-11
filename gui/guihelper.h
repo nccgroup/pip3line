@@ -23,14 +23,7 @@ Released under AGPL see LICENSE for more information
 #include <QMultiMap>
 #include <QMenu>
 #include <QSslConfiguration>
-
-namespace GuiStyles {
-    static const QString LineEditError = "QLineEdit { background-color: #FFB1B2; }";
-    static const QString ComboBoxError = "QComboBox { color : red; }";
-    static const QString PushButtonReadonly = "QPushButton { color : #FF0000; }";
-    static const QString LineEditWarning = "";
-    static const QString LineEditMessage = "";
-}
+#include "shared/guiconst.h"
 
 class TransformsGui;
 class QSettings;
@@ -45,13 +38,12 @@ class TransformRequest;
 class TextInputDialog;
 class QDragEnterEvent;
 class DownloadManager;
+class QTimer;
 
 class GuiHelper : public QObject
 {
         Q_OBJECT
     public:
-        static const QString UTF8_STRING_ACTION;
-        static const QString SEND_TO_NEW_TAB_ACTION;
         explicit GuiHelper( TransformMgmt *transformFactory, QNetworkAccessManager *networkManager, LoggerWidget *logger);
         ~GuiHelper();
         LoggerWidget *getLogger();
@@ -64,6 +56,7 @@ class GuiHelper : public QObject
         void setUniveralReceiver(TabAbstract * tab);
 
         void addTab(TabAbstract *tab);
+        void tabNameUpdated(TabAbstract *tab);
         void removeTab(TabAbstract * tab);
         QList<TabAbstract *> getTabs();
 
@@ -116,9 +109,61 @@ class GuiHelper : public QObject
         void processDropEvent(QDropEvent *event, ByteSourceAbstract *byteSource = NULL, DownloadManager * downloadManager = NULL);
         void requestDownload(QUrl url, ByteSourceAbstract *byteSource = NULL, DownloadManager * downloadManager = NULL);
 
+        GuiConst::AVAILABLE_PRETABS getDefaultNewTab() const;
+        void setDefaultNewTab(GuiConst::AVAILABLE_PRETABS value);
+
+        bool getDebugMode() const;
+        void setDebugMode(bool value);
+
+        bool getIgnoreSSLErrors() const;
+        void setIgnoreSSLErrors(bool value);
+
+        bool getEnableNetworkProxy() const;
+        void setEnableNetworkProxy(bool value);
+
+        QString getProxyInterface() const;
+        void setProxyInterface(const QString &value);
+
+        quint16 getProxyPort() const;
+        void setProxyPort(const quint16 &value);
+
+        QList<TabAbstract *> getDeletedTabs() const;
+        TabAbstract * takeDeletedTab(int index);
+        void addDeletedTab(TabAbstract * dtab);
+        void reviveTab(int index);
+
+        bool isAutoCopyTextTransformGui() const;
+        void setAutoCopyTextTransformGui(bool value);
+
+        quint64 getDefaultSaveStateFlags() const;
+        quint64 getDefaultLoadStateFlags() const;
+        void setDefaultStateFlags(const quint64 &value);
+
+        bool getAutoSaveState() const;
+        void setAutoSaveState(bool value);
+
+        QString getAutoSaveFileName() const;
+        void setAutoSaveFileName(const QString &value);
+
+        bool getAutoSaveOnExit() const;
+        void setAutoSaveOnExit(bool value);
+
+        bool getAutoSaveTimerEnable() const;
+        void setAutoSaveTimerEnable(bool value);
+
+        int getAutoSaveTimerInterval() const;
+        void setAutoSaveTimerInterval(int value);
+
+        void deleteImportExportFuncs();
+
+        bool getAutoRestoreOnStartup() const;
+        void setAutoRestoreOnStartup(bool value);
+
     public slots:
+        void refreshAll();
         void raisePip3lineWindow();
         void routeExternalDataBlock(QByteArray data);
+        void clearDeletedTabs();
     signals:
         void newSelection(QByteArray selection);
         void newTabRequested(QByteArray initialValue);
@@ -129,33 +174,34 @@ class GuiHelper : public QObject
         void appGoesIntoHidding();
         void appIsRising();
         void raiseWindowRequest();
+        void globalUpdates();
+        void deletedTabsUpdated();
+        void tabRevived(TabAbstract * dtab);
+        void requestSaveState();
+
     private slots:
         void onFilterChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
-        void onTabDeleted();
+        void onTabDestroyed();
 
     private:
         Q_DISABLE_COPY(GuiHelper)
-        static const QString SETTINGS_QUICKVIEWS;
-        static const QString SETTINGS_FILTER_BLACKLIST;
-        static const QString SETTINGS_MARKINGS_COLORS;
-        static const QString SETTINGS_EXPORT_IMPORT_FUNC;
-        static const QString SETTINGS_OFFSET_BASE;
         static const QString LOGID;
-        static const QString NEW_BYTE_ACTION;
-        static const int DEFAULT_OFFSET_BASE;
         bool eventFilter(QObject *o, QEvent *e);
         inline void updateSortedTabs();
         void loadImportExportFunctions();
         void saveImportExportFunctions();
         const QString getXMLfromRes(const QString &res);
         void saveMarkingsColor();
-        void deleteImportExportFuncs();
+        void refreshNetworkProxySettings();
+        void refreshIgnoreSSLSetting();
+        void refreshAutoSaveTimer();
         TransformMgmt *transformFactory;
         QNetworkAccessManager *networkManager;
         LoggerWidget *logger;
         QSettings *settings;
         QSet<TabAbstract *> tabs;
         QMultiMap<QString, TabAbstract *> sortedTabs;
+        QTimer *autoSaveTimer;
         int defaultServerPort;
         QString defaultServerIp;
         QString defaultServerPipeName;
@@ -168,6 +214,21 @@ class GuiHelper : public QObject
         ThreadedProcessor * centralTransProc;
         int offsetDefaultBase;
         TabAbstract * universalReceiver;
+        GuiConst::AVAILABLE_PRETABS defaultNewTab;
+        bool ignoreSSLErrors;
+        bool enableNetworkProxy;
+        QString proxyInterface;
+        quint16 proxyPort;
+        QList<TabAbstract *> deletedTabs;
+        bool autoCopyTextTransformGui;
+        bool debugMode;
+        quint64 defaultStateFlags;
+        bool autoSaveState;
+        QString autoSaveFileName;
+        bool autoSaveOnExit;
+        bool autoSaveTimerEnable;
+        int autoSaveTimerInterval;
+        bool autoRestoreOnStartup;
 };
 
 #endif // GUIHELPER_H

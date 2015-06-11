@@ -23,7 +23,6 @@ ModulesManagement::ModulesManagement(const QString &nlangName, const QString &ex
 {
     gui = NULL;
     langName = nlangName;
-    qDebug() << langName;
     callback = ncallback;
     baseModulesDirName = baseDir;
     moduleExtension = extension;
@@ -216,6 +215,8 @@ QWidget *ModulesManagement::getGui(QWidget *parent)
         if (gui == NULL) {
             qFatal("Cannot allocate memory for ModulesManagementWidget X{");
         }
+
+        connect(gui, SIGNAL(destroyed()), this, SLOT(onGuiDelete()));
     }
     return gui;
 }

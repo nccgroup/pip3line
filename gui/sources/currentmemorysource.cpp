@@ -23,8 +23,40 @@ Released under AGPL see LICENSE for more information
 #include "Windows.h"
 #endif
 
+
+MemSearch::MemSearch(CurrentMemorysource *source)
+{
+
+    ranges = source->getMemRangesModel()->getList();
+}
+
+MemSearch::~MemSearch()
+{
+
+}
+
+void MemSearch::internalStart()
+{
+//    int i = 0;
+//    int totalSearchBlocks = ranges.size();
+//    for (i = 0; i < totalSearchBlocks; i++) {
+
+//        worker = new(std::nothrow) SearchWorker(file);
+
+//        if (worker == NULL) {
+//            qFatal("Cannot allocate memory for SearchWorker X{");
+//        } else {
+//            worker->setStartOffset(i * blocksize);
+//            worker->setEndOffset(qMin((i+1) * blocksize + sitem.size(),fsize)); // qMin is for the last block
+//            worker->setStatsStep((quint64)((double)totalSearchSize * 0.01)); // setting stats steps at 1% of the total size
+//            addSearchWorker(worker);
+//        }
+//    }
+}
+
+
 MemRange::MemRange(quint64 lowerVal, quint64 upperVal, QString description):
-    OffsetsRange(lowerVal, upperVal, description)
+    BytesRange(lowerVal, upperVal, description)
 {
     read = false;
     write = false;
@@ -95,7 +127,6 @@ QString MemRange::toString()
 
 bool MemRange::operator<(const MemRange &other) const
 {
-        qDebug() << "MemRange Comparison";
     return upperVal < other.lowerVal;
 }
 
@@ -192,29 +223,31 @@ QVariant MemRangeModel::data(const QModelIndex &index, int role) const
         int i = index.row();
         if (i < ranges.size()) {
             switch (index.column()) {
-                case 0:
-                return OffsetsRange::offsetToString(ranges.at(i)->getLowerVal());
-                case 1:
-                    return OffsetsRange::offsetToString(ranges.at(i)->getUpperVal());
-                case 2:
+                case START_OFFSET:
+                return BytesRange::offsetToString(ranges.at(i)->getLowerVal());
+                case END_OFFSET:
+                    return BytesRange::offsetToString(ranges.at(i)->getUpperVal());
+                case PERMISSIONS:
                 return QString("%1%2%3%4")
                           .arg(ranges.at(i)->isRead()?"r":"-")
                           .arg(ranges.at(i)->isWrite()?"w":"-")
                           .arg(ranges.at(i)->isExec()?"x":"-")
                           .arg(ranges.at(i)->isPriv()?"p":"-");
-                case 3:
+                case SIZE:
                         return QString::number(ranges.at(i)->getSize());
-                case 4:
+                case DESCRIPTION:
                     return ranges.at(i)->getDescription();
             }
         }
     } else if (role == Qt::BackgroundRole && index.row() == currentMemRow) {
         return QVariant(QColor(236,242,118));
     } else if (role == Qt::TextAlignmentRole && index.column() < headers.size()) {
-        if (index.column() < 2)
+        if (index.column() < PERMISSIONS)
             return QVariant(Qt::AlignLeft | Qt::AlignVCenter);
-        else if (index.column() == 3)
+        else if (index.column() == SIZE)
             return QVariant(Qt::AlignRight | Qt::AlignVCenter);
+        else if (index.column() == DESCRIPTION)
+            return QVariant(Qt::AlignLeft | Qt::AlignVCenter);
         else
             return Qt::AlignCenter;
     } else if (role == Qt::FontRole) {
@@ -245,9 +278,12 @@ void MemRangeModel::clear()
 
 void MemRangeModel::addRange(MemRange *range)
 {
+    if (ranges.contains(range)) {
+        return; // nothing to do here
+    }
     beginInsertRows(QModelIndex(),ranges.size(),ranges.size());
     ranges.append(range);
-    qSort(ranges.begin(),ranges.end(), OffsetsRange::lessThanFunc);
+    qSort(ranges.begin(),ranges.end(), BytesRange::lessThanFunc);
     endInsertRows();
 }
 
@@ -290,7 +326,7 @@ QString CurrentMemorysource::description()
 
 quint64 CurrentMemorysource::size()
 {
-    qDebug() << "Wordsize = " << QSysInfo::WordSize;
+    //qDebug() << "Wordsize = " << QSysInfo::WordSize;
     if (QSysInfo::WordSize == 32)
         return ULONG_MAX;
 
@@ -302,7 +338,7 @@ bool CurrentMemorysource::isOffsetValid(quint64 offset)
     return rangesModel->isOffsetInRange(offset);
 }
 
-MemRangeModel *CurrentMemorysource::getMemRanges() const
+MemRangeModel *CurrentMemorysource::getMemRangesModel() const
 {
     return rangesModel;
 }
@@ -346,7 +382,7 @@ void CurrentMemorysource::mapMemory()
             memrange->setExec(entries.at(1).at(2) == 'x');
             memrange->setPriv(entries.at(1).at(3) == 'p');
             rangesModel->addRange(memrange);
-            qDebug() << memrange->toString();
+            //qDebug() << memrange->toString();
         }
     }
 
@@ -550,18 +586,17 @@ bool CurrentMemorysource::setStartingOffset(quint64 offset)
 
 bool CurrentMemorysource::readData(quint64 offset, QByteArray &data, int size)
 {
-    qDebug() << "read current memory data" << QString::number(offset,16).prepend("0x") << size;
-    if (size < 0) { // trivial
-        qDebug() << "Negative size";
+    QList<MemRange *> ranges = rangesModel->getList();
+    // qDebug() << "read current memory data" << QString::number(offset,16).prepend("0x") << size;
+    if (size < 0 || ranges.size() < 1) { // trivial
         return false;
     }
     if (size == 0) { // trivial
-        qDebug() << "Null size";
         data.clear();
         return true;
     }
 
-    QList<MemRange *> ranges = rangesModel->getList();
+
     MemRange * curRange = NULL;
     bool valid = false;
     for (int i = 0; i < ranges.size(); i++) {
@@ -621,12 +656,12 @@ bool CurrentMemorysource::readData(quint64 offset, QByteArray &data, int size)
     return true;
 }
 
-bool CurrentMemorysource::writeData(quint64 offset,  QByteArray &data, int size)
+bool CurrentMemorysource::writeData(quint64 offset, int length,  const QByteArray &data, quintptr source)
 {
     QList<MemRange *> ranges = rangesModel->getList();
     bool valid = false;
     MemRange * curRange = NULL;
-    if (size < 0)
+    if (length < 0 || ranges.size() < 1)
         return valid;
 
 
@@ -635,12 +670,13 @@ bool CurrentMemorysource::writeData(quint64 offset,  QByteArray &data, int size)
         if (curRange->isInRange(offset)) {
             if (curRange->isWrite()) {
                 valid = true;
-                if (!curRange->isInRange(offset + size - 1)) {
-                    size = curRange->getUpperVal() - offset;
+                if (!curRange->isInRange(offset + length - 1)) {
+                    length = curRange->getUpperVal() - offset;
 #ifdef Q_OS_UNIX
-                    memcpy((void *)&offset,(void *)data.data(), size);
+                    memcpy((void *)&offset,(void *)data.data(), length);
+                    emit updated(source);
 #elif defined(Q_OS_WIN)
-
+                    qCritical() << tr("writeData not implemented") << data.size() << source;
 #endif
                 }
             } else {
@@ -683,4 +719,3 @@ QString CurrentMemorysource::errorString(int errnoVal)
 
     return QString("Unmanaged [%1]").arg(errnoVal);
 }
-

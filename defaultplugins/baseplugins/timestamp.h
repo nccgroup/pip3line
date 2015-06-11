@@ -19,7 +19,9 @@ class TimeStamp : public TransformAbstract
     public:
         static const QString id;
         static const QString DEFAULT_DATE_FORMAT;
+        static const QString DEFAULT_DATE_FORMAT_MS;
         static const QString PROP_DATEFORMAT;
+        enum TZ { TZ_UTC = 0, TZ_LOCAL = 1 };
         explicit TimeStamp();
         ~TimeStamp();
         QString name() const;
@@ -37,8 +39,14 @@ class TimeStamp : public TransformAbstract
         void setDateFormat(QString format);
         QString getDateFormat() const;
 
+        TZ getTZ() const;
+        void setTZ(const TZ &value);
+
     private:
+        Qt::TimeSpec getTimeSpec();
         QString dateFormat;
+        TZ tz;
+
 };
 
 #endif // TIMESTAMP_H

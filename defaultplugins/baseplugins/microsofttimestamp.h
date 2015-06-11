@@ -19,6 +19,8 @@ class MicrosoftTimestamp : public TransformAbstract
     public:
         static const QString id;
         static const QString DEFAULT_DATE_FORMAT;
+        static const QString PROP_ADD_OUT_NS;
+        enum TZ { TZ_UTC = 0, TZ_LOCAL = 1 };
         static const QString PROP_DATEFORMAT;
         explicit MicrosoftTimestamp();
         ~MicrosoftTimestamp();
@@ -37,8 +39,18 @@ class MicrosoftTimestamp : public TransformAbstract
         void setDateFormat(QString format);
         QString getDateFormat() const;
         
+        MicrosoftTimestamp::TZ getTZ() const;
+        void setTZ(const TZ &value);
+
+        int getOutNS() const;
+        void setOutNS(int value);
+
+        qint64 getTimeZoneOffset();
     private:
+        Qt::TimeSpec getTimeSpec();
         QString dateFormat;
+        TZ tz;
+        int outNS;
         
 };
 

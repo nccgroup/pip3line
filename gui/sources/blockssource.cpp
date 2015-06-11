@@ -12,6 +12,13 @@ Released under AGPL see LICENSE for more information
 #include <QWidget>
 #include <QDebug>
 
+Block::Block()
+{
+    direction = SOURCE;
+    source = NULL;
+    sourceid = -1;
+}
+
 const int BlocksSource::BLOCK_MAX_SIZE = 0x8000000;
 
 BlocksSource::BlocksSource(QObject *parent) :
@@ -54,6 +61,11 @@ bool BlocksSource::getDecodeinput() const
 void BlocksSource::setDecodeinput(bool value)
 {
     decodeInput = value;
+}
+
+void BlocksSource::sendBlock(const Block &)
+{
+    qCritical() << tr("BlocksSource::sendBlock not implemented");
 }
 
 bool BlocksSource::getEncodeOutput() const

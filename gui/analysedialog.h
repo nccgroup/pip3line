@@ -26,7 +26,11 @@ class AnalyseDialog : public AppDialog
     public:
         explicit AnalyseDialog(GuiHelper * guiHelper, QWidget *parent = 0);
         ~AnalyseDialog();
-
+        BaseStateAbstract *getStateMngtObj();
+        QString getInputValue();
+        QString getOutputValue();
+        void setInputValue(const QString & val);
+        void setOutputValue(const QString & val);
     signals:
         void results(QString);
 private slots:
@@ -48,6 +52,16 @@ private slots:
         Ui::AnalyseDialog *ui;
         QMutex lock;
         QMenu * plainTextContextMenu;
+};
+
+class AnalyseDialogStateObj : public AppStateObj
+{
+        Q_OBJECT
+    public:
+        explicit AnalyseDialogStateObj(AnalyseDialog *diag);
+        ~AnalyseDialogStateObj();
+    private:
+        void internalRun();
 };
 
 #endif // ANALYSE_H

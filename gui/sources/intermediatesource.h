@@ -32,6 +32,7 @@ class IntermediateSource : public BasicSource
         void insert(quint64 offset, QByteArray repData, quintptr source = INVALID_SOURCE);
         void remove(quint64 offset, int length, quintptr source = INVALID_SOURCE);
         void clear(quintptr source = INVALID_SOURCE);
+        void fromLocalFile(QString fileName);
     signals:
         void sendRequest(TransformRequest *);
     private slots:

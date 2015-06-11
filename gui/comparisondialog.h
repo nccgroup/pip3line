@@ -14,6 +14,9 @@ Released under AGPL see LICENSE for more information
 #include "appdialog.h"
 #include <QList>
 #include <QColor>
+#include <QTime>
+#include <QBitArray>
+#include "sources/bytesourceabstract.h"
 
 namespace Ui {
 class ComparisonDialog;
@@ -23,6 +26,7 @@ class QComboBox;
 class TabAbstract;
 class ByteSourceAbstract;
 class QThread;
+class BytesRange;
 
 class CompareWorker : public QObject
 {
@@ -51,15 +55,22 @@ class CompareWorker : public QObject
         QColor getMarkColor() const;
         void setMarkColor(const QColor &value);
 
+        int getResultDifferences() const;
+
     public slots:
         void compare();
         void stop();
     signals:
-        void markingA(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor, QString toolTip);
-        void markingB(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor, QString toolTip);
-        void finishComparing(bool different);
+        void newMarkingsA(BytesRangeList *);
+        void newMarkingsB(BytesRangeList *);
+        void finishComparing(int differences);
         void progress(int percent);
     private:
+        void endingThread();
+        void markingA(quint64 offset);
+        void endAMarking();
+        void markingB(quint64 offset);
+        void endBMarking();
         ByteSourceAbstract * sourceA;
         ByteSourceAbstract * sourceB;
         quint64 startA;
@@ -75,6 +86,17 @@ class CompareWorker : public QObject
         bool markSame;
         bool stopped;
         QColor marksColor;
+        QString tooltipDiffA;
+        QString tooltipDiffB;
+        BytesRangeList *rangesA;
+        BytesRangeList *rangesB;
+        bool ismarkingA;
+        quint64 markerStartA;
+        quint64 markerEndA;
+        quint64 markerStartB;
+        quint64 markerEndB;
+        bool ismarkingB;
+        int resultDifferences;
 };
 
 class ComparisonDialog : public AppDialog
@@ -84,24 +106,43 @@ class ComparisonDialog : public AppDialog
     public:
         explicit ComparisonDialog(GuiHelper *guiHelper ,QWidget *parent = 0);
         ~ComparisonDialog();
+        BaseStateAbstract *getStateMngtObj();
+        QBitArray getUiConf() const;
+        void setUiConf(QBitArray conf);
+        QColor getMarksColor() const;
+        void setMarksColor(const QColor &value);
+
+    public slots:
+        void loadTabs();
     private slots:
         void onTabSelection(int index);
         void onTabEntriesChanged();
         void onCompare();
-        void loadTabs();
         void oncolorChange();
         void onAdvancedClicked(bool status);
         void onEntrySelected(int index);
-        void endOfComparison(bool equals);
+        void endOfComparison(int differences);
     private:
-        static const QColor DEFAULT_MARKING_COLOR;
         void refreshEntries(QComboBox *entryBox, int count);
         void refreshTabs(QComboBox *tabBox);
         void changeIconColor(QColor color);
+        void checkIfComparable();
         Ui::ComparisonDialog *ui;
         QList<TabAbstract *> tabs;
         QColor marksColor;
         QThread * workerThread;
+        QTime compareTimer;
+        static const int BUTTONS_TO_SAVE;
+};
+
+class ComparisonDialogStateObj : public AppStateObj
+{
+        Q_OBJECT
+    public:
+        explicit ComparisonDialogStateObj(ComparisonDialog *diag);
+        ~ComparisonDialogStateObj();
+    private:
+        void internalRun();
 };
 
 #endif // COMPARISONDIALOG_H

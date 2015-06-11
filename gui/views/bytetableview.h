@@ -136,13 +136,11 @@ class ByteTableView : public QTableView
         void clearMarkOnSelected();
         bool hasSelection();
         void search(QByteArray item, QBitArray mask);
-        void searchAgain();
         static const int MAXCOL;
         static const int MINCOL;
         static const int TEXTCOLUMNWIDTH;
         static const int HEXCOLUMNWIDTH;
         static const int DEFAULTROWSHEIGHT;
-        static const QFont RegularFont;
     public slots:
         void setColumnCount(int val);
         void gotoSearch(quint64 soffset, quint64 eoffset);
@@ -170,8 +168,6 @@ class ByteTableView : public QTableView
         HexDelegate * delegate;
         int hexColumncount;
         quint64 lastSearchIndex;
-        QByteArray lastSearch;
-        QBitArray lastMask;
         int currentVerticalHeaderWidth;
         SearchAbstract *searchObject;
 };

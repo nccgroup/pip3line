@@ -12,6 +12,8 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QApplication>
 #include "../guihelper.h"
+#include "guiconst.h"
+using namespace GuiConst;
 
 const QRegExp OffsetGotoWidget::offsetRegexp = QRegExp("^([=+-])?(0x|[oxn])?([0-9a-fA-F]{0,20})$");
 const QString OffsetGotoWidget::TOOLTIP_TEXT = QObject::tr("<html><head/><body><p>First character defines relativity:<br/>"
@@ -90,7 +92,7 @@ void OffsetGotoWidget::onGoto(QString offsetString, bool select)
 
         if (!offsetRegexp.cap(3).isEmpty()) {
             quint64 val = 0;
-            bool neg = false;
+
             bool ok = false;
             if (offsetRegexp.cap(2) == "o") {
                 val = offsetRegexp.cap(3).toULongLong(&ok, 8);
@@ -103,6 +105,7 @@ void OffsetGotoWidget::onGoto(QString offsetString, bool select)
             }
 
             if (ok) {
+                bool neg = false;
                 bool absolute = false;
                 if (offsetRegexp.cap(1) == "-") {
                     neg = true;

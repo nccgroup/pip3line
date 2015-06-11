@@ -25,7 +25,7 @@ TransformRequest::TransformRequest(TransformAbstract *ntransform, const QByteArr
     deleteObject = takeOwnerShip;
     ptid = nptid;
 
-    qDebug() << "Request" << this << "created";
+    //qDebug() << "Request" << this << "created";
 
 }
 
@@ -35,7 +35,7 @@ TransformRequest::~TransformRequest()
         delete transform;
     transform = NULL;
 
-    qDebug() << this << "deleted";
+    //qDebug() << this << "deleted";
 }
 
 void TransformRequest::runRequest()
@@ -93,13 +93,11 @@ ThreadedProcessor::~ThreadedProcessor()
     workerThread.quit();
     workerThread.wait();
     if (!currentRunning.isEmpty()) {
-        qDebug() << "currentRunning is not empty";
         QHashIterator<TransformRequest *, QFuture<void> > i(currentRunning);
         while (i.hasNext()) {
             i.next();
             TransformRequest * request = i.key(); // there might be a race ccondition here, not sure
             QFuture<void> fut = i.value();
-            qDebug() << "  waiting for " << request;
             request->blockSignals(true);
 
             fut.waitForFinished();
@@ -115,7 +113,7 @@ void ThreadedProcessor::processRequest(TransformRequest *request)
 
     quintptr source = request->getptid();
     if (isSourceRunning(source)) {
-        if (waitingRequests.contains(source)) {
+        if (waitingRequests.contains(source)) { // if the source has send any unexecuted request, just erase it
             qDebug() << "One request is already waiting for execution, replacing it";
             delete waitingRequests.take(request->getptid());
         }

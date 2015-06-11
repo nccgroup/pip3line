@@ -41,9 +41,9 @@ const QString TransformMgmt::LOG_ID = "TransformMgmt";
 
 using namespace Pip3lineConst;
 
-TransformMgmt::TransformMgmt()
+TransformMgmt::TransformMgmt() :
+	id(tr("TransformMgmt"))
 {
-    id = tr("TransformMgmt");
     settings = NULL;
     cycleSem.release(MAX_NESTING);
 }
@@ -59,7 +59,7 @@ TransformMgmt::~TransformMgmt()
         qDebug() << "No TransformAbstract instances left :D";
     } else {
         QTextStream cout(stderr);
-        cout << "TransformAbstract instances still present T_T (Memory leak)";
+        cout << "TransformAbstract instances still present T_T (Memory leak)\n";
         QSetIterator<TransformAbstract *> i(transformInstances);
          while (i.hasNext())
              cout << " => " << i.next() << endl;
@@ -87,6 +87,25 @@ bool TransformMgmt::initialize(const QString &baseDirectory)
     settings = getSettingsObj();
 
     emit status (tr("Using libtransform v.%1").arg(LIB_TRANSFORM_VERSION),id);
+
+    bool ret = loadPlugins();
+    return loadTransforms(false) && ret;
+}
+
+bool TransformMgmt::reset()
+{
+    unloadTransforms();
+    unloadPlugins();
+
+    if (transformInstances.isEmpty()) {
+        qDebug() << "No TransformAbstract instances left :D";
+    } else {
+        QTextStream cout(stderr);
+        cout << "TransformAbstract instances still present during reset T_T (Memory leak)";
+        QSetIterator<TransformAbstract *> i(transformInstances);
+         while (i.hasNext())
+             cout << " => " << i.next() << endl;
+    }
 
     bool ret = loadPlugins();
     return loadTransforms(false) && ret;
@@ -193,7 +212,7 @@ void TransformMgmt::saveInstance(TransformAbstract *ta)
 
 void TransformMgmt::OnTransformDelete()
 {
-    TransformAbstract* src = (TransformAbstract* ) sender();
+    TransformAbstract* src = static_cast<TransformAbstract* > (sender());
     if (src != NULL) {
         if (transformInstances.contains(src)) {
             transformInstances.remove(src);
@@ -288,8 +307,12 @@ void TransformMgmt::unloadPlugins()
     foreach (TransformFactoryPluginInterface * val, pluginsList)
          delete val;
 
+    pluginsList.clear();
+
     foreach (Pip3lineCallback * val, callbackList)
          delete val;
+
+    callbackList.clear();
 
     while (!pluginLibs.isEmpty()) {
         QPluginLoader * loader = pluginLibs.takeLast();
@@ -366,6 +389,7 @@ bool TransformMgmt::saveConfToXML(const TransformChain &chain, QXmlStreamWriter 
     stream->writeAttribute(XMLDESCRIPTION, chain.getDescription());
     stream->writeAttribute(XMLHELP, chain.getHelp());
     stream->writeAttribute(XMLFORMAT, QString::number(chain.getFormat()));
+    stream->writeAttribute(XMLOUTPUTTYPE, QString::number(chain.getPreferredOutputType()));
 
     for (int i = 0 ; i < chain.size(); i++) {
 
@@ -429,6 +453,11 @@ TransformChain TransformMgmt::loadConfFromXML(QXmlStreamReader *stream)
     int format = stream->attributes().value(XMLFORMAT).toString().toInt(&ok);
     if (ok && (format == 0 || format == 1)) {
         final.setFormat((format == 0 ? TEXTFORMAT : HEXAFORMAT));
+    }
+
+    int type = stream->attributes().value(XMLOUTPUTTYPE).toString().toInt(&ok);
+    if (ok && (type == 0 || type == 1)) {
+        final.setPreferredOutputType((type == 0 ? ONELINE : MULTILINES));
     }
 
     int order = 0;

@@ -13,6 +13,10 @@ Released under AGPL see LICENSE for more information
 #include "quickviewitem.h"
 #include "ui_quickviewdialog.h"
 #include "loggerwidget.h"
+#include <QXmlStreamWriter>
+#include <QXmlStreamReader>
+
+using namespace GuiConst;
 
 #include <QDebug>
 
@@ -32,19 +36,27 @@ QuickViewDialog::QuickViewDialog(GuiHelper *nguiHelper, QWidget *parent) :
     for (int i = 0; i < saved.size(); i++) {
         addItem(saved.at(i));
     }
+
+    // make the dialog adjust to its layout
+    layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
 QuickViewDialog::~QuickViewDialog()
 {
-    QStringList saving;
-    for (int i = 0; i < itemList.size(); i++) {
-        saving.append(itemList.at(i)->getXmlConf());
-        // don't need to delete them, the ui will do it
-    }
-    guiHelper->saveQuickViewConf(saving);
+    guiHelper->saveQuickViewConf(getConf());
     guiHelper = NULL;
-
+    clear();
     delete ui;
+}
+
+BaseStateAbstract *QuickViewDialog::getStateMngtObj()
+{
+    BaseStateAbstract *stateObj = new(std::nothrow) QuickViewDialogStateObj(this);
+    if (stateObj == NULL) {
+        qFatal("Cannot allocate memory for QuickViewDialogStateObj X{");
+    }
+
+    return stateObj;
 }
 
 void QuickViewDialog::newItem()
@@ -77,11 +89,7 @@ void QuickViewDialog::itemDeleted()
 
 void QuickViewDialog::onReset()
 {
-    QList<QuickViewItem *> list = itemList;
-
-    for (int i = 0; i < list.size(); i++) {
-        delete list.at(i);
-    }
+    clear();
 
     guiHelper->saveQuickViewConf(QStringList());
 
@@ -109,6 +117,26 @@ void QuickViewDialog::addItem(const QString &conf)
     }
 }
 
+void QuickViewDialog::clear()
+{
+    QList<QuickViewItem *> list = itemList;
+
+    for (int i = 0; i < list.size(); i++) {
+        delete list.at(i);
+    }
+}
+
+QStringList QuickViewDialog::getConf()
+{
+    QStringList saving;
+    for (int i = 0; i < itemList.size(); i++) {
+        saving.append(itemList.at(i)->getXmlConf());
+        // don't need to delete them, the ui will do it
+    }
+
+    return saving;
+}
+
 void QuickViewDialog::receivingData(const QByteArray &data)
 {
     currentData = data;
@@ -120,3 +148,58 @@ void QuickViewDialog::receivingData(const QByteArray &data)
 }
 
 
+
+
+QuickViewDialogStateObj::QuickViewDialogStateObj(QuickViewDialog *diag) :
+    AppStateObj(diag)
+{
+
+}
+
+QuickViewDialogStateObj::~QuickViewDialogStateObj()
+{
+
+}
+
+void QuickViewDialogStateObj::internalRun()
+{
+    QuickViewDialog * diag = dynamic_cast<QuickViewDialog *>(dialog);
+    if (diag == NULL) {
+        qFatal("Could not cast AppDialog to QuickViewDialog X{");
+    }
+
+    if (flags & GuiConst::STATE_LOADSAVE_QUICKVIEW_CONF) {
+        if (flags & GuiConst::STATE_SAVE_REQUEST) {
+            QStringList saved = diag->getConf();
+            writer->writeAttribute(GuiConst::STATE_QUICKVIEW_ITEM_COUNT, write(saved.size()));
+            for (int i = 0; i < saved.size(); i++) {
+                writer->writeStartElement(GuiConst::STATE_QUICKVIEW_ITEM);
+                writer->writeAttribute(GuiConst::STATE_CONF, write(saved.at(i).toUtf8()));
+                genCloseElement();
+            }
+
+        } else {
+            QXmlStreamAttributes attrList = reader->attributes();
+            bool ok = false;
+            int size = readInt(attrList.value(GuiConst::STATE_QUICKVIEW_ITEM_COUNT),&ok);
+            qDebug() << "loading" << size << "item(s)";
+            if (ok && size > 0) {
+                diag->clear();
+                for (int i = 0; i < size; i++) {
+                    if (readNextStart(GuiConst::STATE_QUICKVIEW_ITEM)) {
+                        attrList = reader->attributes();
+                        QByteArray conf = readByteArray(attrList.value(GuiConst::STATE_CONF));
+                        if (!conf.isEmpty()) {
+                            diag->addItem(QString::fromUtf8(conf.constData(), conf.size()));
+                        } else {
+                            emit log(tr("Item conf is empty"), metaObject()->className(), Pip3lineConst::LERROR);
+                        }
+
+                        genCloseElement();
+                    }
+                }
+            }
+
+        }
+    }
+}

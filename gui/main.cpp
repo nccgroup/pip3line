@@ -15,8 +15,6 @@ Released under AGPL see LICENSE for more information
 #include <QStyleFactory>
 #include <QObject>
 #include <QStyle>
-#include <QTimer>
-
 
 #define DEBUG_CMD "--debug"
 #define FILE_CMD "--file"
@@ -28,16 +26,19 @@ Released under AGPL see LICENSE for more information
 #include <QDir>
 #include <QByteArray>
 FILE * _logFile = NULL; // logFile
+MainWindow * w = NULL;
 
 #if QT_VERSION >= 0x050000
 void myMessageOutput(QtMsgType type, const QMessageLogContext &, const QString &msg)
 {
-        const char *localMsg = msg.toUtf8().constData();
+    QByteArray fmess = msg.toUtf8();
+    const char *localMsg = fmess.constData();
 #else
 void myMessageOutput(QtMsgType type, const char *localMsg)
 {
 #endif
-    const char * currentTime = QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8().constData();
+    QByteArray ftime = QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8();
+    const char * currentTime = ftime.constData();
 
     switch (type) {
     case QtDebugMsg:
@@ -70,18 +71,13 @@ void myMessageOutput(QtMsgType type, const char *localMsg)
 }
 
 #ifdef Q_OS_LINUX
-#include <signal.h>
-
-void termSignalHandler(int signal) {
-    qDebug() <<"Received signal " << signal;
-    QTimer::singleShot(0,QCoreApplication::instance(),SLOT(quit()));
-}
+#include <csignal>
 
 static void setup_unix_signal_handlers()
 {
     struct sigaction term;
 
-    term.sa_handler = termSignalHandler;
+    term.sa_handler = MainWindow::exitSignalHandler;
     sigemptyset(&term.sa_mask);
     term.sa_flags |= SA_RESTART;
 
@@ -93,12 +89,14 @@ static void setup_unix_signal_handlers()
         qWarning("Could not set the SIGQUIT signal handler");
     if (sigaction(SIGABRT, &term, 0) == -1)
         qWarning("Could not set the SIGABRT signal handler");
-
 }
 #endif
 
 int main(int argc, char *argv[])
 {
+    // Qt initialisation
+    QApplication a(argc, argv);
+
 #ifdef Q_OS_LINUX
     setup_unix_signal_handlers();
 #endif
@@ -166,10 +164,8 @@ int main(int argc, char *argv[])
 
 #endif
 
-    // Qt initialisation
-    QApplication a(argc, argv);
     a.setStyleSheet("QWidget{ selection-background-color: blue}");
-    qDebug() << "App started" << qgetenv("LD_LIBRARY_PATH");;
+    qDebug() << "App started";
     QStyle *currentStyle = QApplication::style();
     qDebug() << "Style" << currentStyle << currentStyle->objectName();
 
@@ -202,7 +198,7 @@ int main(int argc, char *argv[])
     }
 
     int ret = 0;
-    MainWindow * w = new(std::nothrow) MainWindow(debugging);
+    w = new(std::nothrow) MainWindow(debugging);
     if (w != NULL) {
         if (!fileName.isEmpty())
             w->loadFile(fileName);
@@ -212,7 +208,9 @@ int main(int argc, char *argv[])
         ret = a.exec();
         //qWarning() << "App ending";
 
-        delete w;
+        MainWindow * wt = w;
+        w = NULL;
+        delete wt;
     }
 
     if (_logFile != NULL) {

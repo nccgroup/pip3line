@@ -57,6 +57,7 @@ class PythonModules : public ModulesManagement
         void cleaningPyObjs();
         bool checkPyObject(PyObject *obj);
         void settingUpStderr();
+        void disablingSIGINT();
         QString errorMessage;
 };
 

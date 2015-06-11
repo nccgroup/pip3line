@@ -11,18 +11,18 @@ Released under AGPL see LICENSE for more information
 #ifndef REGEXPHELPDIALOG_H
 #define REGEXPHELPDIALOG_H
 
-#include <QDialog>
+#include "appdialog.h"
 
 namespace Ui {
 class RegExpHelpDialog;
 }
 
-class RegExpHelpDialog : public QDialog
+class RegExpHelpDialog : public AppDialog
 {
         Q_OBJECT
         
     public:
-        explicit RegExpHelpDialog(QWidget *parent = 0);
+        explicit RegExpHelpDialog(GuiHelper *nguiHelper, QWidget *parent = 0);
         ~RegExpHelpDialog();
         
     private:

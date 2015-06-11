@@ -31,7 +31,6 @@ class TcpListener : public BlocksSource
 
         explicit TcpListener(QHostAddress remoteAddress, quint16 remotePort, QObject *parent = 0);
         ~TcpListener();
-        static const int BLOCK_MAX_SIZE;
     public slots:
         void sendBlock(const Block & block);
         bool startListening();

@@ -25,6 +25,8 @@ class MessagePanelWidget : public QWidget
     public:
         explicit MessagePanelWidget(QWidget *parent = 0);
         ~MessagePanelWidget();
+        QString toHTML();
+        void setHTML(QString html);
     public slots:
         void logWarning(const QString message, const QString source = QString());
         void logError(const QString message, const QString source = QString());

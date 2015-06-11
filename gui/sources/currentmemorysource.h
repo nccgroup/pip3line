@@ -17,8 +17,10 @@ Released under AGPL see LICENSE for more information
 #include <QAbstractListModel>
 #include <QStringList>
 
+class CurrentMemorysource;
+
 // extending OffsetRange to add functionalities specific to memory management
-class MemRange : public OffsetsRange {
+class MemRange : public BytesRange {
     public:
         explicit MemRange(quint64 lowerVal, quint64 upperVal, QString description = QString());
         ~MemRange() {}
@@ -66,12 +68,38 @@ class MemRangeModel : public QAbstractListModel
         void addRange(MemRange *range);
         void setCurrentRange(MemRange *range);
     private:
+        enum COLUMN { START_OFFSET = 0,
+                      END_OFFSET = 1,
+                      PERMISSIONS = 2,
+                      SIZE = 3,
+                      DESCRIPTION = 4}; // don't change the numbering, it is in sync with the QStringlist
         static const QFont RegularFont;
         QList<MemRange *> ranges;
         int currentMemRow;
         static const QStringList headers;
 };
 
+class MemSearch : public SearchAbstract {
+    Q_OBJECT
+    public:
+        explicit MemSearch(CurrentMemorysource * source);
+        ~MemSearch();
+    private:
+        void internalStart();
+        QList<MemRange *> ranges;
+};
+
+class MemSourceReader : public SourceReader
+{
+    public:
+        explicit MemSourceReader(QString filename);
+        ~MemSourceReader();
+        bool seek(quint64 pos);
+        int read(char * buffer, int maxLen);
+        bool isReadable();
+    private:
+        QList<MemRange *> allocatedRanges;
+};
 
 class CurrentMemorysource : public LargeRandomAccessSource
 {
@@ -82,7 +110,7 @@ class CurrentMemorysource : public LargeRandomAccessSource
         QString description();
         quint64 size();
         bool isOffsetValid(quint64 offset);
-        MemRangeModel * getMemRanges() const;
+        MemRangeModel * getMemRangesModel() const;
         void mapMemory();
         quint64 lowByte();
         quint64 highByte();
@@ -90,6 +118,7 @@ class CurrentMemorysource : public LargeRandomAccessSource
         bool tryMoveDown(int size);
         bool tryMoveView(int size);
         void fromLocalFile(QString fileName);
+
     public slots:
         bool setStartingOffset(quint64 offset);
     signals:
@@ -97,7 +126,7 @@ class CurrentMemorysource : public LargeRandomAccessSource
     private:
         QWidget *requestGui(QWidget *parent,ByteSourceAbstract::GUI_TYPE type);
         bool readData(quint64 offset, QByteArray &data, int size);
-        bool writeData(quint64 offset, QByteArray &data, int size);
+        bool writeData(quint64 offset, int length, const QByteArray &data, quintptr source);
         MemRangeModel *rangesModel;
         QString errorString(int errnoVal);
         MemRange *currentRange;

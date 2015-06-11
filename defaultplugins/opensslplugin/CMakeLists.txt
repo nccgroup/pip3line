@@ -50,14 +50,22 @@ if (OPENSSL_FOUND)
 
 	if (WIN32)
 		set ( EXTERN_LIBS transform libeay32 )
-		link_directories (
-			C:\\OpenSSL-Win32\\lib\\
-			C:\\OpenSSL-Win64\\lib\\
-			)
-		include_directories (
-			C:\\OpenSSL-Win32\\include\\
-			C:\\OpenSSL-Win64\\include\\
-			)
+		if (CMAKE_SIZEOF_VOID_P MATCHES 8) #64bit
+			link_directories (
+				C:\\OpenSSL-Win64\\lib\\
+				)
+			include_directories (
+				C:\\OpenSSL-Win64\\include\\
+				)
+		else(CMAKE_SIZEOF_VOID_P MATCHES 8) #32bit
+				link_directories (
+				C:\\OpenSSL-Win32\\lib\\
+				)
+			include_directories (
+				C:\\OpenSSL-Win32\\include\\
+				)
+		endif(CMAKE_SIZEOF_VOID_P MATCHES 8)
+
 	endif (WIN32)
 
 

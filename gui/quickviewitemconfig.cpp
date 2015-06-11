@@ -28,9 +28,12 @@ QuickViewItemConfig::QuickViewItemConfig(GuiHelper *nguiHelper, QWidget *parent)
     infoDialog = NULL;
     wayBoxVisible = true;
     formatBoxVisible = true;
+    outputTypeVisible = true;
     format = TEXTFORMAT;
     ui->textRadioButton->setChecked(true);
     ui->infoPushButton->setEnabled(false);
+
+    ui->oneLineRadioButton->setChecked(true);
 
     transformFactory = guiHelper->getTransformFactory();
 
@@ -42,6 +45,7 @@ QuickViewItemConfig::QuickViewItemConfig(GuiHelper *nguiHelper, QWidget *parent)
 
     ui->wayGroupBox->setVisible(false);
     ui->formatGroupBox->setVisible(false);
+    ui->typeGroupBox->setVisible(false);
 }
 
 QuickViewItemConfig::~QuickViewItemConfig()
@@ -115,6 +119,20 @@ void QuickViewItemConfig::setFormat(OutputFormat nformat)
         ui->hexaRadioButton->setChecked(true);
 }
 
+void QuickViewItemConfig::setOutputType(OutputType type)
+{
+    if (type == ONELINE) {
+        ui->oneLineRadioButton->setChecked(true);
+    } else {
+        ui->blockRadioButton->setChecked(true);
+    }
+}
+
+OutputType QuickViewItemConfig::getOutputType()
+{
+    return (ui->oneLineRadioButton->isChecked() ? ONELINE : MULTILINES);
+}
+
 void QuickViewItemConfig::setWayBoxVisible(bool val)
 {
     wayBoxVisible = val;
@@ -123,6 +141,11 @@ void QuickViewItemConfig::setWayBoxVisible(bool val)
 void QuickViewItemConfig::setFormatVisible(bool val)
 {
     formatBoxVisible = val;
+}
+
+void QuickViewItemConfig::setOutputTypeVisible(bool val)
+{
+    outputTypeVisible = val;
 }
 
 void QuickViewItemConfig::onTransformSelect(QString name)
@@ -191,6 +214,7 @@ void QuickViewItemConfig::integrateTransform()
             ui->wayGroupBox->setVisible(false);
         }
         ui->formatGroupBox->setVisible(formatBoxVisible);
+        ui->typeGroupBox->setVisible(outputTypeVisible);
 
         if (confGui != NULL)
             ui->confLayout->removeWidget(confGui);

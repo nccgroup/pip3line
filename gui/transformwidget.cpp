@@ -48,6 +48,9 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QRegExp>
 #include "shared/clearallmarkingsbutton.h"
+#include "shared/guiconst.h"
+#include "views/bytetableview.h"
+#include <QScrollBar>
 
 const int TransformWidget::MAX_DIRECTION_TEXT = 20;
 const QString TransformWidget::NEW_BYTE_ACTION = "New Byte(s)";
@@ -108,6 +111,7 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
     connect(guiHelper, SIGNAL(filterChanged()), this, SLOT(buildSelectionArea()));
 
     connect(this, SIGNAL(sendRequest(TransformRequest*)), guiHelper->getCentralTransProc(), SLOT(processRequest(TransformRequest*)), Qt::QueuedConnection);
+    connect(ui->deleteButton, SIGNAL(clicked()), SLOT(deleteMe()));
 
  //   qDebug() << "Created" << this;
 }
@@ -150,7 +154,7 @@ void TransformWidget::configureViewArea() {
     ui->tabWidget->installEventFilter(this);
     this->installEventFilter(this);
 
-    searchWidget = new(std::nothrow) SearchWidget(byteSource, this);
+    searchWidget = new(std::nothrow) SearchWidget(byteSource,guiHelper, this);
     if (searchWidget == NULL) {
         qFatal("Cannot allocate memory for SearchWidget X{");
     }
@@ -160,6 +164,7 @@ void TransformWidget::configureViewArea() {
     ui->toolsLayout->addWidget(searchWidget);
     connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
     connect(textView, SIGNAL(searchStatus(bool)), searchWidget,SLOT(setError(bool)));
+    connect(searchWidget, SIGNAL(jumpTo(quint64,quint64)), hexView, SLOT(gotoSearch(quint64,quint64)));
 
     gotoWidget = new(std::nothrow) OffsetGotoWidget(guiHelper, this);
     if (gotoWidget == NULL) {
@@ -388,6 +393,21 @@ ByteTableView *TransformWidget::getHexTableView()
     return hexView->getHexTableView();
 }
 
+void TransformWidget::copyTextToClipboard()
+{
+    textView->copyToClipboard();
+}
+
+BaseStateAbstract *TransformWidget::getStateMngtObj()
+{
+    TransformWidgetStateObj *stateObj = new(std::nothrow) TransformWidgetStateObj(this);
+    if (stateObj == NULL) {
+        qFatal("Cannot allocate memory for TransformWidgetStateObj X{");
+    }
+
+    return stateObj;
+}
+
 void TransformWidget::forceUpdating()
 {
     refreshOutput();
@@ -463,7 +483,7 @@ bool TransformWidget::eventFilter(QObject *obj, QEvent *event)
             if (ui->tabWidget->currentWidget() == textView) {
                 textView->searchAgain();
             } else {
-                hexView->searchAgain();
+                searchWidget->nextFind(hexView->getLowPos());
             }
             return true;
         } else if (keyEvent->key() == Qt::Key_G && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
@@ -511,9 +531,14 @@ void TransformWidget::onFileLoadRequest()
     }
 }
 
-void TransformWidget::on_deleteButton_clicked()
+void TransformWidget::deleteMe()
 {
     emit deletionRequest(this);
+}
+
+void TransformWidget::setAutoCopyTextToClipboard(bool val)
+{
+    textView->setAutoCopyToClipboard(val);
 }
 
 void TransformWidget::on_infoPushButton_clicked()
@@ -553,5 +578,56 @@ void TransformWidget::onGotoOffset(quint64 offset, bool absolute, bool negative,
     } else {
         ui->tabWidget->setCurrentWidget(hexView);
         gotoWidget->setStyleSheet(qApp->styleSheet());
+    }
+}
+
+
+TransformWidgetStateObj::TransformWidgetStateObj(TransformWidget *tw) :
+    tw(tw)
+{
+    name = tw->metaObject()->className();
+}
+
+TransformWidgetStateObj::~TransformWidgetStateObj()
+{
+
+}
+
+void TransformWidgetStateObj::run()
+{
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+        writer->writeStartElement(tw->metaObject()->className());
+        writer->writeAttribute(GuiConst::STATE_CURRENT_INDEX, write(tw->ui->tabWidget->currentIndex()));
+        writer->writeAttribute(GuiConst::STATE_SCROLL_INDEX, write(tw->hexView->getHexTableView()->verticalScrollBar()->value()));
+        writer->writeEndElement();
+    } else {
+        bool gotIt = false;
+        //need to check if we are not already on the token due to previous checks
+        if (reader->tokenType() == QXmlStreamReader::StartElement && reader->name() == tw->metaObject()->className()) {
+            gotIt = true;
+        } else if (readNextStart(tw->metaObject()->className())) {
+            gotIt = true;
+        }
+
+        if (gotIt) {
+            QXmlStreamAttributes attrList = reader->attributes();
+            bool ok = false;
+            int index = 0;
+            if (attrList.hasAttribute(GuiConst::STATE_CURRENT_INDEX)) {
+                index = readInt(attrList.value(GuiConst::STATE_CURRENT_INDEX), &ok);
+                if (ok && index < tw->ui->tabWidget->count()) {
+                    tw->ui->tabWidget->setCurrentIndex(index);
+                }
+            }
+
+            if (attrList.hasAttribute(GuiConst::STATE_SCROLL_INDEX)) {
+                index = readInt(attrList.value(GuiConst::STATE_SCROLL_INDEX), &ok);
+                if (ok) {
+                    tw->hexView->getHexTableView()->verticalScrollBar()->setValue(index);
+                }
+            }
+
+            readEndElement(tw->metaObject()->className());// reading closing tag classname
+        }
     }
 }

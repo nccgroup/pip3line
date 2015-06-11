@@ -16,4 +16,9 @@ Released under AGPL see LICENSE for more information
 #define ULONG_LONG_MAX _UI64_MAX
 #endif
 
+//#define P_INT64_MAX LONG_LONG_MAX
+//#define P_UINT64_MAX ULONG_LONG_MAX
+//#define P_INT32_MAX INT_MAX
+//#define P_UINT32_MAX UINT_MAX
+
 #endif // CROSSPLATFORM_H

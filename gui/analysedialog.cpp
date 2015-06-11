@@ -16,6 +16,12 @@ Released under AGPL see LICENSE for more information
 #include <QTimer>
 #include <QTextStream>
 #include <QBuffer>
+#include <QXmlStreamWriter>
+#include <QXmlStreamReader>
+#include <QDebug>
+#include "shared/guiconst.h"
+
+using namespace GuiConst;
 
 AnalyseDialog::AnalyseDialog(GuiHelper *guiHelper, QWidget *parent) :
     AppDialog(guiHelper, parent)
@@ -38,11 +44,42 @@ AnalyseDialog::AnalyseDialog(GuiHelper *guiHelper, QWidget *parent) :
     connect(ui->charsetPushButton, SIGNAL(clicked()), this, SLOT(onCharsetAnalysis()));
     connect(ui->charFrequencyPushButton,SIGNAL(clicked()), this, SLOT(onCharFrequencyAnalysis()));
     connect(ui->guessHashpushButton,SIGNAL(clicked()), this, SLOT(onHashGuess()));
+    connect(ui->clearInputPushButton, SIGNAL(clicked()), ui->inputPlainTextEdit, SLOT(clear()));
 }
 
 AnalyseDialog::~AnalyseDialog()
 {
     delete ui;
+}
+
+BaseStateAbstract *AnalyseDialog::getStateMngtObj()
+{
+    AnalyseDialogStateObj *stateObj = new(std::nothrow) AnalyseDialogStateObj(this);
+    if (stateObj == NULL) {
+        qFatal("Cannot allocate memory for AnalyseDialogStateObj X{");
+    }
+
+    return stateObj;
+}
+
+QString AnalyseDialog::getInputValue()
+{
+    return ui->inputPlainTextEdit->toPlainText();
+}
+
+QString AnalyseDialog::getOutputValue()
+{
+    return ui->resultsPlainTextEdit->toPlainText();
+}
+
+void AnalyseDialog::setInputValue(const QString &val)
+{
+    ui->inputPlainTextEdit->appendPlainText(val);
+}
+
+void AnalyseDialog::setOutputValue(const QString &val)
+{
+    ui->resultsPlainTextEdit->appendPlainText(val);
 }
 
 void AnalyseDialog::gatheringResults(QString mess)
@@ -203,24 +240,24 @@ void AnalyseDialog::hashGuess()
 QString AnalyseDialog::potentialHashes(int length)
 {
     switch (length) {
-    case 16:
-        return "md4, mdc2, md5, ripemd, ripemd128";
-    case 20:
-        return "sha0, sha1, ripemd160";
-    case 24:
-        return "Tiger";
-    case 28:
-        return "sha224";
-    case 32:
-        return "sha256,ripemd256, GOST";
-    case 40:
-        return "ripemd320";
-    case 48:
-        return "sha384";
-    case 64:
-        return "sha512, Whirlpool";
-    default:
-        return "??";
+        case 16:
+            return "md4, mdc2, md5, ripemd, ripemd128";
+        case 20:
+            return "sha0, sha1, ripemd160";
+        case 24:
+            return "Tiger";
+        case 28:
+            return "sha224";
+        case 32:
+            return "sha256,ripemd256, GOST";
+        case 40:
+            return "ripemd320";
+        case 48:
+            return "sha384";
+        case 64:
+            return "sha512, Whirlpool";
+        default:
+            return "??";
     }
 }
 
@@ -259,4 +296,54 @@ QList<QByteArray> AnalyseDialog::getInput()
     }
 
     return ret;
+}
+
+
+AnalyseDialogStateObj::AnalyseDialogStateObj(AnalyseDialog *diag) :
+    AppStateObj(diag)
+{
+    setName(GuiConst::STATE_ANALYSE_DIALOG);
+}
+
+AnalyseDialogStateObj::~AnalyseDialogStateObj()
+{
+
+}
+
+void AnalyseDialogStateObj::internalRun()
+{
+    AnalyseDialog * diag = dynamic_cast<AnalyseDialog *>(dialog);
+    if (diag == NULL) {
+        qFatal("Could not cast AppDialog to AnalyseDialog X{");
+    }
+
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+
+        QString tempS = diag->getInputValue();
+        if (tempS.size() > 0)
+            writer->writeAttribute(GuiConst::STATE_INPUT_CONTENT, qCompress(tempS.toUtf8()).toBase64());
+
+        tempS = diag->getOutputValue();
+        if (tempS.size() > 0)
+            writer->writeAttribute(GuiConst::STATE_OUTPUT_CONTENT, qCompress(tempS.toUtf8()).toBase64());
+    } else {
+        if (reader->name() == name) {
+            QXmlStreamAttributes attrList = reader->attributes();
+            QByteArray tempB = attrList.value(GuiConst::STATE_INPUT_CONTENT).toString().toUtf8();
+            if (tempB.size() > 0) {
+                tempB = qUncompress(QByteArray::fromBase64(tempB));
+                if (tempB.size() > 0) {
+                    diag->setInputValue(QString::fromUtf8(tempB));
+                }
+            }
+
+            tempB = attrList.value(GuiConst::STATE_OUTPUT_CONTENT).toString().toUtf8();
+            if (tempB.size() > 0) {
+                tempB = qUncompress(QByteArray::fromBase64(tempB));
+                if (tempB.size() > 0) {
+                    diag->setOutputValue(QString::fromUtf8(tempB));
+                }
+            }
+        }
+    }
 }

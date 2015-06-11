@@ -30,6 +30,8 @@ class SettingsDialog : public AppDialog
         explicit SettingsDialog(GuiHelper *guiHelper, QWidget *parent = 0);
         ~SettingsDialog();
         void setVersionUpdateMessage(QString mess);
+    public slots:
+        void initializeConf();
     signals:
         void updateCheckRequested();
         void error(QString, QString);
@@ -42,6 +44,9 @@ class SettingsDialog : public AppDialog
         void updateImportExportFuncs();
         void updateMisc();
         void updateFilter();
+        void updateDeletedTabsList();
+        void onDeletedTabsDeleted(const QString name);
+        void onDeletedTabsDoubleClicked(QModelIndex index);
         void onPluginClicked(QModelIndex index);
         void onSavedClicked(QListWidgetItem*item);
         void onDeleteSaved(const QString &name);
@@ -60,14 +65,25 @@ class SettingsDialog : public AppDialog
         void onOffsetBaseChanged(QString val);
         void onIgnoreSSLErrChanged(bool ignore);
         void onProxyEnabledChanged(bool proxyEnable);
+        void onProxyIPChanged(QString ipString);
+        void onProxyPortChanged(int port);
+        void onDefaultTabChanged(int index);
+        void onAutoTextCopyChanged(bool val);
+        void onLoadSaveOptionsToggled(bool checked);
+        void onAutoSaveToggled(bool checked);
+        void onAutoSaveFileNameChanged(QString name);
+        void onAutoSaveFileButtonclicked();
+        void onAutoSaveOnExitToggled(bool checked);
+        void onAutoSaveTimerEnableToggled(bool checked);
+        void onAutoSaveTimerIntervalChanged(int value);
+        void onDataSaveToggled(bool checked);
+        void onAutoRestoreToggled(bool checked);
         
     private:
         Q_DISABLE_COPY(SettingsDialog)
+        void connectUpdateSignals();
+        void disconnectUpdateSignals();
         static const QString LOGID;
-        static const QString SETTINGS_GLOBAL_PROXY_IP;
-        static const QString SETTINGS_GLOBAL_PROXY_PORT;
-        static const QString DEFAULT_GLOBAL_PROXY_IP;
-        static const quint16 DEFAULT_GLOBAL_PROXY_PORT;
         TransformMgmt *tManager;
         QHash<QString, int> stackedList;
         Ui::SettingsDialog *ui;

@@ -39,7 +39,8 @@ class UnittestsTest : public QObject
         void testHexencode();
         void testHieroglyphy();
         void testBytesToInteger();
-
+        void testTimeStamp();
+        void testMSTimeStamp();
         void randomFuzzing(TransformAbstract * tr, QString text = QString());
         QByteArray randomByteArray(int length = -1);
     private:
@@ -478,7 +479,7 @@ void UnittestsTest::testCharEncoding()
     QString name = "Char encoding";
     QHash<QString, QString> configuration;
     QHash<QString, QString> failconfiguration;
-    int charEncodingParamscount = 4;
+    int charEncodingParamscount = 5;
 
     TransformAbstract *transf = transformFactory->getTransform(name);
     if (transf == 0)
@@ -637,7 +638,7 @@ void UnittestsTest::testHexencode()
     QCOMPARE(transf->transform(QByteArray("062506324F41")), QByteArray("303632353036333234463431"));
 
     configuration = transf->getConfiguration();
-    QCOMPARE(configuration.size() , 3);
+    QCOMPARE(configuration.size() , 4);
     QCOMPARE(configuration.value(PROP_NAME) , name);
     QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::INBOUND));
     configuration.insert(XMLTYPE,QString("0"));
@@ -829,6 +830,78 @@ void UnittestsTest::testBytesToInteger()
     QVERIFY(!transf->setConfiguration(failconfiguration));
     delete transf;
 
+}
+
+void UnittestsTest::testTimeStamp()
+{
+    QString name = "Timestamp (Epoch)";
+    QHash<QString, QString> configuration;
+
+    TransformAbstract *transf = transformFactory->getTransform(name);
+    if (transf == 0)
+        QSKIP("Cannot find the transformation, skipping test",SkipSingle);
+
+    connect(transf, SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
+    connect(transf, SIGNAL(warning(QString,QString)), this, SLOT(logError(QString)));
+
+    transf->setWay(TransformAbstract::INBOUND);
+
+    QCOMPARE(transf->transform(QByteArray("1429393690")),QByteArray("18/04/2015 16:48:10 Local time"));
+    configuration = transf->getConfiguration();
+    QCOMPARE(configuration.size() , 4);
+
+    QCOMPARE(configuration.value("DateFormat") , QString(QByteArray("dd/MM/yyyy hh:mm:ss").toBase64()));
+    QCOMPARE(configuration.value(XMLTZ) , QString::number(1));
+
+    configuration.insert(XMLTZ,QString::number(0)); // setting to UTC
+    QVERIFY(transf->setConfiguration(configuration));
+    QCOMPARE(transf->transform(QByteArray("1429393690")),QByteArray("18/04/2015 21:48:10 UTC"));
+
+    transf->setWay(TransformAbstract::OUTBOUND);
+    QCOMPARE(transf->transform(QByteArray("18/04/2015 21:48:10 UTC")),QByteArray("1429393690"));
+
+    configuration.insert(PROP_WAY,QString::number(TransformAbstract::OUTBOUND));
+    configuration.insert(XMLTZ,QString::number(1)); // setting to local
+    QVERIFY(transf->setConfiguration(configuration));
+    QCOMPARE(transf->transform(QByteArray("18/04/2015 16:48:10 Local time")),QByteArray("1429393690"));
+
+    delete transf;
+}
+
+void UnittestsTest::testMSTimeStamp()
+{
+    QString name = "Timestamp (Microsoft)";
+    QHash<QString, QString> configuration;
+
+    TransformAbstract *transf = transformFactory->getTransform(name);
+    if (transf == 0)
+        QSKIP("Cannot find the transformation, skipping test",SkipSingle);
+
+    connect(transf, SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
+    connect(transf, SIGNAL(warning(QString,QString)), this, SLOT(logError(QString)));
+
+    transf->setWay(TransformAbstract::INBOUND);
+
+    QCOMPARE(transf->transform(QByteArray("128271382742968750")),QByteArray("Sun 24 June 2007 00:57:54.296ms 8750 ns Local time"));
+    configuration = transf->getConfiguration();
+    QCOMPARE(configuration.size() , 5);
+
+    QCOMPARE(configuration.value("DateFormat") , QString(QByteArray("ddd d MMMM yyyy hh:mm:ss.zzz").toBase64()));
+    QCOMPARE(configuration.value(XMLTZ) , QString::number(1));
+
+    configuration.insert(XMLTZ,QString::number(0)); // setting to UTC
+    QVERIFY(transf->setConfiguration(configuration));
+    QCOMPARE(transf->transform(QByteArray("128271382742968750")),QByteArray("Sun 24 June 2007 05:57:54.296ms 8750 ns UTC"));
+
+    transf->setWay(TransformAbstract::OUTBOUND);
+    QCOMPARE(transf->transform(QByteArray("Sun 24 June 2007 05:57:54.296ms")),QByteArray("128271382742960000"));
+
+    configuration.insert(PROP_WAY,QString::number(TransformAbstract::OUTBOUND));
+    configuration.insert(XMLTZ,QString::number(1)); // setting to local
+    QVERIFY(transf->setConfiguration(configuration));
+    QCOMPARE(transf->transform(QByteArray("Sun 24 June 2007 00:57:54.296ms")),QByteArray("128271382742960000"));
+
+    delete transf;
 }
 
 void UnittestsTest::randomFuzzing(TransformAbstract *transf, QString text)

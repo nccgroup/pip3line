@@ -10,6 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "messagepanelwidget.h"
 #include "ui_messagepanelwidget.h"
+#include <QCursor>
 
 MessagePanelWidget::MessagePanelWidget(QWidget *parent) :
     QWidget(parent)
@@ -26,6 +27,21 @@ MessagePanelWidget::MessagePanelWidget(QWidget *parent) :
 MessagePanelWidget::~MessagePanelWidget()
 {
     delete ui;
+}
+
+QString MessagePanelWidget::toHTML()
+{
+    if (ui->textEdit->toPlainText().size() > 0)
+        return ui->textEdit->toHtml();
+    else
+        return QString();
+}
+
+void MessagePanelWidget::setHTML(QString html)
+{
+    ui->textEdit->clear();
+    if (!html.isEmpty())
+        ui->textEdit->setHtml(html);
 }
 
 void MessagePanelWidget::logWarning(const QString message, const QString )

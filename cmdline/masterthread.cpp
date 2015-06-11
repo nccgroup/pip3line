@@ -38,7 +38,6 @@ MasterThread::MasterThread(bool nbinaryInput, bool hideErrorsFlag, bool verboseF
 
 MasterThread::~MasterThread()
 {
-    processor->stop();
     delete processor;
     delete errlog;
     delete messlog;
@@ -49,40 +48,40 @@ void MasterThread::run()
 {
     QFile fin;
     QFile fout;
-    Processor * pt = NULL;
 
     fin.open(stdin, QFile::ReadOnly | QIODevice::Unbuffered);
     fout.open(stdout,QFile::WriteOnly | QIODevice::Unbuffered);
 
     if (binaryInput) {
-        pt = new(std::nothrow) BinaryProcessor(&transformFactory);
-        if (pt == NULL) {
+        processor = new(std::nothrow) BinaryProcessor(&transformFactory);
+        if (processor == NULL) {
             qFatal("Cannot allocate memory for BinaryProcessor X{");
         }
 
     } else {
-        pt = new(std::nothrow) TextProcessor(&transformFactory);
-        if (pt == NULL) {
+        processor = new(std::nothrow) TextProcessor(&transformFactory);
+        if (processor == NULL) {
             qFatal("Cannot allocate memory for TextProcessor X{");
         }
     }
-    pt->setInput(&fin);
-    pt->setOutput(&fout);
+    processor->setInput(&fin);
+    processor->setOutput(&fout);
     if (!hideErrors)
-        connect(pt,SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
+        connect(processor,SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
 
     if (verbose)
-        connect(pt,SIGNAL(status(QString, QString)), this, SLOT(logStatus(QString)));
+        connect(processor,SIGNAL(status(QString, QString)), this, SLOT(logStatus(QString)));
 
-    if (!transformName.isEmpty() && pt->configureFromName(transformName, singleWay)) {
-        pt->start();
-        pt->wait();
-    } else if (!confFileName.isEmpty() && pt->configureFromFile(confFileName)) {
-        pt->start();
-        pt->wait();
+    if (!transformName.isEmpty() && processor->configureFromName(transformName, singleWay)) {
+        processor->start();
+        processor->wait();
+    } else if (!confFileName.isEmpty() && processor->configureFromFile(confFileName)) {
+        processor->start();
+        processor->wait();
     }
 
-    delete pt;
+    delete processor;
+    processor = NULL;
 
     QCoreApplication::exit(0);
 }

@@ -30,17 +30,19 @@ class ByteTableView;
 class TransformsGui : public TabAbstract
 {
         Q_OBJECT
-        
+        friend class TransformGuiStateObj;
     public:
         explicit TransformsGui(GuiHelper *guiHelper , QWidget *parent = 0);
         ~TransformsGui();
         QString getCurrentChainConf();
-        void setCurrentChainConf(const QString &conf);
+        void setCurrentChainConf(const QString &conf, bool ignoreErrors = false);
+        TransformChain getCurrentTransformChain();
         void setData(const QByteArray &data);
         void loadFromFile(QString fileName);
         int getBlockCount() const;
         ByteSourceAbstract *getSource(int blockIndex);
         ByteTableView *getHexTableView(int blockIndex);
+        BaseStateAbstract *getStateMngtObj();
     signals:
         void chainChanged(QString newConf);
 
@@ -50,16 +52,16 @@ class TransformsGui : public TabAbstract
         void onMassProcessing();
         void onSaveState();
         void onLoadState();
-        void onSaveToMemory();
+        void onRegisterChain();
         void onSavedSelected(QString name);
         void buildSavedCombo();
         void onTransformChanged();
         void onNameChangeRequest(QString name);
         void resetAll();
+        void onAutoCopychanged(bool val);
 
     private:
         Q_DISABLE_COPY(TransformsGui)
-        TransformChain getCurrentTransformChain();
         void setCurrentTransformChain(TransformChain list);
         void addWidget(TransformWidget * transformWidget);
         Ui::TransformsGui *ui;
@@ -68,6 +70,15 @@ class TransformsGui : public TabAbstract
         TransformWidget *firstTransformWidget;
         QList<TransformWidget *> transformWidgetList;
         DetachTabButton *detachButton;
+};
+
+class TransformGuiStateObj : public TabStateObj
+{
+        Q_OBJECT
+    public:
+        explicit TransformGuiStateObj(TransformsGui *tg);
+        ~TransformGuiStateObj();
+        void run();
 };
 
 #endif // TRANSFORMSGUI_H

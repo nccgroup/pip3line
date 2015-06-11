@@ -8,10 +8,12 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QDebug>
+#include "rawtcplistener.h"
 
 const QString InterceptWidget::CHOOSE_TEXT = QObject::tr("Choose source");
 const QString InterceptWidget::UDP_EXTERNAL_SOURCE_TEXT = QObject::tr("External process (UDP)");
 const QString InterceptWidget::TCP_EXTERNAL_SOURCE_TEXT = QObject::tr("External process (TCP)");
+const QString InterceptWidget::RAW_TCP_SOURCE_TEXT = QObject::tr("Raw TCP client");
 const QFont InterceptWidget::RegularFont = QFont("Courier New",10);
 const int InterceptWidget::TIMESTAMP_COLUMN_WIDTH = 135;
 
@@ -53,7 +55,7 @@ InterceptWidget::InterceptWidget(IntercepSource * source, QWidget *parent) :
 
     updateColumns();
 
-    sourceChoices << CHOOSE_TEXT << UDP_EXTERNAL_SOURCE_TEXT << TCP_EXTERNAL_SOURCE_TEXT;
+    sourceChoices << CHOOSE_TEXT << UDP_EXTERNAL_SOURCE_TEXT << TCP_EXTERNAL_SOURCE_TEXT << RAW_TCP_SOURCE_TEXT;
     ui->blockSourceComboBox->addItems(sourceChoices);
     ui->blockSourceComboBox->setCurrentIndex(0);
     QStandardItem * item = qobject_cast<QStandardItemModel *>(ui->blockSourceComboBox->model())->item(0);
@@ -74,7 +76,7 @@ InterceptWidget::~InterceptWidget()
 void InterceptWidget::onSourceChanged(QString selected)
 {
     if (selected.compare(CHOOSE_TEXT) == 0) {
-        qWarning() << "[InterceptWidget::onSourceChanged] cannot select CHOOSE_TEXT as a source";
+        qWarning() << "[InterceptWidget::onSourceChanged] cannot select CHOOSE_TEXT as a source T_T";
         return; // nothing to do here
     } else if (selected.compare(UDP_EXTERNAL_SOURCE_TEXT) == 0) {
         if (currentBlockSource != NULL) {
@@ -92,8 +94,13 @@ void InterceptWidget::onSourceChanged(QString selected)
         if (currentBlockSource == NULL) {
             qFatal("Cannot allocate memory for TcpServerListener X{");
         }
+    } else if (selected.compare(RAW_TCP_SOURCE_TEXT) == 0) {
+        currentBlockSource = new(std::nothrow) RawTcpListener();
+        if (currentBlockSource == NULL) {
+            qFatal("Cannot allocate memory for RawTcpListener X{");
+        }
     } else { // idiot proof
-        qFatal("[InterceptWidget::onSourceChanged] Selection not managed");
+        qFatal("[InterceptWidget::onSourceChanged] Selection not managed T_T");
     }
 
     if (currentBlockSource != NULL) {
@@ -106,6 +113,7 @@ void InterceptWidget::onSourceChanged(QString selected)
 
             connect(currentGui, SIGNAL(destroyed()), SLOT(onCurrentGuiDeleted()), Qt::DirectConnection);
         }
+
         source->setCurrentBlockSource(currentBlockSource);
     }
 }
@@ -124,10 +132,10 @@ void InterceptWidget::updateColumns()
         qFatal("Cannot allocate memory for QStandardItemModel X{");
         return;
     }
-    QStandardItem* item = NULL;
 
     for (int i = 0; i < columnList.size(); ++i)
     {
+        QStandardItem* item = NULL;
         item = new(std::nothrow) QStandardItem(columnList.at(i));
         if (item != NULL) {
             item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);

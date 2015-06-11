@@ -12,14 +12,16 @@ Released under AGPL see LICENSE for more information
 #include "../crossplatform.h"
 #include <QDebug>
 
+const int LargeRandomAccessSource::DEFAULT_CHUNKSIZE = 256;
+
 LargeRandomAccessSource::LargeRandomAccessSource(QObject *parent) :
     ByteSourceAbstract(parent)
 {
     currentStartingOffset = 0;
     _readonly = true;
     capabilities = CAP_HISTORY;
-    currentHistoryPointer = -1;
-    chunksize = 256;
+    currentPointerHistoryPointer = -1;
+    chunksize = DEFAULT_CHUNKSIZE;
     sem.release(10);
     intervalMSec = 2000; // 2 sec of interval for the timer
     connect(&refreshTimer, SIGNAL(timeout()), SLOT(refreshData()));
@@ -264,11 +266,21 @@ int LargeRandomAccessSource::refreshInterval() const
     return intervalMSec;
 }
 
+BaseStateAbstract *LargeRandomAccessSource::getStateMngtObj()
+{
+    LargeRandomAccessSourceStateObj *largeRandomACStateObj = new(std::nothrow) LargeRandomAccessSourceStateObj(this);
+    if (largeRandomACStateObj == NULL) {
+        qFatal("Cannot allocate memory for LargeRandomAccessSourceStateObj X{");
+    }
+
+    return largeRandomACStateObj;
+}
+
 bool LargeRandomAccessSource::historyForward()
 {
-    if (currentHistoryPointer < history.size() - 1) {
-        currentHistoryPointer++;
-        currentStartingOffset = history.at(currentHistoryPointer);
+    if (currentPointerHistoryPointer < pointerHistory.size() - 1) {
+        currentPointerHistoryPointer++;
+        currentStartingOffset = pointerHistory.at(currentPointerHistoryPointer);
         readData(dataChunk,chunksize);
         emit updated(INVALID_SOURCE);
         emit sizeChanged();
@@ -279,9 +291,9 @@ bool LargeRandomAccessSource::historyForward()
 
 bool LargeRandomAccessSource::historyBackward()
 {
-    if (currentHistoryPointer > 0) {
-        currentHistoryPointer--;
-        currentStartingOffset = history.at(currentHistoryPointer);
+    if (currentPointerHistoryPointer > 0) {
+        currentPointerHistoryPointer--;
+        currentStartingOffset = pointerHistory.at(currentPointerHistoryPointer);
         readData(dataChunk,chunksize);
         emit updated(INVALID_SOURCE);
         emit sizeChanged();
@@ -420,6 +432,12 @@ bool LargeRandomAccessSource::readData(QByteArray &data, int size)
     return readData(currentStartingOffset,data,size);
 }
 
+bool LargeRandomAccessSource::readData(quint64 , QByteArray &, int )
+{
+    qCritical() << tr("LargeRandomAccessSource::readData not implemented");
+    return false;
+}
+
 bool LargeRandomAccessSource::writeData(quint64 , int , const QByteArray &, quintptr)
 {
     return false; // by default doing nothing
@@ -427,9 +445,46 @@ bool LargeRandomAccessSource::writeData(quint64 , int , const QByteArray &, quin
 
 void LargeRandomAccessSource::addToHistory(quint64 offset)
 {
-    currentHistoryPointer++;
-    history = history.mid(0,currentHistoryPointer);
-    history.append(offset);
+    currentPointerHistoryPointer++;
+    pointerHistory = pointerHistory.mid(0,currentPointerHistoryPointer);
+    pointerHistory.append(offset);
 }
 
 
+
+
+LargeRandomAccessSourceStateObj::LargeRandomAccessSourceStateObj(LargeRandomAccessSource *ls) :
+    ByteSourceStateObj(ls)
+{
+    setName(ls->name());
+}
+
+LargeRandomAccessSourceStateObj::~LargeRandomAccessSourceStateObj()
+{
+
+}
+
+void LargeRandomAccessSourceStateObj::internalRun()
+{
+    LargeRandomAccessSource *ls = static_cast<LargeRandomAccessSource *>(bs);
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+        writer->writeAttribute(GuiConst::STATE_RANDOM_SOURCE_CURRENT_OFFSET, write(ls->startingRealOffset()));
+        writer->writeAttribute(GuiConst::STATE_CHUNK_SIZE, write(ls->viewSize()));
+    } else {
+        QXmlStreamAttributes attrList = reader->attributes();
+        bool ok = false;
+        quint64 temp = readUInt64(attrList.value(GuiConst::STATE_RANDOM_SOURCE_CURRENT_OFFSET),&ok);
+        if (!ok) {
+            temp = 0;
+        }
+
+        ls->setStartingOffset(temp);
+
+        int cs = readInt(attrList.value(GuiConst::STATE_CHUNK_SIZE),&ok);
+        if (!ok) {
+            cs = LargeRandomAccessSource::DEFAULT_CHUNKSIZE;
+        }
+
+        ls->setViewSize(cs);
+    }
+}

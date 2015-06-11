@@ -30,6 +30,7 @@ class TcpSocketProcessor : public StreamProcessor
         void finished(TcpSocketProcessor *);
     private :
         Q_DISABLE_COPY(TcpSocketProcessor)
+	explicit TcpSocketProcessor() {}
         explicit TcpSocketProcessor(TransformMgmt * tFactory,
 #if QT_VERSION >= 0x050000
                                     qintptr socketDescr,

@@ -17,18 +17,39 @@ Released under AGPL see LICENSE for more information
 #include <QColor>
 #include <QMap>
 #include <commonstrings.h>
+#include <QSettings>
+#include <QXmlStreamWriter>
+#include <QXmlStreamReader>
 #include "searchabstract.h"
+#include "../shared/guiconst.h"
+#include "../state/basestateabstract.h"
 
 class SourceWidgetAbstract;
+class BytesRange;
 
-class OffsetsRange
+class BytesRangeList : public QObject, public QList<BytesRange *> {
+        Q_OBJECT
+    public:
+        explicit BytesRangeList(QObject *parent = 0);
+        BytesRangeList(BytesRangeList const &other);
+        BytesRangeList& operator = (BytesRangeList const &other);
+        virtual ~BytesRangeList();
+        quint64 byteSize();
+        void unify();
+    signals:
+        void updated();
+};
+
+class BytesRange
 {
     public:
         static const QString HEXFORMAT;
-        explicit OffsetsRange(quint64 lowerVal, quint64 upperVal, QString description = QString());
-        OffsetsRange(const OffsetsRange& other);
-        OffsetsRange &operator=(const OffsetsRange &other);
-        virtual ~OffsetsRange();
+        explicit BytesRange(quint64 lowerVal, quint64 upperVal, QString description = QString());
+        BytesRange(const BytesRange& other);
+        BytesRange &operator=(const BytesRange &other);
+
+
+        virtual ~BytesRange();
         bool isInRange(int value);
         bool isInRange(quint64 value);
         QString getDescription() const ;
@@ -41,12 +62,16 @@ class OffsetsRange
         void setLowerVal(quint64 val);
         quint64 getUpperVal() const;
         void setUpperVal(quint64 val);
-        virtual bool operator<(const OffsetsRange& other) const;
-        bool sameMarkings(const OffsetsRange& other) const;
+        virtual bool operator<(const BytesRange& other) const;
+        bool hasSameMarkings(const BytesRange& other) const;
+        void copyMarkings(const BytesRange& other);
         static QString offsetToString(quint64 val);
-        static bool lessThanFunc(OffsetsRange * or1, OffsetsRange *or2);
+        static bool lessThanFunc(BytesRange * or1, BytesRange *or2);
         quint64 getSize() const;
         void setSize(const quint64 &value);
+        static void addMarkToList(BytesRangeList *list, BytesRange * range);
+        static void addMarkToList(BytesRangeList *list, quint64 start, quint64 end, const QColor &bgcolor, const QColor &fgColor, QString toolTip);
+        static void clearMarkingFromList(BytesRangeList *list, quint64 start, quint64 end);
     protected:
         QString description;
         quint64 lowerVal;
@@ -56,25 +81,14 @@ class OffsetsRange
         QColor backgroundColor;
 
     friend class ByteSourceAbstract;
-    friend class ComparableRange;
-};
-
-class ComparableRange
-{
-    public:
-        explicit ComparableRange(OffsetsRange * pointer);
-        OffsetsRange *getRange() const;
-        void setRange(OffsetsRange *value);
-        bool operator<(const ComparableRange& other) const;
-        bool operator==(const ComparableRange& other) const;
-    private:
-        OffsetsRange *range;
-    friend class ByteSourceAbstract;
+    friend class ByteSourceStateObj;
 };
 
 class ByteSourceAbstract : public QObject
 {
         Q_OBJECT
+
+        friend class ByteSourceStateObj;
     public:
         enum CAPABILITIES {
             CAP_RESET = 0x01,
@@ -93,22 +107,15 @@ class ByteSourceAbstract : public QObject
             GUI_UPPER_VIEW
         };
 
-        struct Markings {
-                QColor bgcolor;
-                QColor fgcolor;
-                QString text;
-                bool operator==(const Markings& other) const {
-                    return (bgcolor == other.bgcolor) && (fgcolor == other.fgcolor) && (text == other.text);
-                }
-        };
-
-        enum HistAction {INSERT = 0, REMOVE = 1, REPLACE = 2}; // int values are used for debugging only
+        enum HistAction {INSERT = 0, REMOVE = 1, REPLACE = 2};
         struct HistItem {
                HistAction action;
                quint64 offset;
                QByteArray before;
                QByteArray after;
         };
+
+        enum MarkingLayer {USER_MARKINGS = 0, SEARCH_MARKINGS = 1, COMPARE_MARKINGS = 2};
 
         explicit ByteSourceAbstract(QObject *parent = 0);
         virtual ~ByteSourceAbstract();
@@ -130,7 +137,7 @@ class ByteSourceAbstract : public QObject
         virtual void viewRemove(int offset, int length, quintptr source = INVALID_SOURCE);
         virtual void clear(quintptr source = INVALID_SOURCE);
 
-        virtual void fromLocalFile(QString fileName);
+        virtual void fromLocalFile(QString fileName) = 0; // children have to implement this, to fit specific requirements and limits
         virtual void saveToFile(QString destFilename, quint64 startOffset, quint64 endOffset);
         virtual void saveToFile(QString destFilename);
 
@@ -141,6 +148,7 @@ class ByteSourceAbstract : public QObject
         virtual bool isReadableText();
 
         SearchAbstract * getSearchObject(QObject *parent = 0,bool singleton = true);
+
         virtual bool tryMoveUp(int size);
         virtual bool tryMoveDown(int size);
         virtual bool hasDiscreetView();
@@ -163,6 +171,7 @@ class ByteSourceAbstract : public QObject
         quint32 getCapabilities() const;
         virtual bool setReadOnly(bool readonly = true);
         virtual bool isReadonly();
+        virtual bool checkReadOnly();
 
         virtual int preferredTabType();
         static QString toPrintableString(const QByteArray &val);
@@ -171,6 +180,10 @@ class ByteSourceAbstract : public QObject
         virtual quint64 highByte();
         virtual int textOffsetSize();
 
+        void markNoUpdate(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor = QColor(), QString toolTip = QString());
+
+        virtual BaseStateAbstract *getStateMngtObj() = 0;
+
     public slots:
         virtual bool historyForward();
         virtual bool historyBackward();
@@ -178,25 +191,22 @@ class ByteSourceAbstract : public QObject
         virtual void setViewSize(int size);
         void clearAllMarkings();
         void mark(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor = QColor(), QString toolTip = QString());
-        // use the next function with caution as it does not send updates signals
-        void markNoUpdate(quint64 start, quint64 end, const QColor &bgcolor,const QColor &fgColor = QColor(), QString toolTip = QString());
         virtual void setData(QByteArray data, quintptr source = INVALID_SOURCE); // not always possible
+        void setNewMarkings(BytesRangeList * newUserMarkingsRanges);
     private slots:
         void onGuiDestroyed();
-        void setNewMarkingsMap(QMap<ComparableRange, Markings> newUserMarkingsRanges);
+        void onMarkingsListDeleted();
     signals:
         void updated(quintptr source);
+        void reset();
         void minorUpdate(quint64,quint64);
         void log(QString mess, QString source, Pip3lineConst::LOGLEVEL level);
         void nameChanged(QString newName);
         void sizeChanged();
         void readOnlyChanged(bool readonly);
+        void askFileLoad();
         
     protected:
-        QList<HistItem> history;
-        int currentHistoryPointer;
-        bool applyingHistory;
-
         enum TabType {TAB_GENERIC = 0, TAB_TRANSFORM = 1, TAB_LARGERANDOM = 2};
         virtual QWidget * requestGui(QWidget *parent,ByteSourceAbstract::GUI_TYPE type);
         virtual SearchAbstract *requestSearchObject(QObject *parent);
@@ -207,18 +217,48 @@ class ByteSourceAbstract : public QObject
         void historyAdd(HistItem item);
         void writeToFile(QString destFilename, QByteArray data);
         void clearAllMarkingsNoUpdate();
-        bool _readonly;
         static const quintptr INVALID_SOURCE;
-        quint32 capabilities;
-        QMap<ComparableRange, Markings> userMarkingsRanges;
-        OffsetsRange *cachedMarkingRange;
+        BytesRange *cachedRange; // internal use value
         QWidget *confGui;
         QWidget *buttonBar;
         QWidget *upperView;
         SearchAbstract *searchObj;
+        bool applyingHistory; // internal use value
+
+        BytesRangeList * userMarkingsRanges; // markings
+        int currentHistoryPointer;
+        QList<HistItem> history; // edit history
+
+        quint32 capabilities; // does not need to be save as specific to the source
+
+        bool _readonly;
         QString _name;
 };
 
+class ByteSourceStateObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit ByteSourceStateObj(ByteSourceAbstract *bs);
+        virtual ~ByteSourceStateObj();
+        virtual void run();
+    protected:
+        virtual void internalRun();
+        ByteSourceAbstract *bs;
+};
 
+class ByteSourceClosingObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit ByteSourceClosingObj(ByteSourceAbstract *bs);
+        ~ByteSourceClosingObj();
+        void run();
+        void setReadonly(bool value);
+
+    private:
+        ByteSourceAbstract *bs;
+        bool readonly;
+};
 
 #endif // BYTESOURCEABSTRACT_H

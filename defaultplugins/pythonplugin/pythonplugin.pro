@@ -24,6 +24,7 @@ CONF_PYTHON_3 {
     }
 
     win32 {
+        QMAKE_LFLAGS_WINDOWS += /FS
         INCLUDEPATH +="C:\\Python33\\include\\"
         LIBS += -L"C:\\Python33\\libs\\" -lpython33
     }
@@ -35,6 +36,7 @@ CONF_PYTHON_3 {
     }
 
     win32 {
+    	QMAKE_LFLAGS_WINDOWS += /FS
         INCLUDEPATH +="C:\\Python27\\include\\"
         LIBS += -L"C:\\Python27\\libs\\" -lpython27
     }

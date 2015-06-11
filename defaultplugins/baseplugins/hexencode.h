@@ -32,8 +32,13 @@ class HexEncode : public TransformAbstract
 
         Type getType();
         void setType(Type ntype);
+        bool getAddHexPrefix() const;
+        void setAddHexPrefix(bool value);
+
     private:
+        static const QString XML_ADDPREFIX;
         Type type;
+        bool addHexPrefix;
 };
 
 #endif // HEXENCODE_H

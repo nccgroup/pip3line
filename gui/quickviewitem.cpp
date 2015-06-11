@@ -17,6 +17,8 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include "ui_quickviewitem.h"
 #include <threadedprocessor.h>
+#include <QTextCursor>
+#include <QScrollBar>
 
 const QString QuickViewItem::LOGID = "QuickView";
 
@@ -30,7 +32,10 @@ QuickViewItem::QuickViewItem(GuiHelper *nguiHelper, QWidget *parent, const QStri
     currentTransform = NULL;
     noError = true;
     guiHelper = nguiHelper;
+    outputLine = NULL;
+    outputBlock = NULL;
     format = TEXTFORMAT;
+    outputType = ONELINE;
     guiConfig = new(std::nothrow) QuickViewItemConfig(guiHelper, this);
     if (guiConfig == NULL) {
         qFatal("Cannot allocate memory for guiConfig X{");
@@ -55,11 +60,46 @@ QuickViewItem::~QuickViewItem()
 void QuickViewItem::processingFinished(QByteArray output, Messages messages)
 {
     toolTipMess.clear();
+    QString text;
+    QWidget * outputWidget = NULL;
+    QString stylesheet = QString("%1 { border: 1px solid %2; border-radius: 0px}");
 
     if (format == TEXTFORMAT)
-        ui->outputLineEdit->setText(QString::fromUtf8(output));
+        text = QString::fromUtf8(output);
     else
-        ui->outputLineEdit->setText(QString::fromUtf8(output.toHex()));
+        text = QString::fromUtf8(output.toHex());
+
+    if (outputType == ONELINE) {
+        if (outputLine == NULL) {
+            outputLine = new(std::nothrow) QLineEdit(this);
+            outputLine->setMinimumWidth(350);
+            outputLine->setReadOnly(true);
+            ui->mainLayout->insertWidget(1,outputLine);
+        }
+        if (outputBlock != NULL) {
+            delete outputBlock;
+        }
+
+        outputLine->setText(text);
+
+        outputLine->setCursorPosition(0);
+        outputWidget = outputLine;
+    } else {
+        if (outputBlock == NULL) {
+            outputBlock = new(std::nothrow) QTextEdit(this);
+            outputBlock->setMinimumWidth(350);
+            outputBlock->setReadOnly(true);
+            ui->mainLayout->insertWidget(1,outputBlock);
+        }
+        if (outputLine != NULL) {
+            delete outputLine;
+        }
+        outputBlock->setText(text);
+
+        outputBlock->textCursor().setPosition(0);
+        outputBlock->setFrameShape(QFrame::NoFrame);
+        outputWidget = outputBlock;
+    }
 
     LOGLEVEL level = LSTATUS;
     for (int i = 0; i < messages.size() ; i++) {
@@ -69,18 +109,24 @@ void QuickViewItem::processingFinished(QByteArray output, Messages messages)
         }
     }
 
-    ui->outputLineEdit->setToolTip(toolTipMess);
-
+    outputWidget->setToolTip(toolTipMess);
+    QString color;
     switch (level) {
         case (LERROR):
-            ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid red } QLineEdit QWidget { color: black;}");
+            color = "red";
             break;
         case (LWARNING):
-            ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid orange } QLineEdit QWidget { color: black;}");
+            color = "orange";
             break;
         case (LSTATUS):
         default:
-            ui->outputLineEdit->setStyleSheet("QLineEdit { border: 1px solid gray } QLineEdit QWidget { color: black;}");
+            color = "gray";
+    }
+
+    if (outputLine == NULL) {
+        outputBlock->setStyleSheet(QString("QTextEdit { border: 1px solid %1; border-radius: 0px;}").arg(color));
+    } else {
+        outputLine->setStyleSheet(QString("QLineEdit { border: 1px solid %1; border-radius: 0px}").arg(color));
     }
 }
 
@@ -101,7 +147,6 @@ void QuickViewItem::processData(const QByteArray &data)
         connect(tr,SIGNAL(finishedProcessing(QByteArray,Messages)), this, SLOT(processingFinished(QByteArray,Messages)));
         emit sendRequest(tr);
     }
-
 }
 
 bool QuickViewItem::isConfigured()
@@ -122,7 +167,8 @@ bool QuickViewItem::configure()
         if (currentTransform != 0) {
             ui->nameLabel->setText(guiConfig->getName());
             format = guiConfig->getFormat();
-            QTimer::singleShot(0,this,SLOT(internalProcess()));
+            outputType = guiConfig->getOutputType();
+            processData(currentData);
             return true;
         }
     }
@@ -132,7 +178,7 @@ bool QuickViewItem::configure()
 void QuickViewItem::mouseDoubleClickEvent(QMouseEvent * event)
 {
     if (configure())
-        QTimer::singleShot(0,this,SLOT(internalProcess()));
+        processData(currentData);
 
     event->accept();
 }
@@ -146,6 +192,7 @@ QString QuickViewItem::getXmlConf()
         list.append(currentTransform);
         list.setName(ui->nameLabel->text());
         list.setFormat(format);
+        list.setPreferredOutputType(outputType);
 
         QXmlStreamWriter streamin(&ret);
         guiHelper->getTransformFactory()->saveConfToXML(list, &streamin);
@@ -182,7 +229,9 @@ bool QuickViewItem::setXmlConf(const QString &conf)
         ui->nameLabel->setText(talist.getName());
         guiConfig->setName(talist.getName());
         format = talist.getFormat();
+        outputType = talist.getPreferredOutputType();
         guiConfig->setFormat(format);
+        guiConfig->setOutputType(outputType);
     }
     return true;
 }

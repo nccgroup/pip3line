@@ -162,7 +162,7 @@ QString TransformAbstract::saveChar(const char c) const
     return QString::fromUtf8(val.toHex());
 }
 
-bool TransformAbstract::loadChar(const QString val, char *c)
+bool TransformAbstract::loadChar(const QString &val, char *c)
 {
     QByteArray tmp = fromHex(val.toUtf8());
     if (tmp.size() == 0) {

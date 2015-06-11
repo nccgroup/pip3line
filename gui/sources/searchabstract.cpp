@@ -10,315 +10,376 @@ Released under AGPL see LICENSE for more information
 
 #include <QTimerEvent>
 #include <QDebug>
+#include <QApplication>
+#if QT_VERSION >= 0x050000
+#include <QtConcurrent>
+#endif
+#include <QtConcurrentRun>
 #include "searchabstract.h"
+#include "bytesourceabstract.h"
 
-FoundOffsetsModel::FoundOffsetsModel(QObject *parent) :
-    QAbstractListModel(parent)
+int SourceReader::MAX_READ_SIZE = 0x4000; // 16KB, this should be more than enough
+SourceReader::SourceReader()
 {
 
 }
 
-FoundOffsetsModel::~FoundOffsetsModel()
+SourceReader::~SourceReader()
 {
 
 }
 
-int FoundOffsetsModel::rowCount(const QModelIndex &) const
+QColor SearchAbstract::SEARCH_COLOR = Qt::yellow;
+
+SearchWorker::SearchWorker(SourceReader * device,QObject *parent)
+    : QObject(parent)
 {
-    return items.size();
+    startOffset = 0;
+    endOffset = 0;
+    BufferSize = 4096;
+    statsStep = 4096;
+    cancelled = true;
+    searchMask = NULL;
+    listSend = false;
+    searchSize = 0;
+    hasError = false;
+    rawitem = NULL;
+    targetdevice = device; // no check on the validity of the device itself this has to be done by the caller. The object take ownership as well.
+    foundList = new (std::nothrow) BytesRangeList();
+    if (foundList == NULL) {
+        qFatal("Cannot allocate memory for BytesRangeList X{");
+    }
 }
 
-QVariant FoundOffsetsModel::data(const QModelIndex &index, int role) const
+SearchWorker::~SearchWorker()
 {
-    if (index.isValid()) {
-        if (role == Qt::DisplayRole) {
-            return QVariant(QString::number(items.at(index.row()).startOffset,16).prepend("0x"));
+    if (listSend) // no need to delete the list if it was taken by someone
+        foundList = NULL;
+    else { // unless the list was never requested
+        while (!foundList->isEmpty())
+            delete foundList->takeFirst();
+        delete foundList;
+    }
+    searchMask = NULL;
+    delete targetdevice; // we have ownership
+    targetdevice = NULL;
+}
+
+void SearchWorker::cancel()
+{
+    cancelled = true;
+}
+
+void SearchWorker::search()
+{
+    cancelled = false;
+    quint64 nextStat = startOffset + statsStep;
+    int len = searchSize -1;
+    quint64 curOffset = startOffset;
+
+    if (rawitem == NULL) {
+        qCritical() << "rawitem is null at the beginning of search() T_T";
+        emit finished();
+        return;
+    }
+
+    if (startOffset == endOffset) {
+        emit finished();
+        return;
+    }
+
+    if (!targetdevice->isReadable()) {
+        emit log(tr("Could not open the device, aborting search"),this->metaObject()->className(), Pip3lineConst::LERROR);
+        hasError = true;
+        emit finished();
+        return;
+    }
+
+    if (!targetdevice->seek(curOffset)) {
+        emit log(tr("Error while seeking, aborting search"),this->metaObject()->className(), Pip3lineConst::LERROR);
+        hasError = true;
+        emit finished();
+        return;
+    }
+
+    char * readbuffer = new(std::nothrow) char[BufferSize];
+    if (readbuffer == NULL) {
+        qFatal("Cannot allocate memory for the find buffer X{");
+        emit finished();
+        return;
+    }
+
+    while (true)
+    {
+        int bRead;
+        memmove(readbuffer, readbuffer + BufferSize - len, len);
+        bRead = targetdevice->read(readbuffer + len, (quint64) (BufferSize - len));
+
+        if (bRead < 0) {
+            emit log(tr("Error while reading, aborting search"),this->metaObject()->className(), Pip3lineConst::LERROR);
+            hasError = true;
+            delete[] readbuffer;
+            readbuffer = NULL;
+            emit finished();
+            return;
+        } else if (bRead == 0)  {// end of read for some reasons ...
+            qWarning() << "[SearchWorker::search] zero byte read T_T" << this;
+            delete[] readbuffer;
+            readbuffer = NULL;
+            emit finished();
+            return;
+        }
+
+        int off, i;
+        for (off = (curOffset == 0) ? 0 : len; off < bRead; ++off)
+        {
+            quint64 realOffset = curOffset + (quint64)off;
+            for (i = 0; i <= len; ++i)
+                if ((readbuffer[off + i] & searchMask[i]) != rawitem[i])
+                        break;
+            if (i > len)
+            {
+                BytesRange * br = new(std::nothrow) BytesRange(realOffset - (quint64)len, realOffset);
+                br->setBackground(SearchAbstract::SEARCH_COLOR);
+                if (br == NULL) {
+                    qFatal("Cannot allocate memory for BytesRange X{");
+                    return;
+                }
+                foundList->append(br);
+            }
+            // updating stats
+            if (realOffset > nextStat) {
+                emit progressUpdate(realOffset - startOffset);
+                nextStat += statsStep;
+            }
+
+            if (realOffset >= endOffset)  {// end of the travel
+                delete[] readbuffer;
+                readbuffer = NULL;
+                emit finished();
+                return;
+            }
+        }
+
+        curOffset += (quint64)bRead;
+        if (cancelled) {
+            delete[] readbuffer;
+            readbuffer = NULL;
+            emit finished();
+            return;
         }
     }
-    return QVariant();
 }
 
-QVariant FoundOffsetsModel::headerData(int section, Qt::Orientation orientation, int role) const
+void SearchWorker::setStatsStep(int value)
 {
-    if (role != Qt::DisplayRole)
-             return QVariant();
-
-    if (orientation == Qt::Horizontal) {
-        if (section == 0)
-            return QString("Offset");
-    }
-    return QVariant();
+    statsStep = value;
 }
 
-quint64 FoundOffsetsModel::getStartingOffset(const QModelIndex &index)
+
+bool SearchWorker::getHasError() const
 {
-    if (index.isValid()) {
-        return items.at(index.row()).startOffset;
-    }
-    return 0;
+    return hasError;
 }
 
-bool FoundOffsetsModel::lessThanFoundOffset(FoundOffsetsModel::ItemFound i1, FoundOffsetsModel::ItemFound i2)
+BytesRangeList *SearchWorker::getFoundList()
 {
-    return i1.startOffset < i2.startOffset;
+    listSend = true;
+    return foundList;
 }
 
-void FoundOffsetsModel::clear()
+quint64 SearchWorker::getEndOffset() const
 {
-    if (!items.isEmpty()) {
-        beginRemoveRows(QModelIndex(),0,items.size() - 1);
-        items.clear();
-        endRemoveRows();
-    }
+    return endOffset;
 }
 
-void FoundOffsetsModel::addOffset(quint64 soffset, quint64 endoffset)
+void SearchWorker::setEndOffset(const quint64 &value)
 {
-    ItemFound item;
-    item.startOffset = soffset;
-    item.endOffset = endoffset;
-    addOffset(item);
+    endOffset = value;
 }
 
-void FoundOffsetsModel::addOffset(FoundOffsetsModel::ItemFound item)
+void SearchWorker::setSearchItem(QByteArray &sitem, char *mask)
 {
-    beginResetModel();
-    items.append(item);
-    qSort(items.begin(),items.end(),FoundOffsetsModel::lessThanFoundOffset);
-    endResetModel();
+    rawitem = sitem.data();
+    searchSize = sitem.size();
+    searchMask = mask; // again no checks here, the caller is reponsible for that
 }
 
-void FoundOffsetsModel::addOffsets(QList<FoundOffsetsModel::ItemFound> list)
+quint64 SearchWorker::getStartOffset() const
 {
-    beginResetModel();
-    items.append(list);
-    qSort(items.begin(),items.end(),FoundOffsetsModel::lessThanFoundOffset);
-    endResetModel();
+    return startOffset;
 }
 
-SearchAbstract::SearchAbstract(QObject *parent):
-    QThread(parent)
+void SearchWorker::setStartOffset(const quint64 &value)
 {
-    singleSearch = false;
-    soffset = 0;
-    eoffset = 0;
+    startOffset = value;
+}
+
+const int SearchAbstract::MAX_SEARCH_ITEM_SIZE = 1024;
+
+SearchAbstract::SearchAbstract():
+    QObject(NULL)
+{
+    cursorOffset = 0;
+    jumpToNext = true;
     oldStats = 0;
-    statsSize = 0;
+    totalSearchSize = 0;
     stopped = true;
-    threadCount = QThread::idealThreadCount();
-    threadedSearch = false;
-    BufferSize = 4096; // for now, not sure if it is worth being tweakable
+    hasError = false;
     statsStep = 4096; // by default report every 4k bytes
     mask = NULL;
-    //qDebug() << this << "created";
+    globalFoundList = NULL;
+    moveToThread(&eventThread);
+    eventThread.start();
+
+  //  qDebug() << this << "created" << "Thread: [" << thread() << "]";
 }
 
 SearchAbstract::~SearchAbstract()
 {
-    //qDebug() << this << "Destroying" << isRunning();
-    if (isRunning()) {
-        stopSearch();
-        quit();
-        if (!wait(10000)) {
+  //  qDebug() << this << "Destroying";
+    eventThread.quit();
+    if (!eventThread.wait(10000)) {
             qCritical() << "Could not stop the SearchAbstract thread" << this;
-        }
     }
 
     if (mask != NULL) {
         delete[] mask;
     }
+    globalFoundList = NULL; // never touch that
 }
 
 void SearchAbstract::processStats(quint64 val)
 {
     if (stopped) // ignoring if the search has already ended
         return;
-    SearchAbstract *sob = static_cast<SearchAbstract *>(sender());
-    if (statsSize > 0 && threads.contains(sob)) {
-        threads.insert(sob,val);
+
+    SearchWorker *sob = static_cast<SearchWorker *>(sender());
+    if (totalSearchSize > 0 && workers.contains(sob)) {
+        workers.insert(sob,val);
         quint64 aggregatestats = oldStats;
-        foreach (quint64 value, threads)
+        foreach (quint64 value, workers)
             aggregatestats += value;
-        double newstats = (double)aggregatestats / (double)statsSize;
+        double newstats = (double)aggregatestats / (double)totalSearchSize;
         emit progressStatus(newstats);
     }
 }
+bool SearchAbstract::getJumpToNext() const
+{
+    return jumpToNext;
+}
+
+void SearchAbstract::setJumpToNext(bool value)
+{
+    jumpToNext = value;
+}
+
+quint64 SearchAbstract::getCursorOffset() const
+{
+    return cursorOffset;
+}
+
+void SearchAbstract::setCursorOffset(const quint64 &value)
+{
+    cursorOffset = value;
+}
+
 
 void SearchAbstract::onChildFinished()
 {
-    SearchAbstract *sob = static_cast<SearchAbstract *>(sender());
-    if (threads.contains(sob)) {
-        oldStats += threads.value(sob);
-        threads.remove(sob);
-        sob->quit();
-        if (!sob->wait(10000)) {
-            qCritical() << tr("[ThreadedSearch] could not stop the child thread") << sob;
+    SearchWorker *worker = dynamic_cast<SearchWorker *>(sender());
+    if (workers.contains(worker)) {
+        oldStats += workers.value(worker);
+        hasError = hasError || worker->getHasError();
+        BytesRangeList *tempList = worker->getFoundList();
+        if (stopped) { // no need to process anything just ignore
+
+            while (!tempList->isEmpty())
+                delete tempList->takeFirst();
+        } else {
+            globalFoundList->append(*tempList); // range objects are not owned by the global list
         }
-        sob->deleteLater();
+        delete tempList; // don't need to free the range objects in any case
+        workers.remove(worker);
+
     } else {
-        qCritical() << tr("[ThreadedSearch] Unkown thread") << sob;
+        qCritical() << tr("[ThreadedSearch] Unknown worker T_T") << worker;
     }
-    if (threads.isEmpty()) {
+    delete worker;
+    if (workers.isEmpty()) {
         oldStats = 0;
+        if (globalFoundList->isEmpty())
+            hasError = true;
+        else {
+            globalFoundList->unify();
+            globalFoundList->moveToThread(QApplication::instance()->thread());// dirty, there must be a better way
+            if (jumpToNext) {
+                BytesRange * range = globalFoundList->at(0); // if not found take the first
+                int size = globalFoundList->size();
+                for(int i = 0 ; i < size; i++) {
+                    if (cursorOffset < globalFoundList->at(i)->getLowerVal()) {
+                        range = globalFoundList->at(i);
+                        break;
+                    }
+                }
+                emit jumpRequest(range->getLowerVal(), range->getUpperVal());
+            }
+            emit foundList(globalFoundList);
+        }
         emit searchEnded();
+        emit errorStatus(hasError);
+        hasError = false; // resetting error status
     }
 }
 
-void SearchAbstract::registerSearchObject(SearchAbstract *sobj)
+void SearchAbstract::addSearchWorker(SearchWorker *worker)
 {
-    threads.insert(sobj,0);
-    sobj->setStopAtFirst(false);
-    sobj->setSearchItem(sitem);
-    sobj->setProcessStatsInternally(false);
-    sobj->moveToThread(sobj);
-    sobj->start();
-    connect(sobj, SIGNAL(searchEnded()), SLOT(onChildFinished()),Qt::QueuedConnection);
-    connect(sobj,SIGNAL(progressUpdate(quint64)), SLOT(processStats(quint64)),Qt::QueuedConnection);
-    connect(sobj,SIGNAL(itemFound(quint64,quint64)), SIGNAL(itemFound(quint64,quint64)),Qt::QueuedConnection);
+    workers.insert(worker,0);
+    worker->setSearchItem(sitem,mask);
+    connect(worker, SIGNAL(finished()), SLOT(onChildFinished()),Qt::QueuedConnection);
+    connect(worker,SIGNAL(progressUpdate(quint64)), SLOT(processStats(quint64)),Qt::QueuedConnection);
+    connect(worker,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)));
+    QtConcurrent::run(worker, &SearchWorker::search);
 }
-
-void SearchAbstract::internalThreadedStart()
+BytesRangeList *SearchAbstract::getGlobalFoundList()
 {
-    qWarning() << "[" << metaObject()->className() << "] Multi-threaded search not implemented, falling back to single threaded";
-    threadedSearch = false;
-    internalStart();
-    emit searchEnded();
+    return globalFoundList;
 }
 
 void SearchAbstract::startSearch()
 {
     if (sitem.isEmpty())
         return;
-
-    threads.insert(this,0);
-    threadedSearch = false;
-    stopMutex.lock();
-    stopped = false;
-    stopMutex.unlock();
-    emit searchStarted();
-    oldStats = 0;
-    internalStart();
-    emit searchEnded();
-}
-
-void SearchAbstract::startThreadedSearch()
-{
-    if (sitem.isEmpty())
+    globalFoundList = new(std::nothrow)BytesRangeList(NULL);
+    if (globalFoundList == NULL) {
+        qFatal("Cannot allocate memory for BytesRangeList X{");
         return;
-    threadedSearch = true;
-    singleSearch = false;
-    emit searchStarted();
+    }
+    stopped = false;
     oldStats = 0;
-    internalThreadedStart();
+    emit searchStarted();
+    internalStart();
 }
 
 void SearchAbstract::stopSearch()
 {
-    if (threadedSearch) {
-        QList<SearchAbstract *> list =  threads.keys();
-        for (int i = 0; i < list.size(); ++i) {
-             list.at(i)->stopSearch();
-         }
-    } else {
-        stopMutex.lock();
-        stopped = true;
-        stopMutex.unlock();
+    stopped = true;
+    QList<SearchWorker *> list =  workers.keys();
+    for (int i = 0; i < list.size(); ++i) {
+         list.at(i)->cancel();
     }
- //   qDebug()  << "SearchAbstract stopped requested";
-}
-
-bool SearchAbstract::fastSearch(QIODevice *device, qint64 startOffset, qint64 endOffset)
-{
-    bool found = false;
-    if (startOffset == endOffset)
-        return true;
-
-    qint64 cursorTravel= 0;
-    qint64 nextStat = statsStep;
-    int len = sitem.size() -1;
-    char * value = sitem.data();
-    qint64 curOffset = startOffset;
-    char * readbuffer = new(std::nothrow) char[BufferSize];
-    if (readbuffer == NULL) {
-        qFatal("Cannot allocate memory for the find buffer X{");
-        return false;
-    }
-
-    if (!device->seek(curOffset)) {
-        emit log(tr("Error while seeking: %1").arg(device->errorString()),this->metaObject()->className(), Pip3lineConst::LERROR);
-        return found;
-    }
-
-    while (true)
-    {
-        qint64 bRead;
-        memmove(readbuffer, readbuffer + BufferSize - len, len);
-        bRead = device->read(readbuffer + len, BufferSize - len);
-
-        if (bRead < 0)
-        {
-            emit log(tr("Error while reading the file: %1").arg(device->errorString()),this->metaObject()->className(), Pip3lineConst::LERROR);
-            return found;
-        } else if (bRead == 0) // end of file ... hopefully
-            return found;
-
-        int off, i;
-        for (off = curOffset ? 0 : len; off < bRead; ++off)
-        {
-            for (i = 0; i <= len; ++i)
-                if ((readbuffer[off + i] & mask[i]) != value[i])
-                        break;
-            if (i > len)
-            {
-                emit itemFound(curOffset + (quint64)off - (quint64)len,curOffset + (quint64)off);
-             //   qDebug() << "found" << curOffset;
-                if (!found) {
-                    if (singleSearch)
-                        return true;
-                    else
-                        found = true;
-                }
-            }
-            // updating stats
-            cursorTravel++;
-            if (cursorTravel > nextStat) {
-                emit progressUpdate((quint64)cursorTravel);
-                nextStat += statsStep;
-            }
-
-            if (startOffset + cursorTravel > endOffset) // end of the travel
-                return found;
-        }
-
-        curOffset += bRead;
-        stopMutex.lock();
-        if (stopped) {
-            stopMutex.unlock();
-            break;
-        }
-        stopMutex.unlock();
-    }
-
-    return found;
-}
-
-void SearchAbstract::setProcessStatsInternally(bool process)
-{
-    if (process) {
-        connect(this, SIGNAL(progressUpdate(quint64)), SLOT(processStats(quint64)), Qt::UniqueConnection);
-    } else {
-        disconnect(this, SIGNAL(progressUpdate(quint64)), this, SLOT(processStats(quint64)));
-    }
-}
-
-QByteArray SearchAbstract::getSearchItem() const
-{
-    return sitem;
 }
 
 void SearchAbstract::setSearchItem(const QByteArray &value, QBitArray bitmask)
 {
-    sitem = value;
+
+    if (value.size() > MAX_SEARCH_ITEM_SIZE) { // limiting the size of the search to 1k
+        sitem = value.mid(0,MAX_SEARCH_ITEM_SIZE);
+        emit log(tr("The searched item is larger than %1 bytes, truncating it").arg(MAX_SEARCH_ITEM_SIZE),metaObject()->className(), Pip3lineConst::LERROR);
+    } else {
+        sitem = value;
+    }
+
     int searchSize = sitem.size();
     if (bitmask.size() < searchSize) {
         int index = bitmask.isEmpty() ? 0 : bitmask.size() - 1;
@@ -339,34 +400,4 @@ void SearchAbstract::setSearchItem(const QByteArray &value, QBitArray bitmask)
     for (int i = 0; i < searchSize;i++) {
         mask[i] = bitmask.testBit(i) ? '\xFF' : '\x00';
     }
-}
-
-quint64 SearchAbstract::getEndOffset() const
-{
-    return eoffset;
-}
-
-void SearchAbstract::setEndOffset(const quint64 &value)
-{
-    eoffset = value;
-}
-
-quint64 SearchAbstract::getStartOffset() const
-{
-    return soffset;
-}
-
-void SearchAbstract::setStartOffset(const quint64 &value)
-{
-    soffset = value;
-}
-
-bool SearchAbstract::getStopAtFirst() const
-{
-    return singleSearch;
-}
-
-void SearchAbstract::setStopAtFirst(bool value)
-{
-    singleSearch = value;
 }

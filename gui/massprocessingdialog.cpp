@@ -33,9 +33,8 @@ Released under AGPL see LICENSE for more information
 #include "../tools/serverabstract.h"
 #include "screeniodevice.h"
 #include <QIODevice>
-using namespace Pip3lineConst;
-
-const QString MassProcessingDialog::SETTINGS_MASS_PROCESSING_GROUP = "MassProcessing";
+#include "shared/guiconst.h"
+using namespace GuiConst;
 
 MassProcessingDialog::MassProcessingDialog(GuiHelper *helper, TransformsGui *ntGui) :
     AppDialog(helper, ntGui),

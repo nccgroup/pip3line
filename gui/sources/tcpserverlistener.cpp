@@ -55,16 +55,17 @@ TcpServerListener::TcpServerListener(QObject *parent) :
 }
 
 TcpServerListener::~TcpServerListener() {
-    stopListening();
-
     serverThread->quit();
     serverThread->wait();
-    delete server;
+    serverThread->deleteLater();
+    serverThread = NULL;
+    //delete server; don't need that
 
     if (workerThread != NULL) {
         workerThread->quit();
         workerThread->wait();
         delete workerThread;
+        workerThread = NULL;
     }
 }
 
@@ -77,7 +78,7 @@ bool TcpServerListener::startListening()
 {
     startingWorkers();
     if (server == NULL) {
-        server = new(std::nothrow) InTcpServer(this);
+        server = new(std::nothrow) InTcpServer();
         if (server == NULL) {
             qFatal("Cannot allocate memory for QTcpServer X{");
         }
@@ -93,13 +94,13 @@ bool TcpServerListener::startListening()
 
 
     if (!server->listen(listeningAddress,port)) {
-        emit error(tr("could not start TCP server %1").arg(server->errorString()),metaObject()->className());
+        emit log(tr("could not start TCP server %1").arg(server->errorString()),metaObject()->className(), Pip3lineConst::LERROR);
         delete server;
         server = NULL;
         workerThread->quit();
         return false;
     }
-    emit status(tr("TCP server started %1:%2").arg(listeningAddress.toString()).arg(port), "");
+    emit log(tr("TCP server started %1:%2").arg(listeningAddress.toString()).arg(port), "", Pip3lineConst::LSTATUS);
     emit started();
     return true;
 }
@@ -107,13 +108,12 @@ bool TcpServerListener::startListening()
 void TcpServerListener::stopListening()
 {
     if (server != NULL && server->isListening()) {
-       emit status(tr("TCP server stopped %1:%2").arg(listeningAddress.toString()).arg(port), "");
+       emit log(tr("TCP server stopped %1:%2").arg(listeningAddress.toString()).arg(port), "", Pip3lineConst::LSTATUS);
        server->close();
-       for (int i = 0; i < clients.size(); i++)
-           QTimer::singleShot(0,clients.at(i),SLOT(stopListening()));
+       emit shutdownAllClient();
        stoppingWorkers();
        emit stopped();
-       delete server;
+       server->deleteLater();
        server = NULL;
     }
 }
@@ -126,7 +126,7 @@ void TcpServerListener::postBlockForSending(Block block)
         if (clients.contains(client)) {
             client->postBlockForSending(block); // the client is going to take care of encoding the block
         } else {
-            emit error(tr("Client disconnected cannot forward data block"), metaObject()->className());
+            emit log(tr("Client disconnected cannot forward data block"), metaObject()->className(), Pip3lineConst::LERROR);
         }
     } else {
         qCritical() << "[TcpServerListener::postBlockForSending] NULL client";
@@ -137,7 +137,7 @@ void TcpServerListener::clientFinished()
 {
     TcpListener * client = static_cast<TcpListener *>(sender());
     if (client == NULL) {
-        qWarning() << "[TcpServerListener] NULL client finished";
+        qWarning() << "[TcpServerListener] NULL client finished T_T";
     } else if (clients.contains(client)) {
         clients.removeAll(client);
        // qWarning() << "Client finished" << client;
@@ -178,6 +178,7 @@ void TcpServerListener::handlingClient(int socketDescriptor)
         connect(listener, SIGNAL(stopped()), SLOT(clientFinished()));
         connect(listener, SIGNAL(error(QString,QString)), SIGNAL(error(QString,QString)));
         connect(listener, SIGNAL(status(QString,QString)), SIGNAL(status(QString,QString)));
+        connect(this, SIGNAL(shutdownAllClient()), listener, SLOT(stopListening()),Qt::QueuedConnection);
         QTimer::singleShot(0,listener,SLOT(startListening()));
     } else {
         qFatal("Cannot allocate memory for TcpListener X{");

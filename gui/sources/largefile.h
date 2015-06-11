@@ -17,14 +17,27 @@ Released under AGPL see LICENSE for more information
 #include <QFileSystemWatcher>
 #include <QMutex>
 
+class FileSourceReader : public SourceReader
+{
+    public:
+        explicit FileSourceReader(QString filename);
+        ~FileSourceReader();
+        bool seek(quint64 pos);
+        int read(char * buffer, int maxLen);
+        bool isReadable();
+    private:
+        bool open();
+        QFile file;
+};
+
 class FileSearch : public SearchAbstract {
     Q_OBJECT
     public:
-        FileSearch(QString fileName, QObject *parent = 0);
+        explicit FileSearch(QString fileName);
         ~FileSearch();
+        void setFileName(QString fileName);
     private:
         void internalStart();
-        void internalThreadedStart();
         QString filename;
         static const quint32 MIN_SIZE_FOR_THREADS;
 };
@@ -47,6 +60,7 @@ class LargeFile : public LargeRandomAccessSource
         bool tryMoveUp(int size);
         bool tryMoveDown(int size);
         bool tryMoveView(int size);
+        BaseStateAbstract *getStateMngtObj();
     signals:
         void infoUpdated();
     private slots:
@@ -66,7 +80,16 @@ class LargeFile : public LargeRandomAccessSource
         qint64 fileSize;
         QFileInfo infoFile;
         QFileSystemWatcher watcher;
+};
 
+class LargeFileSourceStateObj : public LargeRandomAccessSourceStateObj
+{
+        Q_OBJECT
+    public:
+        explicit LargeFileSourceStateObj(LargeFile *lf);
+        ~LargeFileSourceStateObj();
+    protected:
+        void internalRun();
 };
 
 #endif // LARGEFILE_H

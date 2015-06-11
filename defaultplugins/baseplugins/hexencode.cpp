@@ -13,10 +13,11 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 
 const QString HexEncode::id = "Hexadecimal";
-
+const QString HexEncode::XML_ADDPREFIX = "AddHexPrefix";
 HexEncode::HexEncode()
 {
     type = NORMAL;
+    addHexPrefix = false;
 }
 
 HexEncode::~HexEncode()
@@ -39,13 +40,14 @@ QHash<QString, QString> HexEncode::getConfiguration()
 {
     QHash<QString, QString> properties = TransformAbstract::getConfiguration();
     properties.insert(XMLTYPE,QString::number(type));
+    properties.insert(XML_ADDPREFIX, QString::number(addHexPrefix ? 1 : 0));
     return properties;
 }
 
 bool HexEncode::setConfiguration(QHash<QString, QString> propertiesList)
 {
     bool res = TransformAbstract::setConfiguration(propertiesList);
-    bool ok;
+    bool ok = false;
 
     int val = propertiesList.value(XMLTYPE).toInt(&ok);
     if (!ok || (val != NORMAL && val != ESCAPED_MIXED && val != ESCAPED && val != CSTYLE && val != CSV)) {
@@ -54,6 +56,9 @@ bool HexEncode::setConfiguration(QHash<QString, QString> propertiesList)
     } else {
         setType((Type)val);
     }
+
+    val = propertiesList.value(XML_ADDPREFIX).toInt(&ok);
+    setAddHexPrefix(val == 1); // no advanced check here for backward compatibility
 
     return res;
 }
@@ -94,6 +99,9 @@ void HexEncode::transform(const QByteArray &input, QByteArray &output) {
         switch (type) {
             case NORMAL:
                 output = temp;
+                if (addHexPrefix) {
+                    output.prepend("0x");
+                }
                 break;
             case ESCAPED_MIXED:
                 for (i = 0; i < input.size(); i += 1) {
@@ -131,7 +139,6 @@ void HexEncode::transform(const QByteArray &input, QByteArray &output) {
                 output = fromHex(input);
                 break;
             case ESCAPED_MIXED:
-                qDebug() << "Escape lenient";
                 while (i < input.size()) {
                     if (input.at(i) == '\\' && i < input.size() - 3 &&  input.at(i+1) == 'x') {
                         if (HEXCHAR.contains(input.at(i+2)) && HEXCHAR.contains(input.at(i+3))) {
@@ -189,6 +196,21 @@ HexEncode::Type HexEncode::getType()
 
 void HexEncode::setType(HexEncode::Type ntype)
 {
-    type = ntype;
-    emit confUpdated();
+    if (type != ntype) {
+        type = ntype;
+        emit confUpdated();
+    }
 }
+bool HexEncode::getAddHexPrefix() const
+{
+    return addHexPrefix;
+}
+
+void HexEncode::setAddHexPrefix(bool value)
+{
+    if (addHexPrefix != value) {
+        addHexPrefix = value;
+        emit confUpdated();
+    }
+}
+

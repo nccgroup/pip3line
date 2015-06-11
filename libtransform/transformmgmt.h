@@ -45,6 +45,7 @@ class LIBTRANSFORMSHARED_EXPORT TransformMgmt : public QObject
         explicit TransformMgmt();
         ~TransformMgmt();
         bool initialize(const QString &baseDirectory);
+        bool reset();
 
 
         const QStringList getTransformsList(QString typeName);

@@ -21,6 +21,7 @@ Released under AGPL see LICENSE for more information
 #include "quickviewitemconfig.h"
 #include <transformmgmt.h>
 #include <QListWidgetItem>
+#include <QFileDialog>
 #include "guihelper.h"
 #include <QSettings>
 #include <QStandardItemModel>
@@ -28,15 +29,13 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QNetworkProxy>
 #include <QNetworkAccessManager>
+#include <tabs/tababstract.h>
 #include "loggerwidget.h"
+#include "shared/guiconst.h"
 
-using namespace Pip3lineConst;
+using namespace GuiConst;
 
 const QString SettingsDialog::LOGID = "SettingsDialog";
-const QString SettingsDialog::DEFAULT_GLOBAL_PROXY_IP = "127.0.0.1";
-const quint16 SettingsDialog::DEFAULT_GLOBAL_PROXY_PORT = 8080;
-const QString SettingsDialog::SETTINGS_GLOBAL_PROXY_IP = "GlobalProxyIP";
-const QString SettingsDialog::SETTINGS_GLOBAL_PROXY_PORT = "GlobalProxyPort";
 
 SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
     AppDialog(nhelper, parent)
@@ -45,52 +44,41 @@ SettingsDialog::SettingsDialog(GuiHelper *nhelper, QWidget *parent) :
     if (ui == NULL) {
         qFatal("Cannot allocate memory for Ui::SettingsDialog X{");
     }
+    setModal(false);
 
     tManager = guiHelper->getTransformFactory();
     settings = tManager->getSettingsObj();
     ui->setupUi(this);
 
-    ui->portSpinBox->setValue(guiHelper->getDefaultPort());
-    ui->decodeCheckBox->setChecked(guiHelper->getDefaultServerDecode());
-    ui->encodeCheckBox->setChecked(guiHelper->getDefaultServerEncode());
-    ui->pipeNameLineEdit->setText(guiHelper->getDefaultServerPipeName());
-    ui->autoUpdateCheckBox->setChecked(settings->value(SETTINGS_AUTO_UPDATE, true).toBool());
-    ui->minimizeCheckBox->setChecked(settings->value(SETTINGS_MINIMIZE_TO_TRAY, true).toBool());
-    ui->hexWidget->setChar(guiHelper->getDefaultServerSeparator());
-    ui->proxyHostLineEdit->setText(settings->value(SETTINGS_GLOBAL_PROXY_IP,DEFAULT_GLOBAL_PROXY_IP).toString());
-    ui->proxyPortSpinBox->setValue(settings->value(SETTINGS_GLOBAL_PROXY_PORT, QString::number(DEFAULT_GLOBAL_PROXY_PORT)).toInt());
+    ui->timerSaveSpinBox->setMinimum(GuiConst::MIN_AUTO_SAVE_TIMER_INTERVAL);
+    ui->timerSaveSpinBox->setMaximum(GuiConst::MAX_AUTO_SAVE_TIMER_INTERVAL);
 
-    connect(ui->autoUpdateCheckBox, SIGNAL(toggled(bool)), this, SLOT(autoUpdateChanged(bool)));
-    connect(ui->minimizeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onMinimizeChanged(bool)));
-    connect(ui->checkUpdatePushButton, SIGNAL(clicked()), this, SLOT(onUpdateRequest()));
-    setModal(false);
-
+    initializeConf();
     updatePluginList();
-    updateRegisteredList();
-    updateSavedMarkingColors();
-    updateImportExportFuncs();
-    updateFilter();
+    updateDeletedTabsList();
 
-    ui->proxyHostLineEdit->setEnabled(ui->enableProxyCheckBox->isChecked());
-    ui->proxyPortSpinBox->setEnabled(ui->enableProxyCheckBox->isChecked());
-
+    connect(ui->checkUpdatePushButton, SIGNAL(clicked()), this, SLOT(onUpdateRequest()));
     connect(tManager, SIGNAL(savedUpdated()), this, SLOT(updateRegisteredList()));
     connect(guiHelper, SIGNAL(markingsUpdated()), this, SLOT(updateSavedMarkingColors()));
-    connect(ui->resetMarkingsPushButton, SIGNAL(clicked()), this, SLOT(onResetMarkings()));
     connect(guiHelper, SIGNAL(importExportUpdated()), this, SLOT(updateImportExportFuncs()));
+    connect(ui->resetMarkingsPushButton, SIGNAL(clicked()), this, SLOT(onResetMarkings()));
     connect(ui->resetIEFuncsPushButton, SIGNAL(clicked()), this, SLOT(onResetImportExportFuncs()));
     connect(ui->savedListWidget, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(onSavedClicked(QListWidgetItem*)));
     connect(ui->pluginsListWidget, SIGNAL(clicked(QModelIndex)), this, SLOT(onPluginClicked(QModelIndex)));
-    connect(ui->decodeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onServerDecodeChanged(bool)));
-    connect(ui->encodeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onServerEncodeChanged(bool)));
-    connect(ui->portSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onServerPortChanged(int)));
-    connect(ui->pipeNameLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onServerPipeNameChanged(QString)));
-    connect(ui->hexWidget, SIGNAL(charChanged(char)), this, SLOT(onServerSeparatorChanged(char)));
     connect(ui->importExportListWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(onDoubleClickImportExportFuncs(QListWidgetItem*)));
     connect(ui->addImportExportPushButton, SIGNAL(clicked()), this, SLOT(onAddImportExportFuncs()));
-    connect(ui->offsetBaseComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(onOffsetBaseChanged(QString)));
-    connect(ui->enableProxyCheckBox, SIGNAL(toggled(bool)), SLOT(onProxyEnabledChanged(bool)));
-    connect(ui->ignoreSSLErrCheckBox, SIGNAL(toggled(bool)), SLOT(onIgnoreSSLErrChanged(bool)));
+    connect(ui->slByteDataCheckBox, SIGNAL(clicked(bool)), this, SLOT(onLoadSaveOptionsToggled(bool)));
+    connect(ui->dataMarkingsCheckBox, SIGNAL(clicked(bool)), this, SLOT(onLoadSaveOptionsToggled(bool)));
+    connect(ui->dataHistCheckBox, SIGNAL(clicked(bool)), this, SLOT(onLoadSaveOptionsToggled(bool)));
+    connect(ui->quickViewCheckBox, SIGNAL(clicked(bool)), this, SLOT(onLoadSaveOptionsToggled(bool)));
+    connect(ui->comparisonCheckBox, SIGNAL(clicked(bool)), this, SLOT(onLoadSaveOptionsToggled(bool)));
+    connect(ui->guiPosCheckBox, SIGNAL(clicked(bool)), this, SLOT(onLoadSaveOptionsToggled(bool)));
+    connect(ui->globalConfCheckBox, SIGNAL(clicked(bool)), this, SLOT(onLoadSaveOptionsToggled(bool)));
+    connect(guiHelper, SIGNAL(deletedTabsUpdated()), this, SLOT(updateDeletedTabsList()));
+    connect(ui->clearAllTabsPushButton, SIGNAL(clicked()), guiHelper, SLOT(clearDeletedTabs()));
+    connect(ui->deletedTabsListWidget, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(onDeletedTabsDoubleClicked(QModelIndex)));
+    connect(ui->fileSavePushButton, SIGNAL(clicked()), this , SLOT(onAutoSaveFileButtonclicked()));
+    ui->titleListWidget->setCurrentRow(0);
 }
 
 SettingsDialog::~SettingsDialog()
@@ -102,6 +90,65 @@ SettingsDialog::~SettingsDialog()
 void SettingsDialog::setVersionUpdateMessage(QString mess)
 {
     ui->versionCheckedLabel->setText(mess);
+}
+
+void SettingsDialog::initializeConf()
+{
+    // preventing signals to loop back to guiHelper
+    disconnectUpdateSignals();
+    ui->portSpinBox->setValue(guiHelper->getDefaultPort());
+    ui->decodeCheckBox->setChecked(guiHelper->getDefaultServerDecode());
+    ui->encodeCheckBox->setChecked(guiHelper->getDefaultServerEncode());
+    ui->pipeNameLineEdit->setText(guiHelper->getDefaultServerPipeName());
+    ui->autoUpdateCheckBox->setChecked(settings->value(SETTINGS_AUTO_UPDATE, true).toBool());
+    ui->minimizeCheckBox->setChecked(settings->value(SETTINGS_MINIMIZE_TO_TRAY, true).toBool());
+    ui->hexWidget->setChar(guiHelper->getDefaultServerSeparator());
+    ui->ignoreSSLErrCheckBox->setChecked(guiHelper->getIgnoreSSLErrors());
+    ui->enableProxyCheckBox->setChecked(guiHelper->getEnableNetworkProxy());
+    ui->proxyHostLineEdit->setEnabled(ui->enableProxyCheckBox->isChecked());
+    ui->proxyPortSpinBox->setEnabled(ui->enableProxyCheckBox->isChecked());
+    ui->proxyHostLineEdit->setText(guiHelper->getProxyInterface());
+    ui->proxyPortSpinBox->setValue(guiHelper->getProxyPort());
+    ui->autoTextCopyCheckBox->setChecked(guiHelper->isAutoCopyTextTransformGui());
+    ui->autoRestoreCheckBox->setChecked(guiHelper->getAutoRestoreOnStartup());
+
+    int val = ui->offsetBaseComboBox->findText(QString::number(guiHelper->getDefaultOffsetBase()));
+    if (val != -1) {
+        ui->offsetBaseComboBox->setCurrentIndex(val);
+    }
+
+    quint64 stateflags = guiHelper->getDefaultSaveStateFlags();
+    ui->slByteDataCheckBox->setChecked(stateflags & GuiConst::STATE_LOADSAVE_DATA);
+    if (ui->slByteDataCheckBox->isChecked()) {
+        ui->dataMarkingsCheckBox->setEnabled(true);
+        ui->dataHistCheckBox->setEnabled(true);
+    } else {
+        ui->dataMarkingsCheckBox->setEnabled(false);
+        ui->dataHistCheckBox->setEnabled(false);
+    }
+    ui->dataMarkingsCheckBox->setChecked(stateflags & GuiConst::STATE_LOADSAVE_MARKINGS);
+    ui->dataHistCheckBox->setChecked(stateflags & GuiConst::STATE_LOADSAVE_HISTORY);
+    ui->quickViewCheckBox->setChecked(stateflags & GuiConst::STATE_LOADSAVE_QUICKVIEW_CONF);
+    ui->comparisonCheckBox->setChecked(stateflags & GuiConst::STATE_LOADSAVE_COMPARISON);
+    ui->guiPosCheckBox->setChecked(stateflags & GuiConst::STATE_LOADSAVE_DIALOG_POS);
+
+    updateRegisteredList();
+    updateSavedMarkingColors();
+    updateImportExportFuncs();
+    updateFilter();
+
+    ui->defaultTabComboBox->clear();
+    ui->defaultTabComboBox->addItems(GuiConst::AVAILABLE_TAB_STRINGS);
+    ui->defaultTabComboBox->setCurrentIndex(guiHelper->getDefaultNewTab());
+
+    ui->autoSaveGroupBox->setChecked(guiHelper->getAutoSaveState());
+    ui->fileSaveLineEdit->setText(guiHelper->getAutoSaveFileName());
+
+    ui->saveOnExitCheckBox->setChecked(guiHelper->getAutoSaveOnExit());
+    ui->timerSaveCheckBox->setChecked(guiHelper->getAutoSaveTimerEnable());
+    ui->timerSaveSpinBox->setValue(guiHelper->getAutoSaveTimerInterval());
+    //once finished we reconnect everything
+    connectUpdateSignals();
 }
 
 void SettingsDialog::autoUpdateChanged(bool checked)
@@ -243,11 +290,11 @@ void SettingsDialog::updateFilter()
         return;
     }
     QSet<QString> typesBlacklist = guiHelper->getTypesBlacklist();
-    QStandardItem* item = NULL;
+
 
     for (int i = 0; i < typesList.size(); ++i)
     {
-        item = new(std::nothrow) QStandardItem(typesList.at(i));
+        QStandardItem* item = new(std::nothrow) QStandardItem(typesList.at(i));
         if (item != NULL) {
             item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
             item->setData( (typesBlacklist.contains(typesList.at(i)) ? Qt::Unchecked : Qt::Checked), Qt::CheckStateRole);
@@ -258,6 +305,60 @@ void SettingsDialog::updateFilter()
     }
     connect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), guiHelper, SLOT(onFilterChanged(QModelIndex,QModelIndex)));
     ui->filterListView->setModel(model);
+}
+
+void SettingsDialog::updateDeletedTabsList()
+{
+    ui->deletedTabsListWidget->clear();
+    QList<TabAbstract *> list = guiHelper->getDeletedTabs();
+    for (int i = 0; i < list.size(); i++) {
+        DeleteableListItem *itemWid = new(std::nothrow) DeleteableListItem(list.at(i)->getName());
+        if (itemWid != NULL) {
+            connect(itemWid, SIGNAL(itemDeleted(QString)), this, SLOT(onDeletedTabsDeleted(QString)));
+            QListWidgetItem *item = new(std::nothrow) QListWidgetItem();
+            if (item != NULL) {
+                ui->deletedTabsListWidget->addItem(item);
+                ui->deletedTabsListWidget->setItemWidget(item, itemWid);
+            } else {
+                qFatal("Cannot allocate memory for QListWidgetItem DeleteTabs settings X{");
+            }
+        } else {
+            qFatal("Cannot allocate memory for DeleteableListItem DeleteTabs settings X{");
+        }
+    }
+}
+
+void SettingsDialog::onDeletedTabsDeleted(const QString)
+{
+    DeleteableListItem *senderItemWid = dynamic_cast<DeleteableListItem *>(sender());
+    if (senderItemWid == NULL) {
+        qFatal("Cannot cast QObject to  DeleteableListItem X{");
+    }
+
+    // find the corresponding item by iterating the list (sub-optimal I know)
+
+    for (int i = 0; i < ui->deletedTabsListWidget->count(); i++) {
+        QListWidgetItem *item = ui->deletedTabsListWidget->item(i);
+        DeleteableListItem *itemWid = dynamic_cast<DeleteableListItem *>(ui->deletedTabsListWidget->itemWidget(item));
+        if (itemWid == senderItemWid) {
+            TabAbstract * tab = guiHelper->takeDeletedTab(i);
+            delete tab;
+            return; // stopping now
+        }
+    }
+    // if we are here, something went wrong
+    qCritical() << "could not find the item attached to the widget";
+}
+
+void SettingsDialog::onDeletedTabsDoubleClicked(QModelIndex index)
+{
+
+    int row = index.row();
+    QListWidgetItem * item = ui->deletedTabsListWidget->item(row);
+    DeleteableListItem *itemWid = (DeleteableListItem *)ui->deletedTabsListWidget->itemWidget(item);
+    itemWid->deleteLater();
+
+    guiHelper->reviveTab(row);
 }
 
 void SettingsDialog::onImportExportFuncDeletes(const QString &name)
@@ -272,7 +373,7 @@ void SettingsDialog::onResetImportExportFuncs()
 
 void SettingsDialog::onDoubleClickImportExportFuncs(QListWidgetItem *item)
 {
-    DeleteableListItem *itemWid = (DeleteableListItem *)ui->importExportListWidget->itemWidget(item);
+    DeleteableListItem *itemWid = dynamic_cast<DeleteableListItem *>(ui->importExportListWidget->itemWidget(item));
 
     QString name = itemWid->getName();
 
@@ -314,6 +415,7 @@ void SettingsDialog::onAddImportExportFuncs()
     if (itemConfig != NULL) {
         itemConfig->setWayBoxVisible(false);
         itemConfig->setFormatVisible(false);
+        itemConfig->setOutputTypeVisible(false);
         int ret = itemConfig->exec();
         if (ret == QDialog::Accepted) {
             TransformAbstract *ta = itemConfig->getTransform();
@@ -408,31 +510,176 @@ void SettingsDialog::onOffsetBaseChanged(QString val)
 
 void SettingsDialog::onIgnoreSSLErrChanged(bool ignore)
 {
-    QSslConfiguration currentConf = QSslConfiguration::defaultConfiguration();
-    if (ignore) {
-        currentConf.setPeerVerifyMode(QSslSocket::VerifyNone);
-    }
-    else {
-        currentConf.setPeerVerifyMode(QSslSocket::AutoVerifyPeer);
-
-    }
-    QSslConfiguration::setDefaultConfiguration(currentConf);
+    guiHelper->setIgnoreSSLErrors(ignore);
 }
 
 void SettingsDialog::onProxyEnabledChanged(bool proxyEnable)
 {
-    QNetworkProxy networkProxy = guiHelper->getNetworkManager()->proxy();
-    if (proxyEnable) {
-        networkProxy.setType(QNetworkProxy::HttpProxy);
-        networkProxy.setHostName(ui->proxyHostLineEdit->text());
-        networkProxy.setPort(ui->proxyPortSpinBox->value());
-    } else {
-        networkProxy = QNetworkProxy::DefaultProxy;
-    }
-
+    guiHelper->setEnableNetworkProxy(proxyEnable);
     ui->proxyHostLineEdit->setEnabled(proxyEnable);
     ui->proxyPortSpinBox->setEnabled(proxyEnable);
+}
 
-    guiHelper->getNetworkManager()->setProxy(networkProxy);
+void SettingsDialog::onProxyIPChanged(QString ipString)
+{
+    guiHelper->setProxyInterface(ipString);
+}
+
+void SettingsDialog::onProxyPortChanged(int port)
+{
+    guiHelper->setProxyPort((quint16)port);
+}
+
+void SettingsDialog::onDefaultTabChanged(int index)
+{
+    if (index >= 0 && index < GuiConst::AVAILABLE_TAB_STRINGS.size())
+        guiHelper->setDefaultNewTab((GuiConst::AVAILABLE_PRETABS)index);
+    else if (index != -1) {
+        qWarning() << "[SettingsDialog::onDefaultTabChanged] Invalid index value" << index;
+    }
+}
+
+void SettingsDialog::onAutoTextCopyChanged(bool val)
+{
+    guiHelper->setAutoCopyTextTransformGui(val);
+}
+
+void SettingsDialog::onLoadSaveOptionsToggled(bool checked)
+{
+    QObject * o = sender();
+    quint64 flags = guiHelper->getDefaultLoadStateFlags();
+
+    if ( o == ui->slByteDataCheckBox ) {
+        if (checked)
+            flags |= GuiConst::STATE_LOADSAVE_DATA;
+        else
+            flags &= ~GuiConst::STATE_LOADSAVE_DATA;
+    } else if ( o == ui->dataMarkingsCheckBox ) {
+        if (checked)
+            flags |= GuiConst::STATE_LOADSAVE_MARKINGS;
+        else
+            flags &= ~GuiConst::STATE_LOADSAVE_MARKINGS;
+    } else if ( o == ui->dataHistCheckBox ) {
+        if (checked)
+            flags |= GuiConst::STATE_LOADSAVE_HISTORY;
+        else
+            flags &= ~GuiConst::STATE_LOADSAVE_HISTORY;
+    } else if ( o == ui->quickViewCheckBox ) {
+        if (checked)
+            flags |= GuiConst::STATE_LOADSAVE_QUICKVIEW_CONF;
+        else
+            flags &= ~GuiConst::STATE_LOADSAVE_QUICKVIEW_CONF;
+    } else if ( o == ui->comparisonCheckBox ) {
+        if (checked)
+            flags |= GuiConst::STATE_LOADSAVE_COMPARISON;
+        else
+            flags &= ~GuiConst::STATE_LOADSAVE_COMPARISON;
+    } else if ( o == ui->guiPosCheckBox ) {
+        if (checked)
+            flags |= GuiConst::STATE_LOADSAVE_DIALOG_POS;
+        else
+            flags &= ~GuiConst::STATE_LOADSAVE_DIALOG_POS;
+    } else if ( o == ui->globalConfCheckBox ) {
+        if (checked)
+            flags |= GuiConst::STATE_LOADSAVE_GLOBAL_CONF;
+        else
+            flags &= ~GuiConst::STATE_LOADSAVE_GLOBAL_CONF;
+    }
+
+    guiHelper->setDefaultStateFlags(flags);
+}
+
+void SettingsDialog::onAutoSaveToggled(bool checked)
+{
+    guiHelper->setAutoSaveState(checked);
+}
+
+void SettingsDialog::onAutoSaveFileNameChanged(QString name)
+{
+    guiHelper->setAutoSaveFileName(name);
+}
+
+void SettingsDialog::onAutoSaveFileButtonclicked()
+{
+    QString fileName = QFileDialog::getSaveFileName(this,tr("Choose a file to save to"),
+                                                    QDir::homePath().append(QDir::separator()).append(GuiConst::DEFAULT_STATE_FILE));
+    if (!fileName.isEmpty()) {
+        ui->fileSaveLineEdit->setText(fileName);
+    }
+}
+
+void SettingsDialog::onAutoSaveOnExitToggled(bool checked)
+{
+    guiHelper->setAutoSaveOnExit(checked);
+}
+
+void SettingsDialog::onAutoSaveTimerEnableToggled(bool checked)
+{
+    guiHelper->setAutoSaveTimerEnable(checked);
+}
+
+void SettingsDialog::onAutoSaveTimerIntervalChanged(int value)
+{
+    guiHelper->setAutoSaveTimerInterval(value);
+}
+
+void SettingsDialog::onDataSaveToggled(bool checked)
+{
+    ui->dataMarkingsCheckBox->setEnabled(checked);
+    ui->dataHistCheckBox->setEnabled(checked);
+}
+
+void SettingsDialog::onAutoRestoreToggled(bool checked)
+{
+    guiHelper->setAutoRestoreOnStartup(checked);
+}
+
+void SettingsDialog::connectUpdateSignals()
+{
+    connect(ui->autoUpdateCheckBox, SIGNAL(toggled(bool)), this, SLOT(autoUpdateChanged(bool)));
+    connect(ui->minimizeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onMinimizeChanged(bool)));
+    connect(ui->defaultTabComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onDefaultTabChanged(int)));
+    connect(ui->decodeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onServerDecodeChanged(bool)));
+    connect(ui->encodeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onServerEncodeChanged(bool)));
+    connect(ui->portSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onServerPortChanged(int)));
+    connect(ui->pipeNameLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onServerPipeNameChanged(QString)));
+    connect(ui->hexWidget, SIGNAL(charChanged(char)), this, SLOT(onServerSeparatorChanged(char)));
+    connect(ui->offsetBaseComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(onOffsetBaseChanged(QString)));
+    connect(ui->enableProxyCheckBox, SIGNAL(toggled(bool)), this, SLOT(onProxyEnabledChanged(bool)));
+    connect(ui->ignoreSSLErrCheckBox, SIGNAL(toggled(bool)), this, SLOT(onIgnoreSSLErrChanged(bool)));
+    connect(ui->proxyHostLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onProxyIPChanged(QString)));
+    connect(ui->proxyPortSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onProxyPortChanged(int)));
+    connect(ui->autoTextCopyCheckBox, SIGNAL(toggled(bool)), this, SLOT(onAutoTextCopyChanged(bool)));
+    connect(ui->autoSaveGroupBox, SIGNAL(toggled(bool)), this, SLOT(onAutoSaveToggled(bool)));
+    connect(ui->fileSaveLineEdit, SIGNAL(textChanged(QString)), this , SLOT(onAutoSaveFileNameChanged(QString)));
+    connect(ui->saveOnExitCheckBox, SIGNAL(toggled(bool)), this, SLOT(onAutoSaveOnExitToggled(bool)));
+    connect(ui->timerSaveCheckBox, SIGNAL(toggled(bool)), this, SLOT(onAutoSaveTimerEnableToggled(bool)));
+    connect(ui->timerSaveSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onAutoSaveTimerIntervalChanged(int)));
+    connect(ui->slByteDataCheckBox, SIGNAL(toggled(bool)), this , SLOT(onDataSaveToggled(bool)));
+    connect(ui->autoRestoreCheckBox, SIGNAL(toggled(bool)), this, SLOT(onAutoRestoreToggled(bool)));
+}
+
+void SettingsDialog::disconnectUpdateSignals()
+{
+    disconnect(ui->autoUpdateCheckBox, SIGNAL(toggled(bool)), this, SLOT(autoUpdateChanged(bool)));
+    disconnect(ui->minimizeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onMinimizeChanged(bool)));
+    disconnect(ui->defaultTabComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onDefaultTabChanged(int)));
+    disconnect(ui->decodeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onServerDecodeChanged(bool)));
+    disconnect(ui->encodeCheckBox, SIGNAL(toggled(bool)), this, SLOT(onServerEncodeChanged(bool)));
+    disconnect(ui->portSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onServerPortChanged(int)));
+    disconnect(ui->pipeNameLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onServerPipeNameChanged(QString)));
+    disconnect(ui->hexWidget, SIGNAL(charChanged(char)), this, SLOT(onServerSeparatorChanged(char)));
+    disconnect(ui->offsetBaseComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(onOffsetBaseChanged(QString)));
+    disconnect(ui->enableProxyCheckBox, SIGNAL(toggled(bool)), this, SLOT(onProxyEnabledChanged(bool)));
+    disconnect(ui->ignoreSSLErrCheckBox, SIGNAL(toggled(bool)), this, SLOT(onIgnoreSSLErrChanged(bool)));
+    disconnect(ui->proxyHostLineEdit, SIGNAL(textChanged(QString)), this, SLOT(onProxyIPChanged(QString)));
+    disconnect(ui->proxyPortSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onProxyPortChanged(int)));
+    disconnect(ui->autoTextCopyCheckBox, SIGNAL(toggled(bool)), this, SLOT(onAutoTextCopyChanged(bool)));
+    disconnect(ui->autoSaveGroupBox, SIGNAL(toggled(bool)), this, SLOT(onAutoSaveToggled(bool)));
+    disconnect(ui->fileSaveLineEdit, SIGNAL(textChanged(QString)), this , SLOT(onAutoSaveFileNameChanged(QString)));
+    disconnect(ui->saveOnExitCheckBox, SIGNAL(toggled(bool)), this, SLOT(onAutoSaveOnExitToggled(bool)));
+    disconnect(ui->timerSaveCheckBox, SIGNAL(toggled(bool)), this, SLOT(onAutoSaveTimerEnableToggled(bool)));
+    disconnect(ui->timerSaveSpinBox, SIGNAL(valueChanged(int)), this, SLOT(onAutoSaveTimerIntervalChanged(int)));
+    disconnect(ui->autoRestoreCheckBox, SIGNAL(toggled(bool)), this, SLOT(onAutoRestoreToggled(bool)));
 }
 

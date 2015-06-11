@@ -29,10 +29,11 @@ AboutDialog::AboutDialog(GuiHelper *guiHelper, QWidget *parent) :
     QString info;
 
     info.append(tr("<p>Compiled with <b>Qt %1</b> (currently running with Qt %2)</p>").arg(QT_VERSION_STR).arg(qVersion()));
+    info.append(tr("Architecture: %1bit").arg(QSysInfo::WordSize));
     info.append(tr("<p>Git branch: %1<br/>").arg(GIT_BRANCH));
     info.append(tr("Git commit: %1</p>").arg(GIT_COMMIT));
-    QStyle *currentStyle = QApplication::style();
-    qDebug() << "Style" << currentStyle;
+  //  QStyle *currentStyle = QApplication::style();
+    //qDebug() << "Style" << currentStyle;
     info.append(tr("<p>Current style: %1</p>").arg(QApplication::style()->objectName()));
     info.append(tr("<p>Style(s) available on this platform: <ul>"));
     QStringList stylelist = QStyleFactory::keys();

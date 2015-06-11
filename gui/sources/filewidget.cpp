@@ -13,6 +13,7 @@ Released under AGPL see LICENSE for more information
 #include "largefile.h"
 #include "../shared/searchwidget.h"
 #include "../guihelper.h"
+#include "../shared/searchresultswidget.h"
 #include <QFileInfo>
 #include <QTimer>
 #include <QTimerEvent>
@@ -29,62 +30,20 @@ FileWidget::FileWidget(LargeFile *fsource, QWidget *parent) :
     ui = new(std::nothrow) Ui::FileWidget;
     ui->setupUi(this);
 
-    ui->resultWidget->setVisible(false);
-
-    itemsFoundModel = new(std::nothrow) FoundOffsetsModel();
-    if (itemsFoundModel == NULL) {
-        qFatal("Cannot allocate memory for SearchItemModel X{");
-    }
-
-    ui->itemsFoundListView->setModel(itemsFoundModel);
-    ui->itemsFoundListView->setUniformItemSizes(true);
-    ui->itemsFoundListView->setLayoutMode(QListView::Batched);
-
-    searchWidget = new(std::nothrow) SearchWidget(fsource,this);
-    if (searchWidget == NULL) {
-        qFatal("Cannot allocate memory for SearchWidget X{");
-    }
-    searchWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
-    ui->mainLayout->insertWidget(ui->mainLayout->indexOf(ui->statsWidget) + 1, searchWidget);
-    connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
-
-    multiSearch = new(std::nothrow) FileSearch(source->fileName());
-    if (multiSearch == NULL) {
-        qFatal("Cannot allocate memory for SearchWidget X{");
-    }
-    connect(multiSearch, SIGNAL(searchStarted()), searchWidget, SLOT(onSearchStarted()));
-    connect(multiSearch, SIGNAL(searchEnded()), searchWidget, SLOT(onSearchEnded()));
-    connect(multiSearch, SIGNAL(searchEnded()), SLOT(onEndSearch()));
-   // connect(multiSearch, SIGNAL(progressUpdate(quint64)), searchWidget, SLOT(updateProgress(quint64))); this should not be needed anymore
-    connect (multiSearch, SIGNAL(progressStatus(double)), searchWidget, SLOT(updateStatusProgress(double)));
-    connect(multiSearch, SIGNAL(itemFound(quint64,quint64)), SLOT(itemFound(quint64,quint64)));
-    connect(searchWidget, SIGNAL(stopSearch()), multiSearch, SLOT(stopSearch()));
-
     refresh();
     connect(source,SIGNAL(infoUpdated()), SLOT(refresh()));
     connect(ui->refreshPushButton, SIGNAL(clicked()), SLOT(refresh()));
-    connect(ui->itemsFoundListView, SIGNAL(doubleClicked(QModelIndex)), SLOT(onDoubleClick(QModelIndex)));
 }
 
 FileWidget::~FileWidget()
 {
     qDebug() << this << "destroyed";
     delete ui;
-    delete multiSearch;
 }
 
 QSize FileWidget::sizeHint() const
 {
     return QSize(400,500);
-}
-
-void FileWidget::onSearch(QByteArray item,QBitArray mask, bool)
-{
-    itemsFoundModel->clear();
-    ui->resultLabel->setText(QString());
-    source->clearAllMarkings();
-    multiSearch->setSearchItem(item,mask);
-    multiSearch->startThreadedSearch();
 }
 
 void FileWidget::refresh()
@@ -119,29 +78,6 @@ void FileWidget::refresh()
         perms.append("Hidden file");
 
     ui->rightsTextLabel->setText(perms);
-    searchWidget->clearSearch();
-    itemsFoundModel->clear();
 }
 
-void FileWidget::itemFound(quint64 soffset, quint64 eoffset)
-{
-    itemsFoundModel->addOffset(soffset, eoffset);
-    source->markNoUpdate(soffset, eoffset, QColor(255,182,117));
-}
-
-void FileWidget::onDoubleClick(QModelIndex index)
-{
-    quint64 offset = itemsFoundModel->getStartingOffset(index);
-    source->setStartingOffset(offset);
-}
-
-void FileWidget::onEndSearch()
-{
-    if (itemsFoundModel->rowCount() > 0)
-        ui->resultLabel->setText(QString::number(itemsFoundModel->rowCount()));
-    else
-        ui->resultLabel->setText(tr("Nothing found"));
-
-    ui->resultWidget->setVisible(true);
-}
 

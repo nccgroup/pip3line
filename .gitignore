@@ -19,3 +19,4 @@ unittests/build-*
 pip3line.kdev4
 extras/burp_plugin/bin
 *.jardesc
+extras/burp_plugin/.classpath

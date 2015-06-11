@@ -36,6 +36,9 @@
         <file>icons/system-switch-user-3.png</file>
         <file>icons/arrow-left-3.png</file>
         <file>icons/arrow-right-3-mod.png</file>
+        <file>icons/edit-copy-3.png</file>
+        <file>icons/edit-copy-4.png</file>
+        <file>icons/object-rotate-right_out.png</file>
     </qresource>
     <qresource prefix="/xmlconfs">
         <file>defaultsxml/base32decode.xml</file>

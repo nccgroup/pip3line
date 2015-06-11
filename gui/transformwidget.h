@@ -30,6 +30,7 @@ Released under AGPL see LICENSE for more information
 #include "guihelper.h"
 #include "loggerwidget.h"
 #include "views/byteitemmodel.h"
+#include "shared/guiconst.h"
 
 class HexView;
 class TextView;
@@ -57,6 +58,8 @@ class TransformWidget : public QWidget
         bool setTransform(TransformAbstract *transf);
         ByteSourceAbstract * getSource();
         ByteTableView *getHexTableView();
+        void copyTextToClipboard();
+        BaseStateAbstract *getStateMngtObj();
     signals:
         void updated();
         void transfoRequest(TransformWidget *);
@@ -76,6 +79,8 @@ class TransformWidget : public QWidget
         void logStatus(const QString message, const QString source = QString());
         void reset();
         void fromLocalFile(QString fileName);
+        void deleteMe();
+        void setAutoCopyTextToClipboard(bool val);
     private slots:
         void refreshOutput();
         void onFileLoadRequest();
@@ -89,7 +94,7 @@ class TransformWidget : public QWidget
         void onHistoryForward();
         void on_encodeRadioButton_toggled(bool checked);
         void on_decodeRadioButton_toggled(bool checked);
-        void on_deleteButton_clicked();
+
         void on_infoPushButton_clicked();
         void on_clearDataPushButton_clicked();
         void onSearch(QByteArray item, QBitArray mask, bool couldBeText);
@@ -123,7 +128,19 @@ class TransformWidget : public QWidget
         SearchWidget *searchWidget;
         ClearAllMarkingsButton * clearAllMarkingsButton;
         MessagePanelWidget* messagePanel;
+
+        friend class TransformWidgetStateObj;
 };
 
+class TransformWidgetStateObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit TransformWidgetStateObj(TransformWidget *tw);
+        ~TransformWidgetStateObj();
+        void run();
 
+    private:
+        TransformWidget *tw;
+};
 #endif // TRANSFORMWIDGET_H

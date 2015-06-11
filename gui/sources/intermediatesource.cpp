@@ -12,7 +12,7 @@ IntermediateSource::IntermediateSource(GuiHelper *guiHelper,
     BasicSource(parent),
     guiHelper(guiHelper),
     original(originalSource),
-    wrapperTransform(transform) // needs to be the only instance
+    wrapperTransform(transform) // Taking ownership of the instance
 {
 
     if (oriStartOffset < oriEndOffset) { // stupidity check
@@ -46,57 +46,54 @@ IntermediateSource::~IntermediateSource()
 
 void IntermediateSource::setData(QByteArray data, quintptr source)
 {
-    if (!_readonly) {
+    if (!checkReadOnly()) {
         if (rawData != data) {
             rawData = data;
             if (!rawData.isEmpty()) {
                 onCurrentUpdated();
             }
             emit updated(source);
+            emit sizeChanged();
+            emit reset();
         }
-    } else {
-        qCritical() << tr("%1 The source is readonly").arg(metaObject()->className());
     }
 }
 
 void IntermediateSource::replace(quint64 offset, int length, QByteArray repData, quintptr source)
 {
-    if (!_readonly) {
+    if (!checkReadOnly()) {
         BasicSource::replace(offset,length, repData,source);
         onCurrentUpdated();
-    } else {
-        qCritical() << tr("%1 The source is readonly").arg(metaObject()->className());
     }
 }
 
 void IntermediateSource::insert(quint64 offset, QByteArray repData, quintptr source)
 {
-    if (!_readonly) {
+    if (!checkReadOnly()) {
         BasicSource::insert(offset,repData,source);
         onCurrentUpdated();
-    } else {
-        qCritical() << tr("%1 The source is readonly").arg(metaObject()->className());
     }
 }
 
 void IntermediateSource::remove(quint64 offset, int length, quintptr source)
 {
-    if (!_readonly) {
+    if (!checkReadOnly()) {
         BasicSource::remove(offset,length,source);
         onCurrentUpdated();
-    } else {
-        qCritical() << tr("%1 The source is readonly").arg(metaObject()->className());
     }
 }
 
 void IntermediateSource::clear(quintptr source)
 {
-    if (!_readonly) {
+    if (!checkReadOnly()) {
         BasicSource::clear(source);
         onCurrentUpdated();
-    } else {
-        qCritical() << tr("%1 The source is readonly").arg(metaObject()->className());
     }
+}
+
+void IntermediateSource::fromLocalFile(QString )
+{
+    emit log(tr("Load file not implemented"),metaObject()->className(),Pip3lineConst::LERROR);
 }
 
 void IntermediateSource::onOriginalUpdated(quintptr source)
@@ -104,13 +101,7 @@ void IntermediateSource::onOriginalUpdated(quintptr source)
     if (source == (quintptr) this)
         return;
 
-    quint64 temp = qMin(endOffset - startOffset,qMin(original->size(), (quint64)INT_MAX));
-
-    if (temp > INT_MAX) {
-        length = INT_MAX;
-    } else {
-        length = (int)temp;
-    }
+    onOriginalSizeChanged();
 
     QByteArray oriData = original->extract(startOffset, length);
     if (wrapperTransform != NULL && !oriData.isEmpty()) {
@@ -162,7 +153,7 @@ void IntermediateSource::inboundProcessingFinished(QByteArray data, Messages mes
     for (int i = 0; i < messages.size() ; i++) {
         emit log(messages.at(i).message,messages.at(i).source, messages.at(i).level);
     }
-    emit updated(INVALID_SOURCE); // this will reinitialise all views [TBI]
+    emit updated(INVALID_SOURCE); // this will reinitialise all views using this source
 }
 
 void IntermediateSource::outboundProcessingFinished(QByteArray data, Messages messages)
@@ -192,5 +183,3 @@ void IntermediateSource::onOriginalSizeChanged()
         length = (int)temp;
     }
 }
-
-

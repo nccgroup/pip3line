@@ -17,8 +17,6 @@ Released under AGPL see LICENSE for more information
 #include <QCryptographicHash>
 #include <QDebug>
 
-const int TcpListener::BLOCK_MAX_SIZE = 0x8000000;
-
 TcpListener::TcpListener(
 #if QT_VERSION >= 0x050000
     qintptr nsocketDescriptor,
@@ -55,6 +53,10 @@ bool TcpListener::startListening()
 {
    // qDebug() << "Socket starts processing";
 
+   if (socket != NULL) {
+        qCritical() << metaObject()->className() << tr("socket already exist, ignoring");
+        return false;
+   }
     socket = new(std::nothrow) QTcpSocket();
     if (socket == NULL) {
         qFatal("Cannot allocate memory for QTcpSocket X{");
@@ -87,9 +89,10 @@ void TcpListener::stopListening()
 {
     if (socket != NULL) {
         socket->disconnectFromHost();
+		delete socket;
+		socket = NULL;
     }
-    delete socket;
-    socket = NULL;
+    
     qDebug() << tr("End of client processing %1:%2").arg(remotePeerAddress.toString()).arg(remotePort);
     if (!tempData.isEmpty()) {
         processBlock(tempData);
@@ -155,7 +158,7 @@ void TcpListener::processBlock(QByteArray data)
     if (data.isEmpty()){
         QString mess = tr("Received data block is empty, ignoring.");
         qWarning() << metaObject()->className() << mess;
-        emit error(mess,metaObject()->className());
+        emit log(mess,metaObject()->className(), Pip3lineConst::LERROR);
         return;
     }
 
@@ -164,7 +167,7 @@ void TcpListener::processBlock(QByteArray data)
         if (data.isEmpty()){
             QString mess = tr("Base64 decoded received data block is empty, ignoring.");
             qWarning() << metaObject()->className() << mess;
-            emit error(mess,metaObject()->className());
+            emit log(mess,metaObject()->className(), Pip3lineConst::LERROR);
             return;
         }
     }

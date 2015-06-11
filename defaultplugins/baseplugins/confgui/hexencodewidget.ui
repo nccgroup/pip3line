@@ -59,6 +59,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="addPrefixCheckBox">
+     <property name="text">
+      <string>Add &quot;0x&quot; prefix (only applicable to normal mode)</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>

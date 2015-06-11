@@ -16,8 +16,9 @@ Released under AGPL see LICENSE for more information
 #include <transformmgmt.h>
 #include <threadedprocessor.h>
 
-SingleViewAbstract::SingleViewAbstract(ByteSourceAbstract *dataModel,GuiHelper *nguiHelper, QWidget *parent) :
-    QWidget(parent)
+SingleViewAbstract::SingleViewAbstract(ByteSourceAbstract *dataModel,GuiHelper *nguiHelper, QWidget *parent, bool takeByteSourceOwnership) :
+    QWidget(parent),
+    hasSourceOwnership(takeByteSourceOwnership)
 {
     byteSource = dataModel;
     guiHelper = nguiHelper;
@@ -26,6 +27,9 @@ SingleViewAbstract::SingleViewAbstract(ByteSourceAbstract *dataModel,GuiHelper *
 
 SingleViewAbstract::~SingleViewAbstract()
 {
+    if (hasSourceOwnership) {
+        delete byteSource;
+    }
     byteSource = NULL;
     logger = NULL;
 }

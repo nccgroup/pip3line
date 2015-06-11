@@ -12,21 +12,34 @@ Released under AGPL see LICENSE for more information
 #include "textinputdialog.h"
 #include "tabs/transformsgui.h"
 #include "tabs/generictab.h"
+#include "tabs/randomaccesstab.h"
 #include <QMouseEvent>
 #include <QFileInfo>
 #include <QDebug>
+#include <QFileDialog>
+#include <QAction>
+#include "shared/guiconst.h"
+#include "state/closingstate.h"
+#include "sources/largefile.h"
+#include "sources/intercepsource.h"
+#include "sources/basicsource.h"
+#include "sources/largefile.h"
+#include "sources/currentmemorysource.h"
+
+using namespace GuiConst;
 
 const QString MainTabs::ID = "MainTabs";
-const uint MainTabs::DEFAULT_MAX_TAB_COUNT = 50;
+const QString MainTabs::STATE_LOGGER_TAB = "LoggerTab";
 
 MainTabs::MainTabs(GuiHelper *nguiHelper, QWidget *parent) :
     QTabWidget(parent)
 {
+    deletedTabContextMenu = NULL;
     tabBarRef = tabBar();
     tabBarRef->installEventFilter(this);
 
     tabCount = 1;
-    maxTabCount = DEFAULT_MAX_TAB_COUNT;
+    maxTabCount = GuiConst::DEFAULT_MAX_TAB_COUNT;
 
     setTabsClosable(true);
     setMovable(true);
@@ -43,20 +56,28 @@ MainTabs::MainTabs(GuiHelper *nguiHelper, QWidget *parent) :
         if (logger->hasUncheckedError())
             tabBarRef->setTabTextColor(index, Qt::red);
     }
-    newTabTransform();
+
+    deletedTabContextMenu = new(std::nothrow) QMenu();
+    if (deletedTabContextMenu == NULL) {
+        qFatal("Cannot allocate memory for deletedTabContextMenu X{");
+        return;
+    }
+    connect(guiHelper, SIGNAL(deletedTabsUpdated()), this, SLOT(updateDeletedTabMenu()));
+    connect(deletedTabContextMenu, SIGNAL(triggered(QAction*)), this, SLOT(onDeletedTabSelected(QAction*)));
+    connect(guiHelper, SIGNAL(tabRevived(TabAbstract*)), this, SLOT(integrateTab(TabAbstract*)));
+
+    this->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this,SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onContextMenuRequested(QPoint)));
+
 }
 
 MainTabs::~MainTabs()
 {
-    QHashIterator<TabAbstract *, bool> i(tabList);
-    while (i.hasNext()) {
-     i.next();
-     delete i.key();
-    }
-    tabList.clear();
+    clearTabs();
     logger = NULL;
     guiHelper = NULL;
     tabBarRef = NULL;
+    delete deletedTabContextMenu;
 }
 
 bool MainTabs::eventFilter(QObject *receiver, QEvent *event)
@@ -78,21 +99,13 @@ bool MainTabs::eventFilter(QObject *receiver, QEvent *event)
                 return true;  //no further handling of this event is required
             }
         }
-        // not usefull right now, probably never will...
-//            else if (event->type() == QEvent::MouseButtonPress) {
-//                QPoint posGlobal = me->globalPos();
-//                int clickedTabId = tabBarRef->tabAt(me->pos());
-//                qDebug() << "pressing on tab " << clickedTabId << " x:" << posGlobal.rx() << " y:" << posGlobal.ry();
-//            } else if (event->type() == QEvent::MouseButtonRelease) {
-//                QPoint posGlobal = me->globalPos();
-//                qDebug() << "releasing on tab" << posGlobal.rx() << " y:" << posGlobal.ry();
-//            }  else if (event->type() == QEvent::MouseMove) {
-
-//                QPoint posGlobal = me->globalPos();
-//                qDebug() << "Moving on tab" << posGlobal.rx() << posGlobal.ry();
-//            }
-        }
+    }
     return result;
+}
+
+LoggerWidget *MainTabs::getLogger() const
+{
+    return logger;
 }
 
 void MainTabs::askForRenaming(int index)
@@ -105,22 +118,8 @@ void MainTabs::askForRenaming(int index)
             if (res == QDialog::Accepted && !newName.isEmpty()) {
                 static_cast<TabAbstract *>(widget(index))->setName(newName);
             }
-
             delete dia;
         }
-    }
-}
-
-void MainTabs::loadFile(QString fileName)
-{
-    int index = 0;
-    if (count() - (indexOf(logger) == -1? 0 : 1) == 0) {
-        index = newTabTransform();
-    }
-
-    if (index > -1) {
-        TabAbstract * tg = static_cast<TabAbstract *>(widget(index));
-        tg->loadFromFile(fileName);
     }
 }
 
@@ -132,19 +131,21 @@ int MainTabs::integrateTab(TabAbstract *newTab)
         return nextInsert;
     }
 
-    nextInsert = count() - ((indexOf(logger) == -1)? 0 : 1);
-    connect(newTab, SIGNAL(askWindowTabSwitch()), this, SLOT(receivedTabWindowSwitch()));
+    nextInsert = count() - ((indexOf(logger) == -1) ? 0 : 1);
+    connect(newTab, SIGNAL(askWindowTabSwitch()), this, SLOT(receivedTabWindowSwitch()), Qt::UniqueConnection);
 
     tabList.insert(newTab,false);
 
     QString tabName = newTab->getName();
     if (tabName.isEmpty()) {
-        tabName = tr("%1").arg(tabCount);
+        // some people have a fat mouse pointer and have difficulties ... so we need to add some padding ...
+        tabName = tr("   %1  ").arg(tabCount);
         newTab->setName(tabName);
     }
 
-    connect(newTab, SIGNAL(nameChanged()), this, SLOT(receivedNameChanged()));
-    connect(newTab, SIGNAL(askBringFront()), this, SLOT(receivedBringToFront()));
+    connect(newTab, SIGNAL(nameChanged()), this, SLOT(receivedNameChanged()), Qt::UniqueConnection);
+    connect(newTab, SIGNAL(askBringFront()), this, SLOT(receivedBringToFront()), Qt::UniqueConnection);
+
     insertTab(nextInsert, newTab, tabName);
     setCurrentIndex(nextInsert);
     guiHelper->addTab(newTab);
@@ -152,26 +153,208 @@ int MainTabs::integrateTab(TabAbstract *newTab)
     return nextInsert;
 }
 
-int MainTabs::newTabTransform(const QByteArray &initialValue, const QString &conf)
+void MainTabs::clearTabs()
 {
-    int ret = -1;
+    QHashIterator<TabAbstract *, bool> i(tabList);
+    while (i.hasNext()) {
+        i.next();
+        delete i.key();
+    }
+
+    guiHelper->clearDeletedTabs();
+    tabList.clear();
+    clearFloatingWindows();
+    hideLogs();
+}
+
+void MainTabs::clearFloatingWindows()
+{
+    QHashIterator<TabAbstract *, FloatingDialog *> i(activeWindows);
+    while (i.hasNext()) {
+        i.next();
+        delete i.value();
+    }
+    activeWindows.clear();
+}
+
+void MainTabs::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::EnabledChange) {
+        QList<FloatingDialog *> list = activeWindows.values();
+        bool enableValue = isEnabled();
+        for (int i = 0; i < list.size(); i++) {
+            list.at(i)->setEnabled(enableValue);
+        }
+    }
+}
+
+BaseStateAbstract *MainTabs::getStateMngtObj()
+{
+    MainTabsStateObj *mainTabStateObj = new(std::nothrow) MainTabsStateObj(this);
+    if (mainTabStateObj == NULL) {
+        qFatal("Cannot allocate memory for MainTabsStateObj X{");
+    }
+
+    return mainTabStateObj;
+}
+
+bool MainTabs::isLoggerVisible()
+{
+    int index = indexOf(logger);
+    return index != -1;
+}
+
+TabAbstract * MainTabs::newTab(ByteSourceAbstract *bs,GuiConst::TAB_TYPES type, int *index)
+{
+    TabAbstract *newtab = NULL;
+
     if (tabCount > maxTabCount) {
         logger->logError(tr("Reached the maximum number of allowed tabs"));
-        return ret;
+        return newtab;
     }
 
-    TransformsGui *newTab = new(std::nothrow) TransformsGui(guiHelper, this);
-    if (newTab != NULL) {
-        ret = integrateTab(newTab);
-        newTab->setCurrentChainConf(conf);
+    switch (type) {
+        case GuiConst::TRANSFORM_TAB_TYPE:
+            newtab = new(std::nothrow) TransformsGui(guiHelper, this);
+            if (newtab == NULL) {
+                qFatal("Cannot allocate memory for TransformsGui X{");
+            }
+            break;
+        case GuiConst::RANDOM_ACCESS_TAB_TYPE:
+            newtab= new(std::nothrow) RandomAccessTab(bs,guiHelper,this);
+            if (newtab == NULL) {
+                qFatal("Cannot allocate memory for RandomAccessTab X{");
+            }
+            break;
+        case GuiConst::GENERIC_TAB_TYPE:
+            newtab = new(std::nothrow) GenericTab(bs,guiHelper,this);
+            if (newtab == NULL) {
+                qFatal("Cannot allocate memory for GenericTab X{");
+            }
+            break;
+        default:
+            qCritical() << tr("[newTab]Invalid tab type %1").arg(type);
+    }
+
+    if (newtab != NULL) {
+        int ret = integrateTab(newtab);
+        if (index != NULL)
+            (*index) = ret;
+    }
+
+    return newtab;
+}
+
+TabAbstract *MainTabs::newPreTab(GuiConst::AVAILABLE_PRETABS preType)
+{
+    TabAbstract * ta = NULL;
+    switch(preType) {
+        case (TRANSFORM_PRETAB):
+            ta = newTabTransform();
+            break;
+        case (HEXAEDITOR_PRETAB):
+            ta = newHexEditorTab();
+            break;
+        case (LARGE_FILE_PRETAB):
+            ta = newFileTab();
+            break;
+        case (INTERCEPT_PRETAB):
+            ta = newInterceptTab();
+            break;
+        case (CURRENTMEM_PRETAB):
+            ta = newCurrentMemTab();
+            break;
+        default:
+            qCritical() << tr("[MainTabs::newPreTab] Invalid pretype value %1").arg(preType);
+    }
+    return ta;
+}
+
+TabAbstract *MainTabs::newTabTransform(const QByteArray &initialValue, const QString &conf)
+{
+    int ret = -1;
+
+    TransformsGui *nt = static_cast<TransformsGui *>(newTab(NULL, GuiConst::TRANSFORM_TAB_TYPE, &ret));
+    if (nt != NULL) {
+        nt->setPreTabType(GuiConst::TRANSFORM_PRETAB);
+        nt->setCurrentChainConf(conf);
         if (!initialValue.isEmpty())
-            newTab->setData(initialValue);
+            nt->setData(initialValue);
         guiHelper->raisePip3lineWindow();
-    } else {
-        qFatal("Cannot allocate memory for newTab X{");
     }
 
-    return ret;
+    return nt;
+}
+
+TabAbstract * MainTabs::newFileTab(QString fileName)
+{
+    LargeFile *fs = new(std::nothrow) LargeFile();
+    if (fs == NULL) {
+        qFatal("Cannot allocate memory for FileSource X{");
+    }
+
+    if (!fileName.isEmpty())
+        fs->fromLocalFile(fileName);
+    connect(fs,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+
+    TabAbstract *ft = newTab(fs, GuiConst::RANDOM_ACCESS_TAB_TYPE);
+    if (ft != NULL) {
+        ft->setPreTabType(GuiConst::LARGE_FILE_PRETAB);
+        ft->setName(QFileInfo(fileName).fileName());
+    }
+
+    return ft;
+}
+
+TabAbstract * MainTabs::newHexEditorTab(QByteArray data)
+{
+    BasicSource * bs = new(std::nothrow) BasicSource();
+    if (bs == NULL) {
+        qFatal("Cannot allocate memory for BasicSearch X{");
+    }
+    connect(bs,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+
+    TabAbstract *tab = newTab(bs, GuiConst::GENERIC_TAB_TYPE);
+    if (tab != NULL) {
+        tab->setPreTabType(GuiConst::HEXAEDITOR_PRETAB);
+        tab->setName(GuiConst::BASEHEX_TAB_STRING);
+        tab->setData(data);
+    }
+
+    return tab;
+}
+
+TabAbstract * MainTabs::newInterceptTab()
+{
+    IntercepSource * is = new(std::nothrow) IntercepSource();
+    if (is == NULL) {
+        qFatal("Cannot allocate memory for IntercepSource X{");
+    }
+    connect(is,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+
+    TabAbstract *tab = newTab(is, GuiConst::GENERIC_TAB_TYPE);
+    if (tab != NULL) {
+        tab->setPreTabType(GuiConst::INTERCEPT_PRETAB);
+    }
+
+    return tab;
+}
+
+TabAbstract * MainTabs::newCurrentMemTab()
+{
+    CurrentMemorysource *cms = new(std::nothrow) CurrentMemorysource();
+    if (cms == NULL) {
+        qFatal("Cannot allocate memory for CurrentMemorysource X{");
+    }
+    connect(cms,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)),Qt::QueuedConnection);
+
+    TabAbstract *raTab = newTab(cms, GuiConst::RANDOM_ACCESS_TAB_TYPE);
+    if (raTab != NULL) {
+        raTab->setPreTabType(GuiConst::CURRENTMEM_PRETAB);
+        raTab->setName("Current memory");
+    }
+
+    return raTab;
 }
 
 void MainTabs::onDeleteTab(int index)
@@ -182,7 +365,9 @@ void MainTabs::onDeleteTab(int index)
 
         removeTab(index);
         tabList.remove(tgui);
-        delete tgui;
+        guiHelper->removeTab(tgui);
+        guiHelper->addDeletedTab(tgui);
+      //  delete tgui;
         setCurrentIndex(index > 0 ? index - 1 : 0);
     } else {
         removeTab(index);
@@ -193,9 +378,17 @@ void MainTabs::showLogs()
 {
     int index = indexOf(logger);
     if (index == -1) {
-        index = addTab(logger, tr("Logs"));
+        index = addTab(logger, GuiConst::LOGS_STR);
     }
     setCurrentIndex(index);
+}
+
+void MainTabs::hideLogs()
+{
+    int index = indexOf(logger);
+    if (index != -1) {
+        removeTab(index);
+    }
 }
 
 void MainTabs::onLogError()
@@ -218,16 +411,28 @@ void MainTabs::onLogCleanStatus()
 void MainTabs::receivedNameChanged()
 {
     TabAbstract *tab = dynamic_cast<TabAbstract *>(sender());
-    int index = indexOf(tab);
-    if (index == -1) {
-        qWarning("[MainTabs] Tab %d not found when renaming T_T",index);
+    if (tab == NULL) {
+        qCritical() << tr("[MainTabs::receivedNameChanged] tab is null after type casting T_T");
         return;
     }
     QString name = tab->getName();
-    if (index != -1 && !name.isEmpty()) {
-        tabBarRef->setTabText(index,name);
-        guiHelper->addTab(tab);
+    if (name.isEmpty()) {
+        logger->logWarning(tr("New name empty during renaming process, ignoring."), ID);
+        return;
     }
+    int index = indexOf(tab);
+    if (index == -1) {
+        if (activeWindows.contains(tab)) {
+            activeWindows.value(tab)->setWindowTitle(name);
+        } else {
+            qWarning("[MainTabs::receivedNameChanged] Tab %d not found when renaming T_T",index);
+            return;
+        }
+    } else {
+        tabBarRef->setTabText(index,name);
+    }
+    // if we are here, then the name was updated sucessfully
+    guiHelper->tabNameUpdated(tab);
 }
 
 void MainTabs::receivedTabWindowSwitch()
@@ -255,13 +460,12 @@ void MainTabs::receivedTabWindowSwitch()
     }
 }
 
-void MainTabs::detachTab(TabAbstract *tab)
+void MainTabs::detachTab(TabAbstract *tab, QByteArray windowState)
 {
     int index = indexOf(tab);
     if (index == -1) {
         qWarning("[MainTabs] Tab not found when switching tab -> window T_T");
     } else {
-
         removeTab(index);
         if (count() != 0)
             setCurrentIndex(0);
@@ -269,6 +473,8 @@ void MainTabs::detachTab(TabAbstract *tab)
         if (fd != NULL) {
             activeWindows.insert(tab, fd);
             fd->setWindowTitle(tab->getName());
+            if (!windowState.isEmpty())
+                fd->restoreGeometry(windowState);
             fd->raise();
             fd->show();
             tabList.insert(tab,true);
@@ -316,3 +522,268 @@ void MainTabs::onFloatingWindowsReject()
         }
     }
 }
+
+void MainTabs::onContextMenuRequested(QPoint pos)
+{
+    deletedTabContextMenu->exec(this->mapToGlobal(pos));
+}
+
+void MainTabs::updateDeletedTabMenu()
+{
+    deletedTabContextMenu->clear();
+
+    QList<TabAbstract *> list = guiHelper->getDeletedTabs();
+    if (list.size() > 0) {
+        QAction * action = new(std::nothrow) QAction(tr("Deleted Tabs"), deletedTabContextMenu);
+        if (action == NULL) {
+            qFatal("Cannot allocate memory for action for \"deleted tab\" X{");
+            return;
+        }
+        action->setDisabled(true);
+        deletedTabContextMenu->addAction(action);
+        deletedTabContextMenu->addSeparator();
+
+        for (int i = 0; i < list.size(); i++) {
+            action = new(std::nothrow) QAction(list.at(i)->getName(), deletedTabContextMenu);
+            if (action == NULL) {
+                qFatal("Cannot allocate memory for action for deletedTabContextMenu X{");
+                return;
+            }
+            deletedTabContextMenu->addAction(action);
+        }
+    }
+}
+
+void MainTabs::onDeletedTabSelected(QAction *action)
+{
+
+    if (tabCount > maxTabCount) {
+        logger->logError(tr("Reached the maximum number of allowed tabs, cannot revive the deleted tab."));
+        return;
+    }
+
+    QList<QAction*> actions = deletedTabContextMenu->actions();
+    int index = actions.indexOf(action);
+    if (index > 1) {
+        index = index - 2; // decreasing the index due to the title and the separator
+        guiHelper->reviveTab(index);
+    } else {
+        qCritical() << "[MainTabs::onDeletedTabSelected] index not found";
+    }
+}
+
+
+MainTabsStateObj::MainTabsStateObj(MainTabs *target) :
+    mtabs(target)
+{
+    setName(mtabs->metaObject()->className());
+}
+
+MainTabsStateObj::~MainTabsStateObj()
+{
+
+}
+
+void MainTabsStateObj::run()
+{
+
+    MainTabsClosingObj *closingState = new(std::nothrow) MainTabsClosingObj(mtabs);
+    if (closingState == NULL) {
+        qFatal("Cannot allocate memory for MainTabsClosingObj X{");
+    }
+
+    emit addNewState(closingState);
+
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+        writer->writeStartElement(GuiConst::STATE_TABS_ARRAY);
+        writer->writeAttribute(GuiConst::STATE_MAINTABS_LOGGER, write(mtabs->isLoggerVisible()));
+        writer->writeAttribute(GuiConst::STATE_CURRENT_INDEX, write(mtabs->currentIndex()));
+
+        int listSize = mtabs->count();
+
+
+        QWidget *logger = mtabs->getLogger();
+        writer->writeAttribute(GuiConst::STATE_LOGGER_INDEX, write(mtabs->indexOf(logger)));
+        int numberOfTabs = listSize - (mtabs->indexOf(logger) != -1 ? 1 : 0);
+        QList<TabAbstract *> windowedTabs = mtabs->activeWindows.keys();
+        numberOfTabs += windowedTabs.count();
+        writer->writeAttribute(GuiConst::STATE_SIZE, write(numberOfTabs));
+
+
+        for (int i = listSize - 1; i > -1; i--) { // need to run in reverse due to the stack structure
+            QWidget * w = mtabs->widget(i);
+            if (w == logger) {
+                continue;
+            }
+
+            TabAbstract *tab = static_cast<TabAbstract *>(w);
+            if (tab == NULL) {
+                qCritical() << tr("[MainTabs::saveState] Error while casting widget");
+                continue;
+            }
+
+            BaseStateAbstract *tempS = tab->getStateMngtObj();
+            if (tempS != NULL) {
+                emit addNewState(tempS);
+            }
+        }
+
+        listSize = windowedTabs.count();
+
+        for (int i = 0; i < listSize; i++) {
+
+            TabAbstract *tab = windowedTabs.at(i);
+
+            BaseStateAbstract *tempS = tab->getStateMngtObj();
+            if (tempS != NULL) {
+                TabStateObj *tabState = static_cast<TabStateObj *>(tempS);
+
+                tabState->setIsWindowed(true);
+                tabState->setWindowState( mtabs->activeWindows.value(tab)->saveGeometry());
+                emit addNewState(tempS);
+            }
+        }
+
+
+    } else if (readNextStart(GuiConst::STATE_TABS_ARRAY)) {
+
+        bool ok = false;
+        mtabs->clearTabs();
+        QXmlStreamAttributes attrList = reader->attributes();
+
+        if (attrList.hasAttribute(GuiConst::STATE_MAINTABS_LOGGER)) {
+            closingState->setShowlogs(readBool( attrList.value(GuiConst::STATE_MAINTABS_LOGGER)));
+        }
+
+        if (attrList.hasAttribute(GuiConst::STATE_CURRENT_INDEX)) {
+            int index = readInt(attrList.value(GuiConst::STATE_CURRENT_INDEX),&ok);
+            if (ok)
+                closingState->setCurrentIndex(index);
+        }
+
+        if (attrList.hasAttribute(GuiConst::STATE_LOGGER_INDEX)) {
+            int index = readInt(attrList.value(GuiConst::STATE_LOGGER_INDEX),&ok);
+            if (ok)
+                closingState->setLogsIndex(index);
+        }
+
+        if (attrList.hasAttribute(GuiConst::STATE_SIZE)) {
+            int listSize = readInt(attrList.value(GuiConst::STATE_SIZE), &ok);
+
+            if (ok && (listSize > 0)) {
+                for (int i = 0; i < listSize; i++) {
+                    InitTabStateObj * initTab = new(std::nothrow) InitTabStateObj(mtabs);
+                    if (initTab == NULL) {
+                        qFatal("Cannot allocate memory for InitTabStateObj X{");
+                    }
+                    connect(initTab, SIGNAL(detachTab(TabAbstract*,QByteArray)), mtabs, SLOT(detachTab(TabAbstract*,QByteArray)), Qt::QueuedConnection);
+                    connect(initTab, SIGNAL(newTab(TabAbstract*)), mtabs, SLOT(integrateTab(TabAbstract*)), Qt::QueuedConnection);
+
+                    emit addNewState(initTab);
+                }
+            }
+        }
+
+    }
+}
+
+InitTabStateObj::InitTabStateObj(MainTabs *target) :
+    mtabs(target)
+{
+    name = metaObject()->className();
+}
+
+InitTabStateObj::~InitTabStateObj()
+{
+
+}
+
+void InitTabStateObj::run()
+{
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+        qCritical() << tr("InitTabStateObj should not be used for saving T_T");
+    } else {
+        if (readNextStart(GuiConst::STATE_TAB)) {
+            QXmlStreamAttributes attrList = reader->attributes();
+            bool ok = false;
+            int pretype = readInt(attrList.value(GuiConst::STATE_PRETAB_TYPE), &ok);
+            if (ok && pretype >= 0 && pretype < GuiConst::AVAILABLE_TAB_STRINGS.size()) {
+                TabAbstract *tab = mtabs->newPreTab((GuiConst::AVAILABLE_PRETABS)pretype);
+                if (tab != NULL) {
+                    emit newTab(tab);
+                    BaseStateAbstract *tabstate = tab->getStateMngtObj();
+                    emit addNewState(tabstate);
+                    if (attrList.hasAttribute(GuiConst::STATE_WINDOWED)) {
+                        QString value = attrList.value(GuiConst::STATE_WINDOWED).toString();
+                        bool ok = false;
+                        int ivalue = value.toInt(&ok);
+                        if (ok) {
+                            if (ivalue == TabAbstract::WINDOWED_TAB) {
+                                QByteArray geometry = readByteArray(attrList.value(GuiConst::STATE_WIDGET_GEOM));
+                                emit detachTab(tab, geometry);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+MainTabsClosingObj::MainTabsClosingObj(MainTabs *target) :
+    ClosingState()
+{
+    mtabs = target;
+    showlogs = false;
+    currentIndex = 0;
+    logsIndex = -1;
+}
+
+MainTabsClosingObj::~MainTabsClosingObj()
+{
+
+}
+
+void MainTabsClosingObj::run()
+{
+    // closing the tabs array
+    genCloseElement();
+    // normal close for maintabs
+    ClosingState::run();
+
+    // last configuration bits for the maintabs
+    if (!(flags & GuiConst::STATE_SAVE_REQUEST)) {
+        if (showlogs) {
+            if (logsIndex < 0 || logsIndex >= mtabs->count()) {
+                mtabs->addTab(mtabs->logger, GuiConst::LOGS_STR);
+            } else {
+                mtabs->insertTab(logsIndex,mtabs->logger,GuiConst::LOGS_STR);
+            }
+        }
+        else
+            mtabs->hideLogs();
+
+        if (currentIndex > 0)
+            mtabs->setCurrentIndex(currentIndex);
+        else
+            mtabs->setCurrentIndex(0);
+    }
+}
+
+void MainTabsClosingObj::setShowlogs(bool value)
+{
+    showlogs = value;
+}
+
+void MainTabsClosingObj::setCurrentIndex(int value)
+{
+    currentIndex = value;
+}
+
+void MainTabsClosingObj::setLogsIndex(int value)
+{
+    logsIndex = value;
+}
+
+

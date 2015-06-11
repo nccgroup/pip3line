@@ -67,7 +67,9 @@ PythonModules::~PythonModules()
 
 bool PythonModules::initialize()
 {
+
     settingUpStderr();
+    disablingSIGINT();
 
     // retrieving current sys.path from the Python interpreter
     PyGILState_STATE lgstate;
@@ -319,6 +321,104 @@ void PythonModules::settingUpStderr()
         PyErr_Print();
         cleaningPyObjs();
     }
+
+    PyGILState_Release(lgstate);
+}
+
+void PythonModules::disablingSIGINT()
+{
+    PyGILState_STATE lgstate;
+    lgstate = PyGILState_Ensure();
+
+    PyObject *modSignals = NULL;
+    // Import signal module
+
+    modSignals = PyImport_ImportModule("signal");
+
+    if (!checkPyObject(modSignals)){
+        callback->logError("[disablingSIGINT] Importing signal failed, Python SIGINT handler is NOT disabled");
+        Py_XDECREF(modSignals);
+        PyGILState_Release(lgstate);
+        return;
+    }
+
+    // get signal.SIGINT
+    PyObject *pySIGINT = PyObject_GetAttrString(modSignals, "SIGINT");
+    if (!checkPyObject(pySIGINT)){
+        callback->logError("[disablingSIGINT] Failed to retrieve signal.SIGINT");
+        Py_XDECREF(modSignals);
+        PyGILState_Release(lgstate);
+        return;
+    }
+
+    // get signal.SIG_IGN (the handler that ignore a signal)
+    PyObject *pySIG_IGN = PyObject_GetAttrString(modSignals, "SIG_IGN");
+    if (!checkPyObject(pySIG_IGN)){
+        callback->logError("[disablingSIGINT] Failed to retrieve signal.SIG_IGN");
+        Py_XDECREF(modSignals);
+        Py_XDECREF(pySIGINT);
+        PyGILState_Release(lgstate);
+        return;
+    }
+
+    // create signal() callable from signal
+    PyObject * pySignalFunc = PyObject_GetAttrString(modSignals, "signal");
+    if (!checkPyObject(pySignalFunc)){
+        checkPyError();
+        {
+            callback->logError(tr("%1").arg(errorMessage));
+        }
+        callback->logError("[disablingSIGINT] Failed to retrieve signal.signal()");
+        Py_XDECREF(modSignals);
+        Py_XDECREF(pySIGINT);
+        Py_XDECREF(pySIG_IGN);
+        PyGILState_Release(lgstate);
+        return;
+    }
+
+    PyObject * pArgs = PyTuple_New(2); // new ref for arguments
+    if (!checkPyObject(pArgs)){
+        callback->logError("[disablingSIGINT] Failed to create argument tuple");
+        Py_XDECREF(modSignals);
+        Py_XDECREF(pySIGINT);
+        Py_XDECREF(pySIG_IGN);
+        Py_XDECREF(pySignalFunc);
+        PyGILState_Release(lgstate);
+        return;
+    }
+
+
+    if (PyTuple_SetItem(pArgs, 0, pySIGINT) != 0) { // don't need to clean pySIGINT at this point (stolen)
+        callback->logError("[disablingSIGINT] Error while assigning the SIGINT value to the arg tuple");
+        Py_XDECREF(modSignals);
+        Py_XDECREF(pySIGINT);
+        Py_XDECREF(pySIG_IGN);
+        Py_XDECREF(pySignalFunc);
+        Py_XDECREF(pArgs);
+        PyGILState_Release(lgstate);
+        return;
+    }
+
+    if (PyTuple_SetItem(pArgs, 1, pySIG_IGN) != 0) { // don't need to clean pySIG_IGN at this point (stolen)
+        callback->logError("[disablingSIGINT] Error while assigning the SIG_IGN value to the arg tuple");
+        Py_XDECREF(modSignals);
+        Py_XDECREF(pySIG_IGN);
+        Py_XDECREF(pySignalFunc);
+        Py_XDECREF(pArgs);
+        PyGILState_Release(lgstate);
+        return;
+    }
+
+    PyObject * obResult = PyObject_CallObject(pySignalFunc, pArgs); // new ref or NULL
+    if (!checkPyError()){
+        callback->logError("[disablingSIGINT] signal.signal(SIGINT, SIG_IGN) failed");
+        callback->logError(tr("%1").arg(errorMessage));
+    }
+
+    qDebug() << "Python SIGINT handler disabled";
+    Py_XDECREF(obResult);
+    Py_XDECREF(pArgs);
+    Py_XDECREF(modSignals);
 
     PyGILState_Release(lgstate);
 }

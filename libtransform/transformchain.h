@@ -32,14 +32,18 @@ class LIBTRANSFORMSHARED_EXPORT TransformChain : public QList<TransformAbstract 
         QString getDescription() const;
         void setHelp(const QString &help);
         QString getHelp() const;
-        void setFormat(Pip3lineConst::OutputFormat val);
+        void setFormat(const Pip3lineConst::OutputFormat &val);
         Pip3lineConst::OutputFormat getFormat() const;
-    private:
+        void setPreferredOutputType(const Pip3lineConst::OutputType &value);
+        Pip3lineConst::OutputType getPreferredOutputType() const;
+        void clearTransforms();
+private:
 
         QString name;
         QString description;
         QString help;
         Pip3lineConst::OutputFormat preferredFormat;
+        Pip3lineConst::OutputType preferredOutputType;
 };
 
 #endif // TRANSFORMCHAIN_H

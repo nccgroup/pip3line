@@ -34,10 +34,15 @@ class TextView : public SingleViewAbstract
         Q_OBJECT
         
     public:
-        explicit TextView(ByteSourceAbstract *byteSource, GuiHelper *guiHelper, QWidget *parent = 0);
+        explicit TextView(ByteSourceAbstract *byteSource, GuiHelper *guiHelper, QWidget *parent = 0, bool takeByteSourceOwnership = false);
         ~TextView();
         void setModel(ByteSourceAbstract *byteSource);
         void search(QByteArray item, QBitArray mask = QBitArray());
+        void copyToClipboard();
+        bool isAutoCopyToClipboard() const;
+    public slots:
+        void setAutoCopyToClipboard(bool value);
+
     signals:
         void invalidText();
         void searchStatus(bool);
@@ -50,13 +55,13 @@ class TextView : public SingleViewAbstract
         void onRightClick(QPoint pos);
         void onLoad(QAction *action);
         void onCopy(QAction *action);
-        void onSaveToFile();
         void onLoadFile();
         void onSendToTab(QAction *action);
         void onSelectAll();
         void onKeepOnlySelection();
         void onCodecChange(QString codecName);
         void onReadOnlyChanged(bool viewIsReadonly);
+        void onSaveToFile(QAction* action);
     private:
         Q_DISABLE_COPY(TextView)
         void buildContextMenu();
@@ -66,19 +71,22 @@ class TextView : public SingleViewAbstract
         static const int MAX_TEXT_VIEW;
         static const QString DEFAULT_CODEC;
         static const QString LOGID;
+        static const QString COPY_AS_TEXT;
         QMenu * globalContextMenu;
         QMenu * sendToMenu;
         QMenu * copyMenu;
         QMenu * loadMenu;
         QAction * loadFileAction;
-        QAction * saveToFileAction;
         QAction * sendToNewTabAction;
         QAction * selectAllAction;
         QAction * keepOnlySelectedAction;
+        QAction * copyAsTextAction;
+        QMenu * saveToFileMenu;
         QHash<QAction *, TabAbstract *> sendToTabMapping;
         Ui::TextView *ui;
         QTextCodec *currentCodec;
         bool errorNotReported;
+        bool autoCopyToClipboard;
 };
 
 #endif // TEXTVIEW_H

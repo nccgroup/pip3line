@@ -160,6 +160,8 @@ void IntercepSource::setData(QByteArray data, quintptr source)
     if (currentPayload != NULL) {
         currentPayload->payload = data;
         emit updated(source);
+        emit sizeChanged();
+        emit reset();
     }
 }
 
@@ -280,14 +282,12 @@ void IntercepSource::setCurrentBlockSource(BlocksSource *value)
     if (currentBlockSource != NULL) {
         disconnect(currentBlockSource, SIGNAL(blockReceived(Block)),this, SLOT(addNewBlock(Block)));
         disconnect(currentBlockSource, SIGNAL(destroyed()), this, SLOT(onBlockSourceDeleted()));
-        disconnect(currentBlockSource, SIGNAL(error(QString,QString)), this, SLOT(logError(QString,QString)));
-        disconnect(currentBlockSource, SIGNAL(status(QString,QString)), this, SLOT(logStatus(QString,QString)));
+        disconnect(currentBlockSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), this, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)));
     }
     currentBlockSource = value;
     connect(currentBlockSource, SIGNAL(blockReceived(Block)), SLOT(addNewBlock(Block)));
     connect(currentBlockSource, SIGNAL(destroyed()), SLOT(onBlockSourceDeleted()));
-    connect(currentBlockSource, SIGNAL(error(QString,QString)), SLOT(logError(QString,QString)));
-    connect(currentBlockSource, SIGNAL(status(QString,QString)), SLOT(logStatus(QString,QString)));
+    connect(currentBlockSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)));
 }
 
 void IntercepSource::addNewBlock(Block block)
@@ -458,6 +458,21 @@ bool IntercepSource::getIntercepting() const
     return intercepting;
 }
 
+void IntercepSource::fromLocalFile(QString)
+{
+    emit log(tr("Load file not implemented"),metaObject()->className(),Pip3lineConst::LERROR);
+}
+
+BaseStateAbstract *IntercepSource::getStateMngtObj()
+{
+    IntercepSourceStateObj *interceptSourceStateObj = new(std::nothrow) IntercepSourceStateObj(this);
+    if (interceptSourceStateObj == NULL) {
+        qFatal("Cannot allocate memory for IntercepSourceStateObj X{");
+    }
+
+    return interceptSourceStateObj;
+}
+
 void IntercepSource::setIntercepting(bool value)
 {
     if (value != intercepting) {
@@ -466,3 +481,20 @@ void IntercepSource::setIntercepting(bool value)
     }
 }
 
+
+
+IntercepSourceStateObj::IntercepSourceStateObj(IntercepSource *is) :
+    ByteSourceStateObj(is)
+{
+    name = metaObject()->className();
+}
+
+IntercepSourceStateObj::~IntercepSourceStateObj()
+{
+
+}
+
+void IntercepSourceStateObj::internalRun()
+{
+    // nothing yet
+}

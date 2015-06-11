@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<comment>
+ <comment>
   * Released as open source by NCC Group Plc - http://www.nccgroup.com/
   *
   * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
@@ -15,14 +15,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>129</width>
+    <width>350</width>
     <height>47</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="mainLayout">
    <property name="spacing">
     <number>0</number>
    </property>
@@ -69,13 +69,6 @@
        </widget>
       </item>
      </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLineEdit" name="outputLineEdit">
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
     </widget>
    </item>
   </layout>

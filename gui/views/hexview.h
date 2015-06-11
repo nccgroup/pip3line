@@ -33,15 +33,16 @@ class HexView : public SingleViewAbstract
 {
         Q_OBJECT
     public:
-        explicit HexView(ByteSourceAbstract *dataModel,GuiHelper *guiHelper, QWidget *parent = 0);
+        explicit HexView(ByteSourceAbstract *dataModel,GuiHelper *guiHelper, QWidget *parent = 0, bool takeByteSourceOwnership = false);
         ~HexView();
         void addCustomMenuActions(QAction * action);
         ByteTableView *getHexTableView();
+        quint64 getLowPos();
     public slots:
         void onClearAllMArkings();
         bool goTo(quint64 offset, bool absolute,bool negative, bool select = false);
+        void gotoSearch(quint64 soffset, quint64 eoffset);
         void search(QByteArray item, QBitArray mask);
-        void searchAgain();
     private slots:
         void updateStats();
         void onRightClick(QPoint pos);
@@ -57,7 +58,7 @@ class HexView : public SingleViewAbstract
         void onMarkMenu(QAction * action);
         void onSelectFromSizeMenu(QAction * action);
         void onGotoFromOffsetMenu(QAction * action);
-        void onCopySelectedSize(QAction * action);
+        void onCopySelectionSize(QAction * action);
         void onCopyCurrentOffset(QAction *action);
         void onClearSelectionMarkings();
         void onLoadFile();
@@ -79,7 +80,7 @@ class HexView : public SingleViewAbstract
         QMenu * selectFromSizeMenu;
         QMenu * gotoFromOffsetMenu;
         QMenu * copyMenu;
-        QMenu * copySelectedSizeMenu;
+        QMenu * copySelectionSizeMenu;
         QMenu * copyCurrentOffsetMenu;
         QMenu * loadMenu;
         QMenu * replaceMenu;
@@ -93,16 +94,6 @@ class HexView : public SingleViewAbstract
 
         qint64 selectedSize;
         quint64 startOffset;
-        static const QString NEW_BYTE_ACTION;
-        static const QString BYTES_LE_ACTION;
-        static const QString BYTES_BE_ACTION;
-        static const QString OFFSET_LE_ACTION;
-        static const QString OFFSET_BE_ACTION;
-        static const QString OFFSET_REL_LE_ACTION;
-        static const QString OFFSET_REL_BE_ACTION;
-        static const QString SIZE_OCTAL_ACTION;
-        static const QString SIZE_DECIMAL_ACTION;
-        static const QString SIZE_HEXADECIMAL_ACTION;
 };
 
 #endif // HEXVIEW_H

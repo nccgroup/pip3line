@@ -27,6 +27,7 @@ class HexEncodeWidget : public QWidget
         ~HexEncodeWidget();
     private slots:
         void onTypeChange();
+        void onAddPrefixChanged(bool val);
     private:
         Ui::HexEncodeWidget *ui;
         HexEncode *transform;

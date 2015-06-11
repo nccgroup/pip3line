@@ -10,7 +10,8 @@ Released under AGPL see LICENSE for more information
 
 #include "pipeserver.h"
 #include <commonstrings.h>
-using namespace Pip3lineConst;
+#include "shared/guiconst.h"
+using namespace GuiConst;
 
 InternalLocalSocketServer::InternalLocalSocketServer(QObject *parent):
     QLocalServer(parent)

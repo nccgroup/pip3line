@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<comment>
+ <comment>
   * Released as open source by NCC Group Plc - http://www.nccgroup.com/
   *
   * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
@@ -111,6 +111,13 @@ Any errors during decoding is ignored</string>
       <property name="margin">
        <number>0</number>
       </property>
+      <item>
+       <widget class="QPushButton" name="clearInputPushButton">
+        <property name="text">
+         <string>Clear input</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <widget class="QPlainTextEdit" name="inputPlainTextEdit"/>
       </item>

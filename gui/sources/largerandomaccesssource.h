@@ -53,6 +53,10 @@ class LargeRandomAccessSource : public ByteSourceAbstract
         bool isRefreshEnabled() const;
         int refreshInterval() const;
         virtual bool tryMoveView(int size) = 0;
+
+        virtual BaseStateAbstract *getStateMngtObj();
+
+        static const int DEFAULT_CHUNKSIZE;
         
     public slots:
         virtual bool historyForward();
@@ -68,19 +72,30 @@ class LargeRandomAccessSource : public ByteSourceAbstract
     protected:
         virtual bool validateViewOffsetAndSize(int offset, int length);
         virtual bool readData(QByteArray &data, int size);
-        virtual bool readData(quint64 offset, QByteArray &data, int size) = 0;
+        virtual bool readData(quint64 offset, QByteArray &data, int size);
         virtual bool writeData(quint64 offset, int length, const QByteArray &data, quintptr source);
         virtual void addToHistory(quint64 offset);
         QByteArray dataChunk;
         int chunksize;
         quint64 currentStartingOffset;
-        QList<quint64> history;
-        int currentHistoryPointer;
+        QList<quint64> pointerHistory;
+        int currentPointerHistoryPointer;
 
         QTimer refreshTimer;
         int intervalMSec;
         QTime dtimer;
         QSemaphore sem;
+
+};
+
+class LargeRandomAccessSourceStateObj : public ByteSourceStateObj
+{
+        Q_OBJECT
+    public:
+        explicit LargeRandomAccessSourceStateObj(LargeRandomAccessSource *ls);
+        virtual ~LargeRandomAccessSourceStateObj();
+    protected:
+        virtual void internalRun();
 };
 
 #endif // LARGERANDOMACCESSSOURCE_H

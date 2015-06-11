@@ -27,15 +27,14 @@ void BinaryProcessor::run()
     QByteArray block;
 
     char buffer[BLOCKSIZE];
-    qint64 whatHasBeenDone = 0;
-
+	
     if (tlist.isEmpty()) {
         emit error(tr("Error: No transformation configured, exiting the process."), "Binary Processor");
         return;
     }
 
     while (!in->atEnd()) {
-        whatHasBeenDone = in->read(buffer,BLOCKSIZE);
+        qint64 whatHasBeenDone = in->read(buffer,BLOCKSIZE);
 
         if (whatHasBeenDone == -1) {
             emit error(in->errorString(), "Binary Processor");

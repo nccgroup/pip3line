@@ -20,6 +20,8 @@ Released under AGPL see LICENSE for more information
 #include <QPoint>
 #include <QNetworkAccessManager>
 #include "sources/blockssource.h"
+#include "shared/guiconst.h"
+#include "state/basestateabstract.h"
 
 namespace Ui {
 class MainWindow;
@@ -37,6 +39,13 @@ class TransformMgmt;
 class GuiHelper;
 class DownloadManager;
 class BlocksSource;
+class TabAbstract;
+class StateOrchestrator;
+class StateDialog;
+
+#ifdef Q_OS_LINUX
+class QSocketNotifier;
+#endif
 
 class MainWindow : public QMainWindow
 {
@@ -46,27 +55,54 @@ class MainWindow : public QMainWindow
         explicit MainWindow(bool debug = false, QWidget *parent = 0);
         ~MainWindow();
         void loadFile(QString fileName);
-    private slots:
+
+        SettingsDialog *getSettingsDialog() const;
+        AnalyseDialog *getAnalyseDialog() const;
+        RegExpHelpDialog *getRegexphelpDialog() const;
+        QuickViewDialog *getQuickView() const;
+        ComparisonDialog *getComparisonView() const;
+        DebugDialog *getDebugDialog() const;
+
+        MainTabs *getMainTabs() const;
+
+#ifdef Q_OS_LINUX
+        static int sigFd[2];
+        static void exitSignalHandler(int signal);
+#endif
+
+    signals:
+        void exiting();
+    public slots:
         void onAboutPip3line();
         void onAnalyse(bool checked);
         void onHelpWithRegExp();
+        void onQuickView(bool checked);
+        void onCompare(bool checked);
+        void onDebug();
         void onSettingsDialogOpen(bool checked);
+
+    private slots:
         void checkForUpdates();
         void processingCheckForUpdate(QByteArray data);
         void processingUrlDownload(QByteArray data);
         void iconActivated(QSystemTrayIcon::ActivationReason reason);
         void onImport(QAction* action);
         void onDataFromURL();
-        void onQuickView(bool checked);
-        void onCompare(bool checked);
         void on_actionLogs_triggered();
         void updateTrayIcon();
-        void onDebug();
         void onDebugDestroyed();
         void onNewAction(QAction * action);
         void onNewDefault();
         void showWindow();
         void onExternalBlockReceived(const Block &block);
+        void onSaveState();
+        void onLoadState();
+        void onSaveLoadFinished();
+        void autoSave();
+        void autoRestore();
+        void onExit();
+        void cleaningAndExit();
+        void handleUnixSignal();
 
     private:
         Q_DISABLE_COPY(MainWindow)
@@ -78,37 +114,87 @@ class MainWindow : public QMainWindow
         void hideEvent(QHideEvent * event);
         void showEvent(QShowEvent * event);
 
-        void newFileTab(QString fileName);
+        void saveLoadState(QString filename, quint64 flags);
 
-        static const QString NEW_TRANSFORMTAB;
-        static const QString NEW_FILE;
-        static const QString NEW_CURRENTMEM;
-        static const QString NEW_BASEHEX;
-        static const QString NEW_INTERCEP;
         Ui::MainWindow *ui;
+
         SettingsDialog *settingsDialog;
         AnalyseDialog *analyseDialog;
         RegExpHelpDialog *regexphelpDialog;
         QuickViewDialog * quickView;
         ComparisonDialog *comparisonView;
         DebugDialog * debugDialog;
-        GuiHelper *guiHelper;
-        TransformMgmt *transformFactory;
+
         LoggerWidget *logger;
         MainTabs * mainTabs;
 
+        GuiHelper *guiHelper;
+        TransformMgmt *transformFactory;
         QNetworkAccessManager networkManager;
+        QSettings *settings;
+        BlocksSource * blockListener;
+        StateOrchestrator * stateOrchestrator;
+        StateDialog *stateDialog;
+
         QSystemTrayIcon *trayIcon;
         QMenu *trayIconMenu;
         QMenu *newMenu;
         QAction *trayIconLabel;
-        QSettings *settings;
+
+        QAction * newTransformTabAction;
+        QAction * newLargeFileTabAction;
+        QAction * newInterceptTabAction;
+        QAction * newHexeditorTabAction;
+        QAction * newCurrentMemTabAction;
 
         bool quickViewWasVisible;
         bool settingsWasVisible;
         bool compareWasVisible;
         QPoint savedPos;
-        BlocksSource * blockListener;
+        static bool appExiting;
+
+#ifdef Q_OS_LINUX
+        QSocketNotifier *snExit;
+#endif
+
+        friend class ClearAllStateObj;
+};
+
+class MainWinStateObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit MainWinStateObj(MainWindow *target);
+        ~MainWinStateObj();
+        void run();
+    private:
+        MainWindow *mwin;
+        static const QString NAME;
+};
+
+
+class GlobalConfStateObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit GlobalConfStateObj(TransformMgmt *transformMgmt);
+        ~GlobalConfStateObj();
+        void run();
+    signals:
+        void settingsUpdated();
+    private :
+        TransformMgmt *transformMgmt;
+};
+
+class ClearAllStateObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit ClearAllStateObj(MainWindow *target);
+        ~ClearAllStateObj();
+        void run();
+    private :
+        MainWindow *mwin;
 };
 
 #endif // MAINWINDOW_H

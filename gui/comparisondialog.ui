@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<comment>
+ <comment>
  * Released as open source by NCC Group Plc - http://www.nccgroup.com/
  *
  * Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
@@ -16,11 +16,14 @@
     <x>0</x>
     <y>0</y>
     <width>286</width>
-    <height>379</height>
+    <height>459</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Compare samples</string>
+  </property>
+  <property name="sizeGripEnabled">
+   <bool>true</bool>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
@@ -50,7 +53,14 @@
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QComboBox" name="tabAComboBox"/>
+              <widget class="QComboBox" name="tabAComboBox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+              </widget>
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="entryALabel">
@@ -79,7 +89,14 @@
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QComboBox" name="tabBComboBox"/>
+              <widget class="QComboBox" name="tabBComboBox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+              </widget>
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="entryBLabel">
@@ -230,6 +247,19 @@
            </widget>
           </item>
          </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="resultLabel">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
         </widget>
        </item>
       </layout>

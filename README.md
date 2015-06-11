@@ -11,10 +11,6 @@ Raw bytes manipulation utility, able to apply well known and less well known tra
 
 > Released under AGPL see LICENSE for more information
 
-[Main site]
-
-http://nccgroup.github.io/pip3line/index.html
-
 [Releases notice]
 
 https://github.com/nccgroup/pip3line/releases
@@ -22,6 +18,12 @@ https://github.com/nccgroup/pip3line/releases
 [Windows Binaries Download]
 
 http://sourceforge.net/projects/pip3line/files/
+
+## Documentation
+
+[Main site]
+
+http://nccgroup.github.io/pip3line/index.html
 
 [Python plugins]
 

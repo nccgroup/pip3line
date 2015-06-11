@@ -13,6 +13,10 @@ Released under AGPL see LICENSE for more information
 
 #include <QDialog>
 #include <QPoint>
+#include <QSettings>
+#include "shared/guiconst.h"
+#include "state/basestateabstract.h"
+
 class GuiHelper;
 class LoggerWidget;
 class QAction;
@@ -23,6 +27,7 @@ class AppDialog : public QDialog
     public:
         explicit AppDialog(GuiHelper * guiHelper, QWidget *parent = 0);
         void attachAction(QAction * action);
+        virtual BaseStateAbstract *getStateMngtObj();
     signals:
         void hiding();
     protected slots:
@@ -36,6 +41,18 @@ class AppDialog : public QDialog
         LoggerWidget *logger;
         void hideEvent(QHideEvent *event);
         QAction * attachedAction;
+};
+
+class AppStateObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit AppStateObj(AppDialog *diag);
+        virtual ~AppStateObj();
+        virtual void run();
+    protected:
+        virtual void internalRun();
+        AppDialog *dialog;
 };
 
 #endif // APPDIALOG_H

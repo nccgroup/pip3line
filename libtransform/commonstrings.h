@@ -11,9 +11,8 @@ Released under AGPL see LICENSE for more information
 #ifndef XMLCOMMON_H
 #define XMLCOMMON_H
 #include <QString>
-#include <QByteArray>
 
-#define LIB_TRANSFORM_VERSION 13
+#define LIB_TRANSFORM_VERSION 14
 
 namespace Pip3lineConst {
     // Default types
@@ -75,41 +74,12 @@ namespace Pip3lineConst {
     static const QString XMLQUERYSTRING = "XMLQuery";
     static const QString XMLLEVEL = "Level";
     static const QString XMLFORMAT = "Format";
+    static const QString XMLOUTPUTTYPE = "OutputType";
     static const QString XMLDECODE = "Decode";
     static const QString XMLOFFSET = "Offset";
     static const QString XMLCLEAN = "Clean";
     static const QString XMLAUTORELOAD = "AutoReload";
-
-    static const QString SETTINGS_SERVER_PORT = "DefaultServerPort";
-    static const QString SETTINGS_SERVER_IP = "DefaultServerIP";
-    static const QString SETTINGS_SERVER_PIPE_NAME = "DefaultServerPipe";
-    static const QString SETTINGS_SERVER_DECODE = "DefaultServerDecode";
-    static const QString SETTINGS_SERVER_ENCODE = "DefaultServerEncode";
-    static const QString SETTINGS_SERVER_SEPARATOR = "DefaultServerSeparator";
-    static const QString SETTINGS_PIPE_NAME="PipeName";
-    static const QString UPDATE_URL = "https://raw.github.com/nccgroup/pip3line/master/gui/release.txt";
-   // static const QString UPDATE_URL = "https://raw.githubusercontent.com/nccgroup/pip3line/master/gui/release.txt";
-    static const QString SETTINGS_AUTO_UPDATE = "AutoUpdate";
-    static const QString SETTINGS_GENERAL_GROUP = "General";
-    static const QString SETTINGS_MINIMIZE_TO_TRAY = "MinimizeToTray";
-    static const QString TCP_SERVER = "Tcp server";
-
-    static const int DEFAULT_PORT = 45632;
-    static const char DEFAULT_BLOCK_SEPARATOR = '\n';
-
-#if defined(Q_OS_WIN32)
-    static const QString DEFAULT_PIPE_MASS = "pip3lineMass";
-    static const QString DEFAULT_PIPE = "pip3line";
-    static const QString PIPE_SERVER = "Named Pipe Server";
-    static const QString PIPE_SOCKET = "Named Pipe";
-#else
-    static const QString DEFAULT_PIPE_MASS = "/tmp/pip3lineMass";
-    static const QString DEFAULT_PIPE = "/tmp/pip3line";
-    static const QString PIPE_SERVER = "Unix Local Socket Server";
-    static const QString PIPE_SOCKET = "Unix Local Socket";
-#endif
-
-    enum OutputFormat {TEXTFORMAT = 0, HEXAFORMAT = 1};
+    static const QString XMLTZ = "TimeZone";
 
     static const QString USER_DIRECTORY = ".pip3line";
     static const int BLOCK_MAX_SIZE = 0x04000000;
@@ -120,6 +90,10 @@ namespace Pip3lineConst {
             QString source;
             LOGLEVEL level;
     };
+
+    enum OutputFormat {TEXTFORMAT = 0, HEXAFORMAT = 1};
+    enum OutputType {ONELINE = 0, MULTILINES = 1};
+
     typedef QList<Message> Messages;
 }
 

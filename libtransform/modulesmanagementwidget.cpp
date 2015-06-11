@@ -14,6 +14,7 @@ Released under AGPL see LICENSE for more information
 #include "modulesmanagement.h"
 #include <QFileDialog>
 #include <QListWidgetItem>
+#include <QDebug>
 
 ModulesManagementWidget::ModulesManagementWidget(ModulesManagement *nmodulesMgmt, QWidget *parent) :
     QWidget(parent)
@@ -34,11 +35,13 @@ ModulesManagementWidget::ModulesManagementWidget(ModulesManagement *nmodulesMgmt
 
     loadPaths();
     loadModules();
+    qDebug() << this << "created";
 }
 
 ModulesManagementWidget::~ModulesManagementWidget()
 {
     delete ui;
+    qDebug() << this << "destroyed";
 }
 
 void ModulesManagementWidget::onManualClicked()

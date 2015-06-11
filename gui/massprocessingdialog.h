@@ -66,7 +66,6 @@ class MassProcessingDialog : public AppDialog
 
     private:
         Q_DISABLE_COPY(MassProcessingDialog)
-        static const QString SETTINGS_MASS_PROCESSING_GROUP;
         enum ReadingTypes {LINES = 0, BLOCK};
         void deleteCurrentServer();
         QIODevice * getInput();

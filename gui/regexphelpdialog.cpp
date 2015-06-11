@@ -11,8 +11,8 @@ Released under AGPL see LICENSE for more information
 #include "regexphelpdialog.h"
 #include "ui_regexphelpdialog.h"
 
-RegExpHelpDialog::RegExpHelpDialog(QWidget *parent) :
-    QDialog(parent)
+RegExpHelpDialog::RegExpHelpDialog(GuiHelper * nguiHelper,QWidget *parent) :
+    AppDialog(nguiHelper,parent)
 {
     ui = new(std::nothrow) Ui::RegExpHelpDialog();
     if (ui == NULL) {

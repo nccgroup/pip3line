@@ -24,11 +24,18 @@ Released under AGPL see LICENSE for more information
 #include "../shared/bytesourceguibutton.h"
 #include "../shared/detachtabbutton.h"
 #include "../views/bytetableview.h"
+#include "../views/bytetableview.h"
+#include <QScrollBar>
+#include <QDebug>
+
+#include "../shared/guiconst.h"
+using namespace GuiConst;
 
 const QString RandomAccessTab::LOGID = "RandomAccessTab";
 
-RandomAccessTab::RandomAccessTab(ByteSourceAbstract *nbyteSource, GuiHelper *guiHelper, QWidget *parent) :
-    TabAbstract(guiHelper,parent)
+RandomAccessTab::RandomAccessTab(ByteSourceAbstract *nbytesource, GuiHelper *guiHelper, QWidget *parent) :
+    TabAbstract(guiHelper,parent),
+    bytesource(nbytesource)
 {
     ui = new(std::nothrow) Ui::RandomAccessTab();
     if (ui == NULL) {
@@ -36,18 +43,17 @@ RandomAccessTab::RandomAccessTab(ByteSourceAbstract *nbyteSource, GuiHelper *gui
     }
     ui->setupUi(this);
 
-    byteSource = nbyteSource;
-    setName(byteSource->name());
-    connect(byteSource,SIGNAL(nameChanged(QString)), SLOT(setName(QString)));
+    setName(bytesource->name());
+    connect(bytesource,SIGNAL(nameChanged(QString)), SLOT(setName(QString)));
 
-    hexView = new(std::nothrow) HexView(byteSource, guiHelper,this);
+    hexView = new(std::nothrow) HexView(bytesource, guiHelper,this);
     if (hexView == NULL) {
         qFatal("Cannot allocate memory for HexView X{");
     }
 
     ui->mainLayout->insertWidget(ui->mainLayout->indexOf(ui->logsWidget) + 1,hexView);
 
-    searchWidget = new(std::nothrow) SearchWidget(byteSource, this);
+    searchWidget = new(std::nothrow) SearchWidget(bytesource, guiHelper, this);
     if (searchWidget == NULL) {
         qFatal("Cannot allocate memory for SearchWidget X{");
     }
@@ -56,6 +62,7 @@ RandomAccessTab::RandomAccessTab(ByteSourceAbstract *nbyteSource, GuiHelper *gui
 
     ui->mainLayout->insertWidget( 1,searchWidget);
     connect(searchWidget, SIGNAL(searchRequest(QByteArray,QBitArray,bool)), SLOT(onSearch(QByteArray,QBitArray,bool)));
+    connect(searchWidget, SIGNAL(jumpTo(quint64,quint64)),hexView,  SLOT(gotoSearch(quint64,quint64)));
 
     hexView->installEventFilter(this);
     hexView->getHexTableView()->verticalScrollBar()->setVisible(true);
@@ -68,28 +75,34 @@ RandomAccessTab::RandomAccessTab(ByteSourceAbstract *nbyteSource, GuiHelper *gui
     ui->toolsLayout->insertWidget(0,gotoWidget);
     connect(gotoWidget,SIGNAL(gotoRequest(quint64,bool,bool,bool)), SLOT(onGotoOffset(quint64,bool,bool,bool)));
 
-    roButton = new(std::nothrow) ReadOnlyButton(byteSource,this);
+    roButton = new(std::nothrow) ReadOnlyButton(bytesource,this);
     if (roButton == NULL) {
         qFatal("Cannot allocate memory for ReadOnlyButton X{");
     }
     ui->toolsLayout->insertWidget(2,roButton);
 
-    clearAllMarksButton = new(std::nothrow) ClearAllMarkingsButton(byteSource,this);
+    clearAllMarksButton = new(std::nothrow) ClearAllMarkingsButton(bytesource,this);
     if (clearAllMarksButton == NULL) {
         qFatal("Cannot allocate memory for clearAllMarkingsButton X{");
     }
     ui->toolsLayout->insertWidget(2,clearAllMarksButton);
 
-    guiButton = new(std::nothrow) ByteSourceGuiButton(byteSource,guiHelper,this);
+    guiButton = new(std::nothrow) ByteSourceGuiButton(bytesource,guiHelper,this);
     if (guiButton == NULL) {
         qFatal("Cannot allocate memory for ByteSourceGuiButton X{");
     }
 
     ui->toolsLayout->insertWidget(3, guiButton);
 
-    if (byteSource->hasDiscreetView()) {
-        ui->viewSizeSpinBox->setValue(byteSource->viewSize());
-        connect(ui->viewSizeSpinBox, SIGNAL(valueChanged(int)),byteSource, SLOT(setViewSize(int)));
+    // Checking if there are some additional buttons
+    QWidget *gui = bytesource->getGui(this, ByteSourceAbstract::GUI_BUTTONS);
+    if (gui != NULL) {
+        ui->toolsLayout->insertWidget(2, gui);
+    }
+
+    if (bytesource->hasDiscreetView()) {
+        ui->viewSizeSpinBox->setValue(bytesource->viewSize());
+        connect(ui->viewSizeSpinBox, SIGNAL(valueChanged(int)),bytesource, SLOT(setViewSize(int)));
     } else {
         ui->viewSizeSpinBox->setVisible(false);
     }
@@ -102,9 +115,11 @@ RandomAccessTab::RandomAccessTab(ByteSourceAbstract *nbyteSource, GuiHelper *gui
 
     ui->toolsLayout->insertWidget(0,detachButton);
 
-    connect(ui->prevPushButton, SIGNAL(clicked()), byteSource,SLOT(historyBackward()));
-    connect(ui->nextPushButton, SIGNAL(clicked()), byteSource, SLOT(historyForward()));
+    connect(ui->prevPushButton, SIGNAL(clicked()), bytesource,SLOT(historyBackward()));
+    connect(ui->nextPushButton, SIGNAL(clicked()), bytesource, SLOT(historyForward()));
     connect(ui->closeLogsPushButton, SIGNAL(clicked()), SLOT(onCloseLogView()));
+    connect(bytesource, SIGNAL(askFileLoad()), SLOT(fileLoadRequest()));
+    connect(bytesource, SIGNAL(updated(quintptr)), SLOT(onSourceUpdated()));
 }
 
 RandomAccessTab::~RandomAccessTab()
@@ -112,8 +127,9 @@ RandomAccessTab::~RandomAccessTab()
     delete gotoWidget;
     delete searchWidget;
     delete roButton;
-    delete byteSource;
     delete ui;
+    delete bytesource;
+    bytesource = NULL;
 }
 
 int RandomAccessTab::getBlockCount() const
@@ -123,7 +139,7 @@ int RandomAccessTab::getBlockCount() const
 
 ByteSourceAbstract *RandomAccessTab::getSource(int)
 {
-    return byteSource;
+    return bytesource;
 }
 
 ByteTableView *RandomAccessTab::getHexTableView(int)
@@ -138,11 +154,11 @@ void RandomAccessTab::loadFromFile(QString fileName)
         return;
     }
 
-    if (byteSource->hasCapability(ByteSourceAbstract::CAP_LOADFILE)) {
-        byteSource->fromLocalFile(fileName);
+    if (bytesource->hasCapability(ByteSourceAbstract::CAP_LOADFILE)) {
+        bytesource->fromLocalFile(fileName);
         integrateByteSource();
     }  else {
-        QMessageBox::critical(this,tr("Error"), tr("%1 does not have the CAP_LOADFILE capability, ignoring").arg(((QObject *)byteSource)->metaObject()->className()),QMessageBox::Ok);
+        QMessageBox::critical(this,tr("Error"), tr("%1 does not have the CAP_LOADFILE capability, ignoring").arg(((QObject *)bytesource)->metaObject()->className()),QMessageBox::Ok);
     }
 }
 
@@ -156,17 +172,27 @@ bool RandomAccessTab::canReceiveData()
     return false;
 }
 
+BaseStateAbstract *RandomAccessTab::getStateMngtObj()
+{
+    RandomAccessStateObj *stateObj = new(std::nothrow) RandomAccessStateObj(this);
+    if (stateObj == NULL) {
+        qFatal("Cannot allocate memory for RandomAccessStateObj X{");
+    }
+
+    return stateObj;
+}
+
 void RandomAccessTab::fileLoadRequest()
 {
     QString fileName;
-    if (byteSource->hasCapability(ByteSourceAbstract::CAP_LOADFILE)) {
+    if (bytesource->hasCapability(ByteSourceAbstract::CAP_LOADFILE)) {
         fileName = QFileDialog::getOpenFileName(this,tr("Choose file to load from"));
         if (!fileName.isEmpty()) {
-            byteSource->fromLocalFile(fileName);
+            bytesource->fromLocalFile(fileName);
             integrateByteSource();
         }
     } else {
-        QMessageBox::critical(this,tr("Error"), tr("%1 does not have the CAP_LOADFILE capability, ignoring").arg(((QObject *)byteSource)->metaObject()->className()),QMessageBox::Ok);
+        QMessageBox::critical(this,tr("Error"), tr("%1 does not have the CAP_LOADFILE capability, ignoring").arg(((QObject *)bytesource)->metaObject()->className()),QMessageBox::Ok);
     }
 }
 
@@ -174,8 +200,17 @@ void RandomAccessTab::integrateByteSource()
 {
     roButton->refreshStateValue();
 
-    ui->prevPushButton->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_HISTORY));
-    ui->nextPushButton->setEnabled(byteSource->hasCapability(ByteSourceAbstract::CAP_HISTORY));
+    ui->prevPushButton->setEnabled(bytesource->hasCapability(ByteSourceAbstract::CAP_HISTORY));
+    ui->nextPushButton->setEnabled(bytesource->hasCapability(ByteSourceAbstract::CAP_HISTORY));
+}
+SearchWidget *RandomAccessTab::getSearchWidget() const
+{
+    return searchWidget;
+}
+
+OffsetGotoWidget *RandomAccessTab::getGotoWidget() const
+{
+    return gotoWidget;
 }
 
 void RandomAccessTab::onSearch(QByteArray item, QBitArray mask, bool)
@@ -211,20 +246,106 @@ void RandomAccessTab::onCloseLogView()
     ui->logsTextEdit->clear();
 }
 
+void RandomAccessTab::onSourceUpdated()
+{
+    ui->viewSizeSpinBox->blockSignals(true);
+    ui->viewSizeSpinBox->setValue(bytesource->viewSize());
+    ui->viewSizeSpinBox->blockSignals(false);
+}
+
 bool RandomAccessTab::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        if (keyEvent->key() == Qt::Key_N && keyEvent->modifiers().testFlag(Qt::ControlModifier))  {
-            hexView->searchAgain();
-            return true;
-        } else if (keyEvent->key() == Qt::Key_G && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
-            gotoWidget->setFocus();
-            return true;
-        } else if (keyEvent->key() == Qt::Key_F && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
-            searchWidget->setFocus();
-            return true;
+        if (keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
+            if (keyEvent->key() == Qt::Key_N)  {
+                searchWidget->nextFind(bytesource->getRealOffset(hexView->getLowPos()));
+                return true;
+            } else if (keyEvent->key() == Qt::Key_G) {
+                gotoWidget->setFocus();
+                return true;
+            } else if (keyEvent->key() == Qt::Key_F) {
+                searchWidget->setFocus();
+                return true;
+            }
         }
     }
     return QObject::eventFilter(obj, event);
+}
+
+
+RandomAccessStateObj::RandomAccessStateObj(RandomAccessTab *tab) :
+    TabStateObj(tab)
+{
+    name = metaObject()->className();
+}
+
+RandomAccessStateObj::~RandomAccessStateObj()
+{
+
+}
+
+void RandomAccessStateObj::run()
+{
+    RandomAccessTab * rTab = dynamic_cast<RandomAccessTab *> (tab);
+    TabStateObj::run();
+
+    if (flags & GuiConst::STATE_SAVE_REQUEST) {
+        writer->writeAttribute(GuiConst::STATE_SEARCH_WIDGET, write(rTab->getSearchWidget()->text(),true));
+        writer->writeAttribute(GuiConst::STATE_GOTOOFFSET_WIDGET, write(rTab->getGotoWidget()->text()));
+        writer->writeAttribute(GuiConst::STATE_SCROLL_INDEX, write(rTab->hexView->getHexTableView()->verticalScrollBar()->value()));
+
+    } else {
+        QXmlStreamAttributes attrList = reader->attributes();
+        if (attrList.hasAttribute(GuiConst::STATE_SEARCH_WIDGET)) {
+            rTab->getSearchWidget()->setText(readString(attrList.value(GuiConst::STATE_SEARCH_WIDGET)));
+        }
+
+        if (attrList.hasAttribute(GuiConst::STATE_GOTOOFFSET_WIDGET)) {
+            rTab->getGotoWidget()->setText(readString(attrList.value(GuiConst::STATE_GOTOOFFSET_WIDGET)));
+        }
+
+        bool ok = false;
+
+        if (attrList.hasAttribute(GuiConst::STATE_SCROLL_INDEX)) {
+            int index = readInt(attrList.value(GuiConst::STATE_SCROLL_INDEX), &ok);
+            if (ok) {
+                RandomAccessClosingStateObj *tempState = new(std::nothrow) RandomAccessClosingStateObj(rTab);
+                if (tempState == NULL) {
+                    qFatal("Cannot allocate memory for RandomAccessClosingStateObj X{");
+                }
+
+                tempState->setScrollIndex(index);
+
+                emit addNewState(tempState);
+            }
+        }
+    }
+
+    BaseStateAbstract *state = rTab->getSource(0)->getStateMngtObj();
+    emit addNewState(state);
+}
+
+RandomAccessClosingStateObj::RandomAccessClosingStateObj(RandomAccessTab *tab) :
+    tab(tab)
+{
+    scrollIndex = 0;
+    name = metaObject()->className();
+}
+
+RandomAccessClosingStateObj::~RandomAccessClosingStateObj()
+{
+
+}
+
+void RandomAccessClosingStateObj::run()
+{
+    qDebug() << "set Index" << scrollIndex << tab->hexView->getHexTableView()->verticalScrollBar()->minimum() << tab->hexView->getHexTableView()->verticalScrollBar()->maximum();
+    qDebug() << "data size" << tab->getSource(0)->size();
+    tab->hexView->getHexTableView()->verticalScrollBar()->setValue(scrollIndex);
+}
+
+void RandomAccessClosingStateObj::setScrollIndex(int value)
+{
+    scrollIndex = value;
 }

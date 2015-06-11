@@ -55,11 +55,10 @@ void ServerAbstract::setSeparator(char c)
 
 void ServerAbstract::stopServer()
 {
-    Processor * processor;
     confLocker.lock();
 
     for (int i = 0; i < clientProcessor.size(); i++) {
-        processor = clientProcessor.at(i);
+        Processor * processor = clientProcessor.at(i);
         processor->stop();
         if (!processor->wait(10000))
             logError(QObject::tr("%1 Client Processor %1 seems stuck, this may cause a crash ...").arg(getServerType()).arg((long)processor,0,16),"");

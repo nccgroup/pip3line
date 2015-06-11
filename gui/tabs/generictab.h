@@ -32,11 +32,13 @@ class MessagePanelWidget;
 class QDragEnterEvent;
 class QDropEvent;
 class DownloadManager;
+class TransformAbstract;
 
 class GenericTab : public TabAbstract
 {
         Q_OBJECT
     public:
+
         explicit GenericTab(ByteSourceAbstract *bytesource, GuiHelper *guiHelper, QWidget *parent = 0);
         ~GenericTab();
         void loadFromFile(QString fileName);
@@ -45,6 +47,12 @@ class GenericTab : public TabAbstract
         ByteTableView *getHexTableView(int blockIndex);
         void setData(const QByteArray &data);
         bool canReceiveData();
+        BaseStateAbstract *getStateMngtObj();
+
+        OffsetGotoWidget *getGotoWidget() const;
+        SearchWidget *getSearchWidget() const;
+        MessagePanelWidget *getMessagePanel() const;
+
     private slots:
         void onSearch(QByteArray item, QBitArray mask, bool);
         void fileLoadRequest();
@@ -56,12 +64,22 @@ class GenericTab : public TabAbstract
 
     private:
         Q_DISABLE_COPY(GenericTab)
+        enum ViewType {UNDEFINED = 0, HEXVIEW = 1, TEXTVIEW = 2, DEFAULTTEXT = 3};
+        struct ViewTab {
+                ViewTab() : transform(NULL), type(UNDEFINED),tabName(GuiConst::UNDEFINED_TEXT) {}
+                TransformAbstract * transform;
+                ViewType type;
+                QString tabName;
+        };
+        static const QString TEXT_TEXT;
         bool eventFilter(QObject *obj, QEvent *event);
         void dragEnterEvent ( QDragEnterEvent * event );
         void dropEvent(QDropEvent *event);
         void integrateByteSource();
-        ByteSourceAbstract *byteSource;
+        void addViewTab(ViewTab data);
+
         Ui::GenericTab *ui;
+        ByteSourceAbstract *bytesource;
         HexView *hexView;
         OffsetGotoWidget * gotoWidget;
         SearchWidget *searchWidget;
@@ -72,7 +90,37 @@ class GenericTab : public TabAbstract
         MessagePanelWidget * messagePanel;
         QAction * newHexViewAction;
         QAction * newTextViewAction;
+        QAction * newDefaultTextViewAction;
         bool ableToReceiveData;
+        QList<ViewTab> tabData;
+
+        friend class GenericTabStateObj;
+        friend class GenericTabClosingStateObj;
+};
+
+class GenericTabStateObj : public TabStateObj
+{
+        Q_OBJECT
+    public:
+        explicit GenericTabStateObj(GenericTab *tab);
+        ~GenericTabStateObj();
+        void run();
+};
+
+class GenericTabClosingStateObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit GenericTabClosingStateObj(GenericTab *tab);
+        ~GenericTabClosingStateObj();
+        void run();
+        void setScrollIndex(int value);
+        void setCurrentIndex(int value);
+
+    protected:
+        GenericTab *tab;
+        int scrollIndex;
+        int currentIndex;
 };
 
 #endif // GENERICTAB_H

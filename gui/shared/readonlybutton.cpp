@@ -13,12 +13,15 @@ Released under AGPL see LICENSE for more information
 #include "../guihelper.h"
 #include <QMessageBox>
 #include <QToolTip>
+#include <QDebug>
+#include "guiconst.h"
+using namespace GuiConst;
 
 const QString ReadOnlyButton::ReadWrite = "RW";
 const QString ReadOnlyButton::ReadOnly = "RO";
 const QString ReadOnlyButton::ButtonToolTipRW = "Current state is read/write, click here if you want to switch to readonly";
 const QString ReadOnlyButton::ButtonToolTipRO = "Current state is read-only, click here if you want to enable write";
-const QString ReadOnlyButton::CAP_WRITE_ToolTip = "Disabled: the source cannot be modified";
+const QString ReadOnlyButton::CAP_WRITE_DISABLED_ToolTip = "Disabled: the source cannot be modified";
 
 ReadOnlyButton::ReadOnlyButton(ByteSourceAbstract *bytesource, QWidget *parent) :
     QPushButton(parent)
@@ -29,6 +32,8 @@ ReadOnlyButton::ReadOnlyButton(ByteSourceAbstract *bytesource, QWidget *parent) 
     setFlat(true);
     refreshStateValue();
     connect(this, SIGNAL(toggled(bool)), SLOT(onToggle(bool)));
+    connect(byteSource, SIGNAL(readOnlyChanged(bool)), this, SLOT(refreshStateValue()));
+
 }
 
 void ReadOnlyButton::refreshStateValue()
@@ -49,7 +54,9 @@ void ReadOnlyButton::refreshStateValue()
 
     if (!byteSource->hasCapability(ByteSourceAbstract::CAP_WRITE)) {
         setDisabled(true);
-        setToolTip(CAP_WRITE_ToolTip);
+        setToolTip(CAP_WRITE_DISABLED_ToolTip);
+    } else {
+        setEnabled(true);
     }
     blockSignals(false);
 }
@@ -75,12 +82,12 @@ void ReadOnlyButton::onToggle(bool val)
             mess = tr("Could not set readonly property on %1").arg(((QObject *)byteSource)->metaObject()->className());
         }
     } else {
-        mess = tr("%1 does not have the CAP_WRITE capability").arg(((QObject *)byteSource)->metaObject()->className());
+        mess = tr("%1 does not have the CAP_WRITE capability T_T").arg(((QObject *)byteSource)->metaObject()->className());
         blockSignals(true);
         setStyleSheet(GuiStyles::PushButtonReadonly);
         setChecked(true);
         setText(ReadOnly);
-        setToolTip(CAP_WRITE_ToolTip);
+        setToolTip(CAP_WRITE_DISABLED_ToolTip);
         blockSignals(false);
     }
     emit logError(mess);

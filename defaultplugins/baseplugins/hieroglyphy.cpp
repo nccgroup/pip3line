@@ -91,7 +91,7 @@ QWidget *Hieroglyphy::requestGui(QWidget *parent)
 }
 
 QString Hieroglyphy::inboundString() const
-{
+{  
     return tr("Convert script");
 }
 
@@ -108,7 +108,6 @@ QString Hieroglyphy::help() const
     helpS.append("<p>Compared to the original algorithm (see Credits) multi-bytes unicode characters (unicode value > 255) conversion should be working fine.");
     helpS.append("<br>Although converting just one of them produces a massive sequence, so I would recommend avoiding them.</p>");
     helpS.append("<br>As explained from the original blog post, this algorithm will only produce \"browser\" compatible sequences, due to the fact that we use the <span style=\" color:#ff5757;\">location</span> property to generate the 'h' , 't' and '/' characters.<br>");
-     helpS.append("Although this should not be too much of an issue, given that JavaScript is mostly used within browsers.</p>");
     return helpS;
 }
 

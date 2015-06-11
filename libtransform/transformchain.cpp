@@ -14,6 +14,7 @@ Released under AGPL see LICENSE for more information
 TransformChain::TransformChain()
 {
     preferredFormat = TEXTFORMAT;
+    preferredOutputType = ONELINE;
 }
 
 TransformChain::TransformChain(const TransformChain &other) : QList<TransformAbstract *>(other)
@@ -22,6 +23,7 @@ TransformChain::TransformChain(const TransformChain &other) : QList<TransformAbs
     description = other.description;
     help = other.help;
     preferredFormat = other.preferredFormat;
+    preferredOutputType = other.preferredOutputType;
 }
 
 TransformChain &TransformChain::operator =(const TransformChain &other)
@@ -31,6 +33,7 @@ TransformChain &TransformChain::operator =(const TransformChain &other)
     description = other.description;
     help = other.help;
     preferredFormat = other.preferredFormat;
+    preferredOutputType = other.preferredOutputType;
     return *this;
 }
 
@@ -68,7 +71,7 @@ QString TransformChain::getHelp() const
     return help;
 }
 
-void TransformChain::setFormat(OutputFormat val)
+void TransformChain::setFormat(const OutputFormat &val)
 {
     preferredFormat = val;
 }
@@ -77,3 +80,21 @@ OutputFormat TransformChain::getFormat() const
 {
     return preferredFormat;
 }
+Pip3lineConst::OutputType TransformChain::getPreferredOutputType() const
+{
+    return preferredOutputType;
+}
+
+void TransformChain::clearTransforms()
+{
+    for (int i = 0; i < size(); i++) {
+        delete at(i);
+    }
+    clear();
+}
+
+void TransformChain::setPreferredOutputType(const Pip3lineConst::OutputType &value)
+{
+    preferredOutputType = value;
+}
+
