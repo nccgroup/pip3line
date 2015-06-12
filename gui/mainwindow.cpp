@@ -276,6 +276,7 @@ void MainWindow::buildToolBar()
     }
     newMenu->addAction(newLargeFileTabAction);
 
+#ifndef Q_OS_OSX // memory view not implemented for OS X
     if (guiHelper->getDebugMode()) {
         newCurrentMemTabAction = new(std::nothrow) QAction(CURRENTMEM_TAB_STRING, newMenu);
         if (newCurrentMemTabAction == NULL) {
@@ -283,6 +284,7 @@ void MainWindow::buildToolBar()
         }
         newMenu->addAction(newCurrentMemTabAction);
     }
+#endif
 
 //    newInterceptTabAction = new(std::nothrow) QAction(INTERCEP_TAB_STRING, newMenu);
 //    if (newInterceptTabAction == NULL) {

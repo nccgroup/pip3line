@@ -21,6 +21,10 @@ Released under AGPL see LICENSE for more information
 #include <sys/mman.h>
 #elif defined(Q_OS_WIN)
 #include "Windows.h"
+#elif defined(Q_OS_OSX)
+#include <sys/errno.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 

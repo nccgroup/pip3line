@@ -30,9 +30,11 @@ endif(WITH_QT5)
 include_directories (
 	../libtransform)
 
-link_directories (
-	${PROJECT_SOURCE_DIR}/../lib
-	)
+if (NOT APPLE)
+  link_directories (
+    ${PROJECT_SOURCE_DIR}/../lib
+  )
+endif()
 
 set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/../bin )
 
