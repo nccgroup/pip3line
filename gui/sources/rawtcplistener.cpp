@@ -15,7 +15,6 @@ RawTcpListener::RawTcpListener(QHostAddress remoteAddress, quint16 remotePort, Q
     remotePort(remotePort)
 {
     ssocket = NULL;
-    remotePort = 0;
 }
 
 RawTcpListener::~RawTcpListener()

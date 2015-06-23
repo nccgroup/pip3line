@@ -91,7 +91,7 @@ class TcpServer : public ServerAbstract
 #endif
     private:
         Q_DISABLE_COPY(TcpServer)
-        QMutex confLocker;
+       // QMutex confLocker;
         InternalTcpServer *tcpServer;
         QString IP;
         int port;

@@ -12,9 +12,9 @@ Released under AGPL see LICENSE for more information
 
 const QString ComposedTransform::id = "Composed";
 
-ComposedTransform::ComposedTransform(TransformChain transformChain)
+ComposedTransform::ComposedTransform(TransformChain transformChain) :
+    chain(transformChain)
 {
-    chain = transformChain;
     twoWaysFlag = true;
     for (int i = 0; i < chain.size(); i++) {
         twoWaysFlag = chain.at(i)->isTwoWays() && twoWaysFlag;

@@ -147,20 +147,19 @@ int main(int argc, char *argv[])
     }
 
 
-
-
-#ifdef Q_OS_WIN
-    // forcing style on windows. can be overwritten at runtime
+#if QT_VERSION >= 0x050000
+    // forcing style for Qt5. can be overwritten at runtime
     // with the option -style [style name]
     // An indicative list of available themes is given in the Help->info dialog
     QStringList stylelist = QStyleFactory::keys();
     if (stylelist.contains("Fusion"))
         QApplication::setStyle("Fusion");
+#ifdef Q_OS_WIN
     else if (stylelist.contains("WindowsVista"))
         QApplication::setStyle("WindowsVista");
     else if (stylelist.contains("WindowsXP"))
         QApplication::setStyle("WindowsXP");
-
+#endif
 
 #endif
 
