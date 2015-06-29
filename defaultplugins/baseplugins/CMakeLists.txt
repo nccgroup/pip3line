@@ -231,6 +231,10 @@ if(WITH_QT5)
 		sha256.h
 		sha384.h
 		sha512.h
+		sha3_224.h
+		sha3_256.h
+		sha3_384.h
+		sha3_512.h
 	)
 	
 	set ( baseplugins_SRCS
@@ -239,6 +243,10 @@ if(WITH_QT5)
 		sha256.cpp
 		sha384.cpp
 		sha512.cpp
+		sha3_224.cpp
+		sha3_256.cpp
+		sha3_384.cpp
+		sha3_512.cpp
 	)
 endif(WITH_QT5)
 	

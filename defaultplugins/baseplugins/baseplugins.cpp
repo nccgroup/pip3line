@@ -66,6 +66,13 @@ Released under AGPL see LICENSE for more information
 #include "sha512.h"
 #endif
 
+#if QT_VERSION >= 0x050100
+#include "sha3_224.h"
+#include "sha3_256.h"
+#include "sha3_384.h"
+#include "sha3_512.h"
+#endif
+
 const QString BasePlugins::Base64Url = "Base64 && Url Encode";
 const QString BasePlugins::BinaryNum = "Binary (num)";
 const QString BasePlugins::OctalNum = "Octal (num)";
@@ -125,6 +132,30 @@ TransformAbstract *BasePlugins::getTransform(QString name)
         }
     } else
 
+#endif
+
+#if QT_VERSION >= 0x050100
+        if (Sha3_224::id == name) {
+            ta = new(std::nothrow) Sha3_224();
+            if (ta == NULL) {
+                qFatal("Cannot allocate memory for Sha3_224 X{");
+            }
+        } else if (Sha3_256::id == name) {
+            ta = new(std::nothrow) Sha3_256();
+            if (ta == NULL) {
+                qFatal("Cannot allocate memory for Sha3_256 X{");
+            }
+        } else if (Sha3_384::id == name) {
+            ta = new(std::nothrow) Sha3_384();
+            if (ta == NULL) {
+                qFatal("Cannot allocate memory for Sha3_384 X{");
+            }
+        } else if (Sha3_512::id == name) {
+            ta = new(std::nothrow) Sha3_512();
+            if (ta == NULL) {
+                qFatal("Cannot allocate memory for Sha3_512 X{");
+            }
+        } else
 #endif
 
     if (ByteRot::id == name) {
@@ -366,6 +397,13 @@ const QStringList BasePlugins::getTransformList(QString typeName)
         enclist.append(Sha384::id);
         enclist.append(Sha512::id);
 #endif
+#if QT_VERSION >= 0x050100
+        enclist.append(Sha3_224::id);
+        enclist.append(Sha3_256::id);
+        enclist.append(Sha3_384::id);
+        enclist.append(Sha3_512::id);
+#endif
+
     } else if (typeName == DEFAULT_TYPE_CRYPTO) {
         enclist.append(Xor::id);
         enclist.append(Rotx::id);
