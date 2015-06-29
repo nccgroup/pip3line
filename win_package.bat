@@ -80,12 +80,8 @@ copy %QT_LIBS%"\bin\d3dcompiler_47.dll"
 copy %QT_LIBS%"\bin\libEGL.dll"
 copy %QT_LIBS%"\bin\libGLESv2.dll"
 
-echo [6] Copying Misc. files
-copy ..\vs_redist.README
-
-%QT_LIBS%/bin/windeployqt --release pip3line.exe
-
 :EndInstall
+%QT_LIBS%/bin/windeployqt --release pip3line.exe
 cd ..
 GOTO End
 
