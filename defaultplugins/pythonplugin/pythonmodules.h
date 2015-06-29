@@ -33,6 +33,7 @@ class PythonModules : public ModulesManagement
         PyObject * loadModule(QString modulePath, bool reload = false, bool *firstLoad = NULL);
         bool unloadModules(QString modulePath);
         void unloadModules();
+        QString getInfos();
     private Q_SLOTS:
         void updatePath();
         QString retrievePythonErrors();
@@ -55,6 +56,7 @@ class PythonModules : public ModulesManagement
         QHash<QString, PyObject*> modulesPath;
 
         void cleaningPyObjs();
+        QString getRuntimeVersion();
         bool checkPyObject(PyObject *obj);
         void settingUpStderr();
         void disablingSIGINT();

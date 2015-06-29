@@ -221,6 +221,11 @@ QWidget *ModulesManagement::getGui(QWidget *parent)
     return gui;
 }
 
+QString ModulesManagement::getInfos()
+{
+    return QString();
+}
+
 QString ModulesManagement::addModule(QString fileName, ModulesManagement::ModuleType type)
 {
 //    qDebug() << "[ModulesManagement::addModule]" << fileName;

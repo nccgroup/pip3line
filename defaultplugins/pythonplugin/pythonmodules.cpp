@@ -14,6 +14,7 @@ Released under AGPL see LICENSE for more information
 #include "../../version.h"
 #include <transformmgmt.h>
 #include <QDebug>
+#include <QSysInfo>
 #include <pip3linecallback.h>
 
 #ifdef BUILD_PYTHON_3
@@ -98,17 +99,20 @@ bool PythonModules::initialize()
 #endif
                 } else {
                     callback->logError(tr("[getCurrentSysPath] Could not convert the pathObj to string"));
+                    PyGILState_Release(lgstate);
                     return false;
                 }
 
             } else {
                 callback->logError(tr("[getCurrentSysPath] the object is not a string"));
+                PyGILState_Release(lgstate);
                 return false;
             }
 
         }
     } else {
         callback->logError(tr("[getCurrentSysPath] no sys.path property was found. something is really wrong T_T"));
+        PyGILState_Release(lgstate);
         return false;
     }
 
@@ -197,6 +201,15 @@ void PythonModules::unloadModules()
     modulesPath.clear();
 
     PyGILState_Release(lgstate);
+}
+
+QString PythonModules::getInfos()
+{
+    QString info;
+    info.append(QString("<p>Plugin compiled against Python %1 (%2 bits)</p>").arg(PY_VERSION).arg(QSysInfo::WordSize));
+    info.append(QString("<p>Plugin running with %1</p>").arg(getRuntimeVersion()));
+
+    return info;
 }
 
 void PythonModules::updatePath()
@@ -602,6 +615,62 @@ void PythonModules::cleaningPyObjs()
     Py_XDECREF(pyStringIO);
     pyStringIO = NULL;
     PyGILState_Release(lgstate);
+}
+
+QString PythonModules::getRuntimeVersion()
+{
+    QString version;
+    PyGILState_STATE lgstate;
+    lgstate = PyGILState_Ensure();
+
+    Py_ssize_t size = 0;
+    PyObject *modSys = NULL;
+    // Import signal module
+
+    modSys = PyImport_ImportModule("sys");
+
+    if (!checkPyObject(modSys)){
+        callback->logError("[getRuntimeVersion] Importing sys failed");
+        Py_XDECREF(modSys);
+        PyGILState_Release(lgstate);
+        return version;
+    }
+
+    // get sys.version
+    PyObject *pyVersion = PyObject_GetAttrString(modSys, "version");
+    if (!checkPyObject(pyVersion)){
+        callback->logError("[getRuntimeVersion] Failed to retrieve sys.version");
+        Py_XDECREF(modSys);
+        Py_XDECREF(pyVersion);
+        PyGILState_Release(lgstate);
+        return version;
+    }
+
+#ifdef BUILD_PYTHON_3
+            if (PyUnicode_Check(pyVersion)) {
+                wchar_t *wstring = PyUnicode_AsWideCharString(pyVersion, &size); // new object, need to be cleaned
+                if (wstring != NULL) {
+                    version = QString::fromWCharArray(wstring,size);
+                    PyMem_Free(wstring);
+#else
+            if (PyString_Check(pyVersion)) {
+                char * buf = NULL;
+                if (PyString_AsStringAndSize(pyVersion, &buf, &size) != -1) { // do not touch buf after the call
+                    version = QString::fromUtf8(QByteArray(buf, size));
+#endif
+                } else {
+                    callback->logError(tr("[getRuntimeVersion] Could not convert the pyVersion to string"));
+                }
+
+            } else {
+                callback->logError(tr("[getRuntimeVersion] the pyVersion object is not a string"));
+            }
+
+    Py_XDECREF(pyVersion);
+    Py_XDECREF(modSys);
+    PyGILState_Release(lgstate);
+
+    return version;
 }
 
 bool PythonModules::checkPyObject(PyObject *obj)

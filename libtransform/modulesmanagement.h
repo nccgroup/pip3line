@@ -60,6 +60,8 @@ class LIBTRANSFORMSHARED_EXPORT ModulesManagement : public QObject
 
         QWidget *getGui(QWidget * parent);
 
+        virtual QString getInfos();
+
     Q_SIGNALS:
         void pathsUpdated();
         void modulesUpdated();

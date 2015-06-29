@@ -12,21 +12,21 @@ TEMPLATE = lib
 CONFIG += plugin debug no_keywords
 
 # Comment this out if you want to compile the 2.7 version
-#CONFIG += CONF_PYTHON_3
+CONFIG += CONF_PYTHON_3
 
 
 CONF_PYTHON_3 {
     DEFINES += BUILD_PYTHON_3
     TARGET = python3plugin
     unix {
-        LIBS += -lpython3.3
-        INCLUDEPATH +="/usr/include/python3.3/"
+        LIBS += -lpython3.4
+        INCLUDEPATH +="/usr/include/python3.4/"
     }
 
     win32 {
         QMAKE_LFLAGS_WINDOWS += /FS
-        INCLUDEPATH +="C:\\Python33\\include\\"
-        LIBS += -L"C:\\Python33\\libs\\" -lpython33
+        INCLUDEPATH +="C:\\Python34\\include\\"
+        LIBS += -L"C:\\Python34\\libs\\" -lpython34
     }
 } else {
     TARGET = python27plugin

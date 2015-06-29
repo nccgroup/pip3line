@@ -27,7 +27,7 @@ ModulesManagementWidget::ModulesManagementWidget(ModulesManagement *nmodulesMgmt
     moduleTitle = modulesMgmt->getLangName();
 
     ui->setupUi(this);
-
+    ui->infoLabel->setText(modulesMgmt->getInfos());
     connect(modulesMgmt,SIGNAL(modulesUpdated()), this, SLOT(loadModules()));
     connect(modulesMgmt,SIGNAL(pathsUpdated()), this, SLOT(loadPaths()));
     connect(ui->modulesListWidget, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(onModuleSelected(QListWidgetItem*)));

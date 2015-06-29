@@ -12,7 +12,7 @@ Released under AGPL see LICENSE for more information
 #define XMLCOMMON_H
 #include <QString>
 
-#define LIB_TRANSFORM_VERSION 14
+#define LIB_TRANSFORM_VERSION 15
 
 namespace Pip3lineConst {
     // Default types
