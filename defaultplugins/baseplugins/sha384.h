@@ -15,15 +15,16 @@ Released under AGPL see LICENSE for more information
 
 class Sha384 : public TransformAbstract
 {
-public:
-    Sha384();
-    ~Sha384();
-    QString name() const;
-    QString description() const;
-    void transform(const QByteArray &input, QByteArray &output);
-    bool isTwoWays();
-    static const QString id;
-    QString help() const;
+    Q_OBJECT
+    public:
+        explicit Sha384();
+        ~Sha384();
+        QString name() const;
+        QString description() const;
+        void transform(const QByteArray &input, QByteArray &output);
+        bool isTwoWays();
+        static const QString id;
+        QString help() const;
 };
 
 #endif // SHA384_H

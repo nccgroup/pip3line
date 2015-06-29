@@ -15,15 +15,16 @@ Released under AGPL see LICENSE for more information
 
 class Sha256 : public TransformAbstract
 {
-public:
-    Sha256();
-    ~Sha256();
-    QString name() const;
-    QString description() const;
-    void transform(const QByteArray &input, QByteArray &output);
-    bool isTwoWays();
-    static const QString id;
-    QString help() const;
+    Q_OBJECT
+    public:
+        explicit Sha256();
+        ~Sha256();
+        QString name() const;
+        QString description() const;
+        void transform(const QByteArray &input, QByteArray &output);
+        bool isTwoWays();
+        static const QString id;
+        QString help() const;
 };
 
 #endif // SHA256_H

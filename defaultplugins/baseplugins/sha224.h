@@ -15,15 +15,16 @@ Released under AGPL see LICENSE for more information
 
 class Sha224 : public TransformAbstract
 {
-public:
-    Sha224();
-    ~Sha224();
-    QString name() const;
-    QString description() const;
-    void transform(const QByteArray &input, QByteArray &output);
-    bool isTwoWays();
-    static const QString id;
-    QString help() const;
+    Q_OBJECT
+    public:
+        explicit Sha224();
+        ~Sha224();
+        QString name() const;
+        QString description() const;
+        void transform(const QByteArray &input, QByteArray &output);
+        bool isTwoWays();
+        static const QString id;
+        QString help() const;
 };
 
 #endif // SHA224_H

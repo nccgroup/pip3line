@@ -15,15 +15,16 @@ Released under AGPL see LICENSE for more information
 
 class Sha512 : public TransformAbstract
 {
-public:
-    Sha512();
-    ~Sha512();
-    QString name() const;
-    QString description() const;
-    void transform(const QByteArray &input, QByteArray &output);
-    bool isTwoWays();
-    static const QString id;
-    QString help() const;
+    Q_OBJECT
+    public:
+        Sha512();
+        ~Sha512();
+        QString name() const;
+        QString description() const;
+        void transform(const QByteArray &input, QByteArray &output);
+        bool isTwoWays();
+        static const QString id;
+        QString help() const;
 };
 
 #endif // SHA512_H
