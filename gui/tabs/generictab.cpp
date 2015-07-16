@@ -346,8 +346,7 @@ void GenericTab::onDeleteTab(int index)
         } else {
             vt = tabData.takeAt(index);
         }
-        if (vt.type == TEXTVIEW || vt.type == HEXVIEW) // only case where the bytesource is IntermediateSource
-            delete sva->getByteSource();
+
         delete sva;
     }
 }

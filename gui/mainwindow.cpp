@@ -90,6 +90,7 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     newMenu = NULL;
     blockListener = NULL;
     trayIconMenu = NULL;
+    transformFactory = NULL;
 
     newTransformTabAction = NULL;
     newLargeFileTabAction = NULL;
@@ -313,7 +314,7 @@ void MainWindow::buildToolBar()
 
 void MainWindow::initializeLibTransform()
 {
-    if (transformFactory != NULL) {
+    if (transformFactory == NULL) {
         transformFactory = new(std::nothrow) TransformMgmt();
         if (transformFactory == NULL) {
             qFatal("Cannot allocate memory for the Transform Factory X{");
