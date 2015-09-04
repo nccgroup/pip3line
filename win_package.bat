@@ -10,7 +10,7 @@ IF "%GOTVERSION%"=="false" GOTO Usage
 
 SET VSVERSION=%1
 REM Default Qt dir
-SET "BASE_DIR_QT=C:\Qt\5.4"
+SET "BASE_DIR_QT=C:\Qt\5.5"
 
 IF "%VSVERSION%"=="2013OGL" set QT_LIBS="%BASE_DIR_QT%\msvc2013_opengl"
 IF "%VSVERSION%"=="2013OGL64" set QT_LIBS=%BASE_DIR_QT%"\msvc2013_64_opengl"
@@ -41,6 +41,9 @@ copy "..\bin\pip3linecmd.exe"
 md plugins > nul 2> nul
 copy "..\bin\plugins\*.dll" ".\plugins"
 
+echo [1.1] Copying extras
+md extras > nul 2> nul
+xcopy "..\extras\*" ".\extras" /s /i
 
 REM QT libraries
 echo [2] Copying QT libraries
@@ -51,9 +54,6 @@ copy %QT_LIBS%"\bin\Qt5Svg.dll"
 copy %QT_LIBS%"\bin\Qt5Widgets.dll"
 copy %QT_LIBS%"\bin\Qt5XmlPatterns.dll"
 copy %QT_LIBS%"\bin\Qt5Concurrent.dll"
-copy %QT_LIBS%"\bin\icudt53.dll"
-copy %QT_LIBS%"\bin\icuin53.dll"
-copy %QT_LIBS%"\bin\icuuc53.dll"
 
 echo [3] Copying QT mandatory plugins
 REM QT mandatory plug-ins, if missing the application won't even start

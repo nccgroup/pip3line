@@ -10,7 +10,7 @@
 
 message( STATUS "Configuring libtransform --" )
 project( transform )
-cmake_minimum_required( VERSION 2.8.11 )
+cmake_minimum_required( VERSION 3.2 )
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DLIBTRANSFORM_LIBRARY)
 

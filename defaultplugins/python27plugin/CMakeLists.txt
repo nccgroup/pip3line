@@ -11,7 +11,7 @@
 message ( STATUS "Configuring the Python 2.7 plugin --" )
 project( python27plugin )
 
-cmake_minimum_required( VERSION 2.8.11 )
+cmake_minimum_required( VERSION 3.2 )
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DPYTHONPLUGIN_LIBRARY -DQT_NO_KEYWORDS)
 

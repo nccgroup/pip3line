@@ -10,7 +10,7 @@
 
 message ( STATUS "Configuring pip3line gui --" )
 project( pip3line )
-cmake_minimum_required( VERSION 2.8.11)
+cmake_minimum_required( VERSION 3.2)
 set ( CMAKE_BUILD_TYPE Release )
 
 set(CMAKE_AUTOMOC ON)

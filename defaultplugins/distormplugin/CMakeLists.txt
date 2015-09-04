@@ -11,7 +11,7 @@
 message( STATUS "Configuring the Distorm plugin --")
 project( distormplugin )
 
-cmake_policy(SET CMP0015 NEW)
+cmake_minimum_required( VERSION 3.2 )
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DDISTORM_LIBRARY )
 

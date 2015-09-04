@@ -8,7 +8,7 @@
 # Released under AGPL see LICENSE for more information
 ####
 
-cmake_policy(VERSION 2.8.11)
+cmake_policy(VERSION 3.2)
 
 message( STATUS "Git information --" )
 
