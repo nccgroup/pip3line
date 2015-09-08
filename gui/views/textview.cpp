@@ -68,10 +68,8 @@ TextView::TextView(ByteSourceAbstract *nbyteSource, GuiHelper *nguiHelper, QWidg
     connect(guiHelper, SIGNAL(tabsUpdated()), this, SLOT(updateSendToMenu()));
     connect(guiHelper, SIGNAL(importExportUpdated()), this, SLOT(updateImportExportMenu()));
     setAcceptDrops(true);
-    QFont textViewFont;
-    textViewFont.setFamily("Monospace");
-    textViewFont.setPointSize(10);
-    ui->plainTextEdit->setFont(textViewFont);
+
+    ui->plainTextEdit->setFont(GuiStyles::DEFAULT_REGULAR_FONT);
 
     ui->plainTextEdit->setReadOnly(byteSource->isReadonly());
     connect(byteSource, SIGNAL(readOnlyChanged(bool)), this, SLOT(onReadOnlyChanged(bool)));
