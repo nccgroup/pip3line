@@ -123,6 +123,7 @@ GenericTab::GenericTab(ByteSourceAbstract *nbytesource, GuiHelper *guiHelper, QW
 
     ui->mainLayout->insertWidget(ui->mainLayout->indexOf(ui->tabWidget) + 1,messagePanel);
     connect(bytesource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), messagePanel, SLOT(log(QString,QString,Pip3lineConst::LOGLEVEL)));
+    connect(bytesource, SIGNAL(reset()), messagePanel, SLOT(closeWidget()));
     //connect(byteSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger, SLOT(log(QString,QString,Pip3lineConst::LOGLEVEL)));
 
     // Checking if there are some additional buttons
