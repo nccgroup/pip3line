@@ -72,6 +72,9 @@ class BytesRange
         static void addMarkToList(BytesRangeList *list, BytesRange * range);
         static void addMarkToList(BytesRangeList *list, quint64 start, quint64 end, const QColor &bgcolor, const QColor &fgColor, QString toolTip);
         static void clearMarkingFromList(BytesRangeList *list, quint64 start, quint64 end);
+        static void moveMarkingAfterDelete(BytesRangeList *list, quint64 pos, quint64 deleteSize);
+        static void moveMarkingAfterInsert(BytesRangeList *list, quint64 pos, quint64 insertSize);
+        static void moveMarkingAfterReplace(BytesRangeList *list, quint64 pos, int diff);
     protected:
         QString description;
         quint64 lowerVal;
@@ -184,6 +187,9 @@ class ByteSourceAbstract : public QObject
 
         virtual BaseStateAbstract *getStateMngtObj() = 0;
 
+        bool hasStaticMarking() const;
+        void setStaticMarking(bool value);
+
     public slots:
         virtual bool historyForward();
         virtual bool historyBackward();
@@ -218,21 +224,22 @@ class ByteSourceAbstract : public QObject
         void writeToFile(QString destFilename, QByteArray data);
         void clearAllMarkingsNoUpdate();
         static const quintptr INVALID_SOURCE;
-        BytesRange *cachedRange; // internal use value
+        BytesRange *cachedRange; // internal use value (does not need saving)
         QWidget *confGui;
         QWidget *buttonBar;
         QWidget *upperView;
         SearchAbstract *searchObj;
-        bool applyingHistory; // internal use value
+        bool applyingHistory; // internal use value  (does not need saving)
 
         BytesRangeList * userMarkingsRanges; // markings
         int currentHistoryPointer;
         QList<HistItem> history; // edit history
 
-        quint32 capabilities; // does not need to be save as specific to the source
+        quint32 capabilities; // does not need to be saved as it is specific to the source
 
         bool _readonly;
         QString _name;
+        bool staticMarking; // markings won't get affected by deletion or insertion
 };
 
 class ByteSourceStateObj : public BaseStateAbstract

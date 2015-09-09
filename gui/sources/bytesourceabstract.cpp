@@ -343,7 +343,110 @@ void BytesRange::clearMarkingFromList(BytesRangeList *list, quint64 start, quint
 //    qDebug() << "Marks" << list->size();
 //    for (int i = 0; i < list->size(); i++) {
 //        qDebug() << "- " << QString::number(list->at(i)->lowerVal,16) << ":" << QString::number(list->at(i)->upperVal,16);
-//    }
+    //    }
+}
+
+void BytesRange::moveMarkingAfterDelete(BytesRangeList *list, quint64 pos, quint64 deleteSize)
+{
+    int msize = list->size();
+    for (int i = 0; i < msize; i++) {
+        BytesRange * currRange = list->at(i);
+        if (pos > currRange->upperVal) {
+            continue;
+        }
+        if (pos < currRange->lowerVal){
+            if (currRange->lowerVal < deleteSize)
+                currRange->lowerVal = 0;
+            else
+                currRange->lowerVal = currRange->lowerVal - deleteSize;
+        }
+
+        if (currRange->upperVal < deleteSize) { // at this point the range is ... out of range, removing it
+            delete currRange;
+            list->removeAt(i);
+            msize--;
+        }
+        else
+            currRange->upperVal = currRange->upperVal - deleteSize;
+    }
+}
+
+void BytesRange::moveMarkingAfterInsert(BytesRangeList *list, quint64 pos, quint64 insertSize)
+{
+    int msize = list->size();
+    for (int i = 0; i < msize; i++) {
+        BytesRange * currRange = list->at(i);
+
+        if (pos > currRange->upperVal) {
+            continue;
+        }
+        if (pos <= currRange->lowerVal){
+            if (currRange->lowerVal > ULONG_LONG_MAX - insertSize){ // at this point the range is ... out of range, removing it
+                delete currRange;
+                list->removeAt(i);
+                i--; // need to take into account the fact that one object was removed;
+                msize--;
+                continue;
+            }
+            else
+                currRange->lowerVal = currRange->lowerVal + insertSize;
+        }
+
+        if (currRange->upperVal > ULONG_LONG_MAX - insertSize) {
+            currRange->upperVal = ULONG_LONG_MAX;
+        }
+        else
+            currRange->upperVal = currRange->upperVal + insertSize;
+    }
+}
+
+void BytesRange::moveMarkingAfterReplace(BytesRangeList *list, quint64 pos, int diff)
+{
+    if (diff == 0) return; // nothing to do here
+    int msize = list->size();
+    for (int i = 0; i < msize; i++) {
+        BytesRange * currRange = list->at(i);
+
+        if (pos > currRange->upperVal) { // probably need some work here
+            continue;
+        }
+
+        if (diff < 0) { // expansion
+            diff = qAbs(diff);
+            if (pos < currRange->lowerVal){
+                if (currRange->lowerVal > ULONG_LONG_MAX - diff){ // at this point the range is ... out of range, removing it
+                    delete currRange;
+                    list->removeAt(i);
+                    i--; // need to take into account the fact that one object was removed;
+                    msize--;
+                    continue;
+                }
+                else
+                    currRange->lowerVal = currRange->lowerVal + diff;
+            }
+
+            if (currRange->upperVal > ULONG_LONG_MAX - diff) {
+                currRange->upperVal = ULONG_LONG_MAX;
+            }
+            else
+                currRange->upperVal = currRange->upperVal + diff;
+        } else { // reduction
+            if (pos < currRange->lowerVal){
+                if (currRange->lowerVal < (quint64)diff) // diff is positive
+                    currRange->lowerVal = 0;
+                else
+                    currRange->lowerVal = currRange->lowerVal - diff;
+            }
+
+            if (currRange->upperVal < (quint64)diff) { // at this point the range is ... out of range, removing it
+                delete currRange;
+                list->removeAt(i);
+                msize--;
+            }
+            else
+                currRange->upperVal = currRange->upperVal - diff;
+        }
+    }
 }
 
 BytesRangeList::BytesRangeList(QObject * parent) :
@@ -415,6 +518,7 @@ ByteSourceAbstract::ByteSourceAbstract(QObject *parent) :
     userMarkingsRanges = NULL;
     currentHistoryPointer = -1;
     applyingHistory = false;
+    staticMarking = false;
     _readonly = false;
 }
 
@@ -652,6 +756,16 @@ void ByteSourceAbstract::clearAllMarkingsNoUpdate()
         userMarkingsRanges = NULL;
     }
 }
+bool ByteSourceAbstract::hasStaticMarking() const
+{
+    return staticMarking;
+}
+
+void ByteSourceAbstract::setStaticMarking(bool value)
+{
+    staticMarking = value;
+}
+
 
 void ByteSourceAbstract::onMarkingsListDeleted()
 {
@@ -1066,6 +1180,7 @@ void ByteSourceStateObj::run()
         int size = 0;
         writer->writeAttribute(GuiConst::STATE_NAME, bs->name());
         writer->writeAttribute(GuiConst::STATE_READONLY, write(bs->isReadonly()));
+        writer->writeAttribute(GuiConst::STATE_STATIC_MARKINGS, write(bs->hasStaticMarking()));
 
         // inherited class save
         internalRun();
@@ -1129,6 +1244,10 @@ void ByteSourceStateObj::run()
 
             if (attributes.hasAttribute(GuiConst::STATE_READONLY)) {
                 closingState->setReadonly(readBool(attributes.value(GuiConst::STATE_READONLY)));
+            }
+
+            if (attributes.hasAttribute(GuiConst::STATE_STATIC_MARKINGS)) {
+                bs->setStaticMarking(readBool(attributes.value(GuiConst::STATE_STATIC_MARKINGS)));
             }
 
             // loading inherited class specific

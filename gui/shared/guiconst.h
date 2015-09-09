@@ -101,6 +101,7 @@ namespace GuiConst
     static const QString STATE_PRETAB_TYPE = "PreTab";
     static const QString STATE_NAME = "Name";
     static const QString STATE_READONLY = "Readonly";
+    static const QString STATE_STATIC_MARKINGS = "StaticMarkings";
     static const QString STATE_USERMARKINGS = "UserMarkings";
     static const QString STATE_MARKING = "Marking";
     static const QString STATE_HEX_HISTORY = "HexHistory";

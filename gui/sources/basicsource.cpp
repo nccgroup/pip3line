@@ -184,6 +184,11 @@ void BasicSource::replace(quint64 offset, int length, QByteArray repData, quintp
     if (!_readonly && validateOffsetAndSize(offset, length)) {
         historyAddReplace(offset, rawData.mid(offset,length),repData);
         rawData.replace(offset,length,repData);
+
+        if (!staticMarking) {
+            int diff = length - repData.size(); // we (safely) assume that size() cannot be negative
+            BytesRange::moveMarkingAfterReplace(userMarkingsRanges, offset, diff);
+        }
         emit updated(source);
         if (length != repData.size())
             emit sizeChanged();
@@ -195,6 +200,7 @@ void BasicSource::insert(quint64 offset, QByteArray repData, quintptr source)
     if (!_readonly && validateOffsetAndSize(offset, 0)) {
         historyAddInsert(offset,repData);
         rawData.insert(offset, repData);
+        if (!staticMarking) BytesRange::moveMarkingAfterInsert(userMarkingsRanges, offset,repData.size());
         emit updated(source);
         emit sizeChanged();
     }
@@ -205,6 +211,26 @@ void BasicSource::remove(quint64 offset, int length, quintptr source)
     if (!_readonly && validateOffsetAndSize(offset, 0)) {
         historyAddRemove(offset,rawData.mid(offset,length));
         rawData.remove(offset, length);
+
+        if (!staticMarking) {
+            quint64 end = offset;
+            if (length < 0) {
+                length = qAbs(length);
+                if (offset < (quint64)length) {
+                    offset = 0;
+                } else {
+                    offset = offset - length;
+                }
+            } else {
+                if (offset + (quint64)length + 1 > (quint64)rawData.size())
+                    end = rawData.size() - 1;
+                else
+                    end = offset + (quint64)length - 1;
+            }
+
+            BytesRange::clearMarkingFromList(userMarkingsRanges, offset,end);
+            BytesRange::moveMarkingAfterDelete(userMarkingsRanges, offset,length);
+        }
         emit updated(source);
         emit sizeChanged();
     }
