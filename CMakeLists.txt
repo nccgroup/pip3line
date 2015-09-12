@@ -8,7 +8,9 @@
 # Released under AGPL see LICENSE for more information
 ####
 
-cmake_policy(VERSION 3.2)
+cmake_policy(VERSION 2.8.11)
+
+cmake_minimum_required( VERSION 2.8.11 )
 
 message( STATUS "Git information --" )
 
@@ -39,7 +41,6 @@ message(STATUS "Building using git commit: ${GIT_COMMIT}")
 message( STATUS "General Configuration --" )
 
 project( pip3lineall )
-cmake_minimum_required( VERSION 2.8.11 )
 set ( CMAKE_BUILD_TYPE Release )
 
 add_definitions(-DQT_NO_DEBUG_OUTPUT)

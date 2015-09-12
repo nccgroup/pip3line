@@ -3,8 +3,6 @@
 # https://github.com/nccgroup/pip3line
 # Released under AGPL see LICENSE for more information
 
-cmake_policy(VERSION 2.8.11)
-
 if (NOT EXISTS "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt")
     message(FATAL_ERROR "Cannot find install manifest: \"@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt\"")
 endif(NOT EXISTS "@CMAKE_CURRENT_BINARY_DIR@/install_manifest.txt")

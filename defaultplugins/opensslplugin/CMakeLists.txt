@@ -11,8 +11,6 @@
 message( STATUS "Configuring the OpenSSL plugin --")
 project( opensslplugin )
 
-cmake_minimum_required( VERSION 3.2 )
-
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DOPENSSLPLUGIN_LIBRARY)
 

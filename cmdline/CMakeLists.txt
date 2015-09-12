@@ -16,8 +16,6 @@
 # along with Pip3line.  If not, see <http://www.gnu.org/licenses/>.
 ####
 
-cmake_minimum_required( VERSION 3.2 )
-
 message ( STATUS "Configuring pip3linecmd --" )
 project( pip3linecmd )
 set ( CMAKE_BUILD_TYPE Release )

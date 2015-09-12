@@ -10,7 +10,6 @@
 
 message ( STATUS "Configuring the base plugin --" )
 project( baseplugins )
-cmake_minimum_required( VERSION 3.2 )
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DBASEPLUGINS_LIBRARY)
 

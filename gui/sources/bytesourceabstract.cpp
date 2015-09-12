@@ -17,6 +17,7 @@ Released under AGPL see LICENSE for more information
 #include <QApplication>
 #include "bytesourceabstract.h"
 #include "../state/basestateabstract.h"
+#include "../crossplatform.h"
 
 const quintptr ByteSourceAbstract::INVALID_SOURCE = 0;
 

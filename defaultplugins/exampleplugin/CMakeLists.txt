@@ -10,7 +10,6 @@
 
 message ( STATUS "Configuring the example plugin --" )
 project( exampleplugin )
-cmake_minimum_required( VERSION 3.2 )
 set ( CMAKE_BUILD_TYPE Release )
 add_definitions ( -Wall -DEXAMPLEPLUGIN_LIBRARY )
 
