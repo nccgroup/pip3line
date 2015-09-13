@@ -8,9 +8,11 @@
 # Released under AGPL see LICENSE for more information
 ####
 
-cmake_policy(VERSION 2.8.11)
-
-cmake_minimum_required( VERSION 2.8.11 )
+if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 3.0)
+	cmake_minimum_required( VERSION 3.1 )
+else ()
+       cmake_minimum_required( VERSION 2.8.11 )
+endif()
 
 message( STATUS "Git information --" )
 
