@@ -46,6 +46,13 @@ void myMessageOutput(QtMsgType type, const char *localMsg)
         if (_logFile != NULL)
             fprintf(_logFile, "%s Debug: %s\n",currentTime, localMsg);
         break;
+#if QT_VERSION >= 0x050500
+    case QtInfoMsg:
+        fprintf(stderr, "%s Info: %s\n",currentTime, localMsg);
+        if (_logFile != NULL)
+            fprintf(_logFile, "%s Info: %s\n",currentTime, localMsg);
+        break;
+#endif
     case QtWarningMsg:
         fprintf(stderr, "%s Warning: %s\n",currentTime, localMsg);
         if (_logFile != NULL)
