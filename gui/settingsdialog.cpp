@@ -138,8 +138,14 @@ void SettingsDialog::initializeConf()
     updateFilter();
 
     ui->defaultTabComboBox->clear();
-    ui->defaultTabComboBox->addItems(GuiConst::AVAILABLE_TAB_STRINGS);
-    ui->defaultTabComboBox->setCurrentIndex(guiHelper->getDefaultNewTab());
+    ui->defaultTabComboBox->addItem(GuiConst::TRANSFORM_TAB_STRING,QVariant(GuiConst::TRANSFORM_PRETAB));
+    ui->defaultTabComboBox->addItem(GuiConst::BASEHEX_TAB_STRING,QVariant(GuiConst::HEXAEDITOR_PRETAB));
+    int index = ui->defaultTabComboBox->findData(guiHelper->getDefaultNewTab());
+    if (index == -1) {
+        qCritical() << tr("[SettingsDialog::initializeConf] cannot find the index for the default tab combobox T_T");
+        index = 0;
+    }
+    ui->defaultTabComboBox->setCurrentIndex(index);
 
     ui->autoSaveGroupBox->setChecked(guiHelper->getAutoSaveState());
     ui->fileSaveLineEdit->setText(guiHelper->getAutoSaveFileName());
@@ -276,6 +282,7 @@ void SettingsDialog::updateMisc()
             ui->offsetBaseComboBox->setCurrentIndex(2);
             break;
         default: // this should obviously not happen ...
+            qCritical() << "[SettingsDialog::updateMisc] offsetbase looks fishy"<< offsetbase << "T_T";
             guiHelper->setDefaultOffsetBase(16);
             ui->offsetBaseComboBox->setCurrentIndex(2);
     }
@@ -533,7 +540,7 @@ void SettingsDialog::onProxyPortChanged(int port)
 void SettingsDialog::onDefaultTabChanged(int index)
 {
     if (index >= 0 && index < GuiConst::AVAILABLE_TAB_STRINGS.size())
-        guiHelper->setDefaultNewTab((GuiConst::AVAILABLE_PRETABS)index);
+        guiHelper->setDefaultNewTab((GuiConst::AVAILABLE_PRETABS)ui->defaultTabComboBox->itemData(index).toInt()); // don't need to check if this is an actual int
     else if (index != -1) {
         qWarning() << "[SettingsDialog::onDefaultTabChanged] Invalid index value" << index;
     }
