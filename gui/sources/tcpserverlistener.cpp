@@ -176,8 +176,7 @@ void TcpServerListener::handlingClient(int socketDescriptor)
         listener->moveToThread(workerThread);
         connect(listener, SIGNAL(blockReceived(Block)), SLOT(onClientReceivedBlock(Block)));
         connect(listener, SIGNAL(stopped()), SLOT(clientFinished()));
-        connect(listener, SIGNAL(error(QString,QString)), SIGNAL(error(QString,QString)));
-        connect(listener, SIGNAL(status(QString,QString)), SIGNAL(status(QString,QString)));
+        connect(listener, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)));
         connect(this, SIGNAL(shutdownAllClient()), listener, SLOT(stopListening()),Qt::QueuedConnection);
         QTimer::singleShot(0,listener,SLOT(startListening()));
     } else {
