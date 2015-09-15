@@ -10,7 +10,7 @@ Released under AGPL see LICENSE for more information
 
 #include "tcpserverlistener.h"
 #include "tcplistener.h"
-#include "networkconfwidget.h"
+#include "../networkconfwidget.h"
 #include <QThread>
 #include <QDebug>
 #include <QTimer>
@@ -35,6 +35,7 @@ void InTcpServer::incomingConnection(int socketDescriptor)
 
 const quint16 TcpServerListener::DEFAULT_PORT = 40000;
 const QHostAddress TcpServerListener::DEFAULT_ADDRESS = QHostAddress::LocalHost;
+const QString TcpServerListener::ID = QString("External Program (TCP server)");
 
 TcpServerListener::TcpServerListener(QObject *parent) :
     BlocksSource(parent)
@@ -43,7 +44,7 @@ TcpServerListener::TcpServerListener(QObject *parent) :
     port = DEFAULT_PORT;
     server = NULL;
     workerThread = NULL;
-
+    type = EXTERNAL_SERVER;
     serverThread = new(std::nothrow) QThread();
     if (serverThread == NULL) {
         qFatal("Cannot allocate memory for serverThread X{");
@@ -69,7 +70,7 @@ TcpServerListener::~TcpServerListener() {
     }
 }
 
-void TcpServerListener::sendBlock(const Block & )
+void TcpServerListener::sendBlock(Block * )
 {
     qFatal("[TcpServerListener::sendBlock] forbidden secret");
 }
@@ -118,19 +119,24 @@ void TcpServerListener::stopListening()
     }
 }
 
-void TcpServerListener::postBlockForSending(Block block)
+void TcpServerListener::postBlockForSending(Block *block)
 {
-    TcpListener * client = static_cast<TcpListener *>(block.source);
-
-    if (client != NULL) {
-        if (clients.contains(client)) {
-            client->postBlockForSending(block); // the client is going to take care of encoding the block
-        } else {
-            emit log(tr("Client disconnected cannot forward data block"), metaObject()->className(), Pip3lineConst::LERROR);
-        }
+    if (!clientsID.contains(block->getSourceid())) {
+        emit log(tr("Client not found (probably disconnected) cannot forward data block"), metaObject()->className(), Pip3lineConst::LERROR);
     } else {
-        qCritical() << "[TcpServerListener::postBlockForSending] NULL client";
+        TcpListener * client = clientsID.value(block->getSourceid());
+        client->postBlockForSending(block); // the client is going to take care of encoding the block
     }
+}
+
+QString TcpServerListener::getName()
+{
+    return ID;
+}
+
+bool TcpServerListener::isReflexive()
+{
+    return true;
 }
 
 void TcpServerListener::clientFinished()
@@ -138,8 +144,11 @@ void TcpServerListener::clientFinished()
     TcpListener * client = static_cast<TcpListener *>(sender());
     if (client == NULL) {
         qWarning() << "[TcpServerListener] NULL client finished T_T";
-    } else if (clients.contains(client)) {
-        clients.removeAll(client);
+    } else if (clientsList.contains(client)) {
+        int cid = clientsList.value(client);
+        BlocksSource::releaseID(cid);
+        clientsList.remove(client);
+        clientsID.remove(cid);
        // qWarning() << "Client finished" << client;
     }
     else
@@ -148,15 +157,14 @@ void TcpServerListener::clientFinished()
     delete client;
 }
 
-void TcpServerListener::onClientReceivedBlock(Block block)
+void TcpServerListener::onClientReceivedBlock(Block *block)
 {
     TcpListener *client = qobject_cast<TcpListener *>(sender());
-    int index = clients.indexOf(client);
-    if (index == -1) {
+    if (!clientsList.contains(client)) {
         qCritical() << tr("Could not find client in list");
     } else {
-        block.sourceid = index;
-        block.direction = Block::SOURCE;
+        int id = clientsList.value(client);
+        block->setSourceid(id);
         emit blockReceived(block);
     }
 }
@@ -172,9 +180,11 @@ void TcpServerListener::handlingClient(int socketDescriptor)
        // qDebug() << "Listener created" << listener;
         listener->setDecodeinput(decodeInput);
         listener->setEncodeOutput(encodeOutput);
-        clients.append(listener);
+        int cid = BlocksSource::newSourceID(this);
+        clientsList.insert(listener, cid);
+        clientsID.insert(cid, listener);
         listener->moveToThread(workerThread);
-        connect(listener, SIGNAL(blockReceived(Block)), SLOT(onClientReceivedBlock(Block)));
+        connect(listener, SIGNAL(blockReceived(Block *)), SLOT(onClientReceivedBlock(Block *)));
         connect(listener, SIGNAL(stopped()), SLOT(clientFinished()));
         connect(listener, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)));
         connect(this, SIGNAL(shutdownAllClient()), listener, SLOT(stopListening()),Qt::QueuedConnection);

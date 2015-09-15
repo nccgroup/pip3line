@@ -9,6 +9,7 @@ class RawTcpListener : public BlocksSource
 {
         Q_OBJECT
     public:
+        static const QString ID;
         explicit RawTcpListener(QObject *parent = 0);
         explicit RawTcpListener(QHostAddress remoteAddress, quint16 remotePort, QObject *parent = 0);
         ~RawTcpListener();
@@ -16,10 +17,12 @@ class RawTcpListener : public BlocksSource
         void setRemotePeerAddress(const QHostAddress &value);
         quint16 getRemotePort() const;
         void setRemotePort(const quint16 &value);
+        QString getName();
+        bool isReflexive();
     signals:
         void connectionclosed();
     public slots:
-        void sendBlock(const Block & block);
+        void sendBlock(Block *block);
         bool startListening();
         void stopListening();
 

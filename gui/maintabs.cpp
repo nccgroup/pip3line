@@ -21,7 +21,7 @@ Released under AGPL see LICENSE for more information
 #include "shared/guiconst.h"
 #include "state/closingstate.h"
 #include "sources/largefile.h"
-#include "sources/intercepsource.h"
+#include "sources/intercept/intercepsource.h"
 #include "sources/basicsource.h"
 #include "sources/largefile.h"
 #include "sources/currentmemorysource.h"
@@ -45,7 +45,6 @@ MainTabs::MainTabs(GuiHelper *nguiHelper, QWidget *parent) :
     setMovable(true);
 
     guiHelper = nguiHelper;
-    connect(guiHelper, SIGNAL(newTabRequested(QByteArray)), this, SLOT(newTabTransform(QByteArray)));
     connect(this, SIGNAL(tabCloseRequested(int)), this, SLOT(onDeleteTab(int)));
 
     logger = guiHelper->getLogger();
@@ -245,15 +244,15 @@ TabAbstract * MainTabs::newTab(ByteSourceAbstract *bs,GuiConst::TAB_TYPES type, 
     return newtab;
 }
 
-TabAbstract *MainTabs::newPreTab(GuiConst::AVAILABLE_PRETABS preType)
+TabAbstract *MainTabs::newPreTab(GuiConst::AVAILABLE_PRETABS preType, QByteArray initialData)
 {
     TabAbstract * ta = NULL;
     switch(preType) {
         case (TRANSFORM_PRETAB):
-            ta = newTabTransform();
+            ta = newTabTransform(initialData);
             break;
         case (HEXAEDITOR_PRETAB):
-            ta = newHexEditorTab();
+            ta = newHexEditorTab(initialData);
             break;
         case (LARGE_FILE_PRETAB):
             ta = newFileTab();

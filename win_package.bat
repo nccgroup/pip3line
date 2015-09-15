@@ -2,7 +2,7 @@
 
 IF "%1"=="" goto Usage
 SET GOTVERSION=false
-IF NOT "%1"=="2013OGL" SET GOTVERSION=true 
+IF NOT "%1"=="2013" SET GOTVERSION=true 
 IF NOT "%1"=="201364" SET GOTVERSION=true 
 IF NOT "%1"=="2013OGL64" SET GOTVERSION=true 
 
@@ -12,12 +12,12 @@ SET VSVERSION=%1
 REM Default Qt dir
 SET "BASE_DIR_QT=C:\Qt\5.5"
 
-IF "%VSVERSION%"=="2013OGL" set QT_LIBS="%BASE_DIR_QT%\msvc2013_opengl"
+IF "%VSVERSION%"=="2013" set QT_LIBS="%BASE_DIR_QT%\msvc2013"
 IF "%VSVERSION%"=="2013OGL64" set QT_LIBS=%BASE_DIR_QT%"\msvc2013_64_opengl"
 IF "%VSVERSION%"=="201364" set QT_LIBS=%BASE_DIR_QT%"\msvc2013_64"
 
 REM Openssl lib (default is 32 bit, change for anything else if needed)
-IF "%VSVERSION%"=="2013OGL" SET "OPENSSL_PATH=C:\OpenSSL-Win32"
+IF "%VSVERSION%"=="2013" SET "OPENSSL_PATH=C:\OpenSSL-Win32"
 IF "%VSVERSION%"=="2013OGL64" SET "OPENSSL_PATH=C:\OpenSSL-Win64"
 IF "%VSVERSION%"=="201364" SET "OPENSSL_PATH=C:\OpenSSL-Win64"
 
@@ -88,12 +88,12 @@ GOTO End
 :Usage
 ECHO.
 ECHO Need Qt Visual Studio version, i.e.
-ECHO %~n0.bat 2013OGL
+ECHO %~n0.bat 2013
 ECHO 
 ECHO Available versions : 
 ECHO     2013OGL64 : VS 2013 amd64 with OpenGL
 ECHO     201364    : VS 2013 amd64 (using ANGLE)
-ECHO     2013OGL   : VS 2013 x86 with OpenGL
+ECHO     2013      : VS 2013 x86 with OpenGL
 GOTO End
 
 :Nonexistentdir

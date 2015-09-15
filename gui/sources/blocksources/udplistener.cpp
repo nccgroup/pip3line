@@ -9,16 +9,18 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "udplistener.h"
-#include "networkconfwidget.h"
+#include "../networkconfwidget.h"
 #include <QUdpSocket>
 #include <QThread>
 #include <QDebug>
 
 const quint16 UdpListener::DEFAULT_PORT = 40000;
 const QHostAddress UdpListener::DEFAULT_ADDRESS = QHostAddress::LocalHost;
+const QString UdpListener::ID = QString("External program (UDP)");
 
 UdpListener::UdpListener(QObject *parent) : BlocksSource(parent)
 {
+    type = EXTERNAL_SERVER;
     initialize();
 }
 
@@ -33,6 +35,15 @@ UdpListener::~UdpListener()
     serverThread->quit();
     serverThread->wait();
     stopListening();
+    QHashIterator<int, UDPClient *> i(clients);
+     while (i.hasNext()) {
+         i.next();
+         BlocksSource::releaseID(i.key());
+         delete i.value();
+     }
+
+     clients.clear();
+
 }
 
 void UdpListener::initialize(QHostAddress nlisteningAddress, quint16 nport)
@@ -50,23 +61,26 @@ void UdpListener::initialize(QHostAddress nlisteningAddress, quint16 nport)
     serverThread->start();
 }
 
-void UdpListener::sendBlock(const Block & block)
+void UdpListener::sendBlock(Block *block)
 {
     QByteArray data;
     if (currentSocket != NULL) {
-        if (block.sourceid < 0 || block.sourceid > clients.size())
-            qCritical() << tr("[UdpListener::sendBlock] Invalid sourceid: %1").arg(block.sourceid);
+        int sourceid = block->getSourceid();
+        if (!clients.contains(sourceid))
+            qCritical() << tr("[UdpListener::sendBlock] Invalid sourceid: %1").arg(sourceid);
         else {
-            UDPClient client = clients.at(block.sourceid);
+            UDPClient * client = clients.value(sourceid);
             if (encodeOutput)
-                data = block.data.toBase64();
+                data = block->getData().toBase64();
             else
-                data = block.data;
-            currentSocket->writeDatagram(data ,client.getAdress(),client.getPort());
+                data = block->getData();
+            currentSocket->writeDatagram(data ,client->getAdress(),client->getPort());
         }
     } else {
         qCritical() << "[UdpListener::sendBlock] No UDP socket present, dropping the block.";
     }
+
+    delete block;
 }
 
 bool UdpListener::startListening()
@@ -104,6 +118,16 @@ void UdpListener::stopListening()
     emit stopped();
 }
 
+QString UdpListener::getName()
+{
+    return ID;
+}
+
+bool UdpListener::isReflexive()
+{
+    return true;
+}
+
 void UdpListener::readPendingDatagrams()
 {
     while (currentSocket->hasPendingDatagrams()) {
@@ -119,13 +143,13 @@ void UdpListener::readPendingDatagrams()
             datagram = QByteArray::fromBase64(datagram);
 
         qDebug() << "UDP datagram received" << currentClient.toString() << ":" << currentClientPort << datagram.toHex();
-        Block datab;
-        datab.data = datagram;
-        datab.source = this;
-        datab.sourceid = clients.size();
-        datab.direction = Block::SOURCE;
-        UDPClient client(currentClient, currentClientPort);
-        clients.append(client);
+        int id = BlocksSource::newSourceID(this);
+        Block * datab = new(std::nothrow) Block(datagram, id);
+        if (datab == NULL) qFatal("Cannot allocate memory for Block X{");
+        UDPClient *client = new(std::nothrow) UDPClient(currentClient, currentClientPort);
+        if (client == NULL) qFatal("Cannot allocate memory for UDPClient X{");
+
+        clients.insert(id,client);
         emit blockReceived(datab);
     }
 }

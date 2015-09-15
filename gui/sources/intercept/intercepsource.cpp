@@ -11,124 +11,12 @@ Released under AGPL see LICENSE for more information
 
 #include "intercepsource.h"
 #include "interceptwidget.h"
-#include "blockssource.h"
+#include "../blocksources/blockssource.h"
 #include <QDebug>
-#include <QAbstractItemModel>
 #include <QSize>
 #include <QVariant>
 #include <QHBoxLayout>
 #include <QPushButton>
-
-const QFont PayloadModel::RegularFont = QFont("Courier New",10);
-const int PayloadModel::DIRECTION_COLUMN = 0;
-const int PayloadModel::TIMESPTAMP_COLUMN = 1;
-const int PayloadModel::PAYLOAD_COLUMN = 2;
-
-PayloadModel::PayloadModel(QObject *parent) :
-    QAbstractTableModel(parent)
-{
-    columnNames << "D" << "Timestamp" << "Payload";
-}
-
-PayloadModel::~PayloadModel()
-{
-    clear();
-}
-
-int PayloadModel::rowCount(const QModelIndex &parent) const
-{
-    if (parent.isValid()) {
-        return 0;
-    }
-
-    return payloadList.size();
-}
-
-int PayloadModel::columnCount(const QModelIndex &parent) const
-{
-    if (parent.isValid()) {
-        return 0;
-    }
-    return columnNames.size();
-}
-
-QVariant PayloadModel::data(const QModelIndex &index, int role) const
-{
-    if (!index.isValid())
-        return QVariant();
-
-    int row = index.row();
-    int column = index.column();
-    Payload * payl = payloadList.at(row);
-    if (role == Qt::DisplayRole) {
-        if ( column == TIMESPTAMP_COLUMN)
-            return QVariant(payl->timestamp);
-        else if (column == PAYLOAD_COLUMN)
-            return QVariant(payl->payload.toHex());
-        else
-            return QVariant();
-    } else if (role == Qt::DecorationRole) {
-        if (column == DIRECTION_COLUMN)
-                    return payl->direction == Block::SOURCE ?
-                                QVariant(QIcon(":/Images/icons/arrow-right-3-mod.png")):
-                                QVariant(QIcon(":/Images/icons/arrow-left-3.png"));
-    }else if (role == Qt::BackgroundRole) {
-        return (payl->originalPayload == payl->payload ? QVariant() : QVariant(QColor(218,160,255,255)));
-    } else if (role == Qt::FontRole) {
-        return QVariant(RegularFont);
-    }
-
-    return QVariant();
-}
-
-QVariant PayloadModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    QVariant empty;
-    if (role != Qt::DisplayRole)
-             return empty;
-
-    if (orientation == Qt::Horizontal) {
-        return section < columnNames.size() ? QVariant(columnNames.at(section)) : empty;
-    } else {
-        return  QVariant(section);
-    }
-}
-
-void PayloadModel::addPayload(Payload *payload)
-{
-    if (payload == NULL) {
-        qCritical() << "[PayloadModel::addPayload] NULL pointer, ignoring";
-    } else {
-        int index = payloadList.size();
-        beginInsertRows(QModelIndex(),index,index);
-        payloadList.append(payload);
-        endInsertRows();
-    }
-}
-
-Payload *PayloadModel::getPayload(int i)
-{
-    return payloadList.at(i);
-}
-
-void PayloadModel::clear()
-{
-    beginResetModel();
-    while (!payloadList.isEmpty())
-        delete payloadList.takeFirst();
-    endResetModel();
-}
-
-QStringList PayloadModel::getColumnNames() const
-{
-    return columnNames;
-}
-
-void PayloadModel::setColumnNames(const QStringList &value)
-{
-    columnNames = value;
-}
-
 
 IntercepSource::IntercepSource(QObject *parent) :
     ByteSourceAbstract(parent)
@@ -158,7 +46,7 @@ QString IntercepSource::description()
 void IntercepSource::setData(QByteArray data, quintptr source)
 {
     if (currentPayload != NULL) {
-        currentPayload->payload = data;
+        currentPayload->setPayload(data);
         emit updated(source);
         emit sizeChanged();
         emit reset();
@@ -168,7 +56,7 @@ void IntercepSource::setData(QByteArray data, quintptr source)
 QByteArray IntercepSource::getRawData()
 {
     if (currentPayload != NULL) {
-        return currentPayload->payload;
+        return currentPayload->getPayload();
     }
     return QByteArray();
 }
@@ -176,7 +64,7 @@ QByteArray IntercepSource::getRawData()
 quint64 IntercepSource::size()
 {
     if (currentPayload != NULL) {
-        return currentPayload->payload.size();
+        return currentPayload->getPayload().size();
     }
     return 0;
 }
@@ -191,7 +79,7 @@ QByteArray IntercepSource::extract(quint64 offset, int length)
         length = qAbs(length);
     }
 
-    return currentPayload->payload.mid(offset,length);
+    return currentPayload->getPayload().mid(offset,length);
 }
 
 char IntercepSource::extract(quint64 offset)
@@ -199,14 +87,14 @@ char IntercepSource::extract(quint64 offset)
     if (!validateOffsetAndSize(offset, 1) || currentPayload != NULL) {
         return '\00';
     }
-    return currentPayload->payload.at(offset);
+    return currentPayload->getPayload().at(offset);
 }
 
 void IntercepSource::replace(quint64 offset, int length, QByteArray repData, quintptr source)
 {
     if (currentPayload != NULL || (!_readonly && validateOffsetAndSize(offset, length))) {
-        historyAddReplace(offset, currentPayload->payload.mid(offset,length),repData);
-        currentPayload->payload.replace(offset,length,repData);
+        historyAddReplace(offset, currentPayload->getPayload().mid(offset,length),repData);
+        currentPayload->getPayload().replace(offset,length,repData);
         emit updated(source);
         emit sizeChanged();
     }
@@ -216,7 +104,7 @@ void IntercepSource::insert(quint64 offset, QByteArray repData, quintptr source)
 {
     if (currentPayload != NULL || (!_readonly && validateOffsetAndSize(offset, 0))) {
         historyAddInsert(offset,repData);
-        currentPayload->payload.insert(offset, repData);
+        currentPayload->getPayload().insert(offset, repData);
         emit updated(source);
         emit sizeChanged();
     }
@@ -225,8 +113,8 @@ void IntercepSource::insert(quint64 offset, QByteArray repData, quintptr source)
 void IntercepSource::remove(quint64 offset, int length, quintptr source)
 {
     if (currentPayload != NULL || (!_readonly && validateOffsetAndSize(offset, 0))) {
-        historyAddRemove(offset,currentPayload->payload.mid(offset,length));
-        currentPayload->payload.remove(offset, length);
+        historyAddRemove(offset,currentPayload->getPayload().mid(offset,length));
+        currentPayload->getPayload().remove(offset, length);
         emit updated(source);
         emit sizeChanged();
     }
@@ -246,7 +134,7 @@ int IntercepSource::getViewOffset(quint64 realoffset)
         return -1;
     }
 
-    if (realoffset > (quint64) currentPayload->payload.size()) {
+    if (realoffset > (quint64) currentPayload->size()) {
         emit log(tr("Offset too large: %1").arg(realoffset),metaObject()->className(), Pip3lineConst::LERROR);
         return - 1;
     }
@@ -264,7 +152,7 @@ bool IntercepSource::isOffsetValid(quint64 offset)
         return false;
     }
 
-    return offset < ((quint64)currentPayload->payload.size());
+    return offset < ((quint64)currentPayload->size());
 }
 
 bool IntercepSource::isReadableText()
@@ -279,56 +167,56 @@ PayloadModel *IntercepSource::getModel()
 
 void IntercepSource::setCurrentBlockSource(BlocksSource *value)
 {
-    if (currentBlockSource != NULL) {
-        disconnect(currentBlockSource, SIGNAL(blockReceived(Block)),this, SLOT(addNewBlock(Block)));
+    if (currentBlockSource != NULL) { // ??? Whaaaaa ?
+        disconnect(currentBlockSource, SIGNAL(blockReceived(Block *)),this, SLOT(addNewBlock(Block *)));
         disconnect(currentBlockSource, SIGNAL(destroyed()), this, SLOT(onBlockSourceDeleted()));
         disconnect(currentBlockSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), this, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)));
     }
     currentBlockSource = value;
-    connect(currentBlockSource, SIGNAL(blockReceived(Block)), SLOT(addNewBlock(Block)));
+    connect(currentBlockSource, SIGNAL(blockReceived(Block *)), SLOT(addNewBlock(Block *)));
     connect(currentBlockSource, SIGNAL(destroyed()), SLOT(onBlockSourceDeleted()));
     connect(currentBlockSource, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)));
 }
 
 void IntercepSource::addNewBlock(Block block)
 {
-    Payload * payl = new(std::nothrow) Payload();
-    if (payl == NULL) {
-        qFatal("Cannot allocate memory for Payload X{");
-    }
-    payl->payload = block.data;
-    payl->originalPayload = block.data;
-    payl->source = block.source;
-    payl->direction = block.direction;
-    payl->timestamp = QDateTime::currentDateTime();
-    payl->sourceid = block.sourceid;
-    if (intercepting && processingPayload) {
-        payloadQueue.enqueue(payl);
-    } else {
-        configureCurrentPayload(payl);
-        model->addPayload(payl);
-        processingPayload = true;
-        if (!intercepting)
-            currentBlockSource->postBlockForSending(block);
-    }
+//    Payload * payl = new(std::nothrow) Payload(block.data);
+//    if (payl == NULL) {
+//        qFatal("Cannot allocate memory for Payload X{");
+//    }
+//    payl->payload = block.data;
+//    payl->originalPayload = block.data;
+//    payl->source = block.source;
+//    payl->direction = block.direction;
+//    payl->timestamp = QDateTime::currentDateTime();
+//    payl->sourceid = block.sourceid;
+//    if (intercepting && processingPayload) {
+//        payloadQueue.enqueue(payl);
+//    } else {
+//        configureCurrentPayload(payl);
+//        model->addPayload(payl);
+//        processingPayload = true;
+//        if (!intercepting)
+//            currentBlockSource->postBlockForSending(block);
+//    }
 }
 
 void IntercepSource::forwardCurrentBlock()
 {
     if (currentPayload != NULL && processingPayload) {
-        Block block;
-        block.data = currentPayload->payload;
-        block.source = currentPayload->source;
-        block.direction = currentPayload->direction;
-        block.sourceid = currentPayload->sourceid;
-        currentBlockSource->postBlockForSending(block);
-        if (payloadQueue.size() > 0) {
-            Payload * payl = payloadQueue.dequeue();
-            model->addPayload(payl);
-            configureCurrentPayload(payl);
-        } else {
-            processingPayload = false;
-        }
+//        Block block;
+//        block.data = currentPayload->payload;
+//        block.source = currentPayload->source;
+//        block.direction = currentPayload->direction;
+//        block.sourceid = currentPayload->sourceid;
+//        currentBlockSource->postBlockForSending(block);
+//        if (payloadQueue.size() > 0) {
+//            Payload * payl = payloadQueue.dequeue();
+//            model->addPayload(payl);
+//            configureCurrentPayload(payl);
+//        } else {
+//            processingPayload = false;
+//        }
     }
 }
 
@@ -354,10 +242,10 @@ void IntercepSource::onBlockSourceDeleted()
 void IntercepSource::configureCurrentPayload(Payload *payl)
 {
     if (currentPayload != NULL) {
-        currentPayload->history = history;
+        currentPayload->setHistory(history);
     }
     currentPayload = payl;
-    history = currentPayload->history;
+    history = currentPayload->getHistory();
     emit updated(ByteSourceAbstract::INVALID_SOURCE);
 }
 
@@ -431,7 +319,7 @@ bool IntercepSource::validateOffsetAndSize(quint64 offset, int length)
     if (currentPayload == NULL)
         return false;
 
-    if (offset > (quint64)currentPayload->payload.size()) { // hitting the limit data size
+    if (offset > (quint64)currentPayload->size()) { // hitting the limit data size
         emit log(tr("Offset too large: %1 length: %2").arg(offset).arg(length),metaObject()->className(), Pip3lineConst::LERROR);
         return false;
     }
@@ -446,7 +334,7 @@ bool IntercepSource::validateOffsetAndSize(quint64 offset, int length)
         return false;
     }
 
-    if (offset + (quint64)length > (quint64)currentPayload->payload.size()) { // this is behond the end of the data
+    if (offset + (quint64)length > (quint64)currentPayload->size()) { // this is behond the end of the data
         emit log(tr("Length too large for the data set. offset: %1 length: %2").arg(offset).arg(length),metaObject()->className(),Pip3lineConst::LWARNING);
         return false;
     }
@@ -480,8 +368,6 @@ void IntercepSource::setIntercepting(bool value)
         processingPayload = false;
     }
 }
-
-
 
 IntercepSourceStateObj::IntercepSourceStateObj(IntercepSource *is) :
     ByteSourceStateObj(is)

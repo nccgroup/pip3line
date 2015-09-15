@@ -23,22 +23,25 @@ class TcpListener : public BlocksSource
 {
         Q_OBJECT
     public:
+        static const QString ID;
 #if QT_VERSION >= 0x050000
-    explicit TcpListener(qintptr socketDescriptor, QObject *parent = 0);
+        explicit TcpListener(qintptr socketDescriptor, QObject *parent = 0);
 #else
-    explicit TcpListener(int socketDescriptor, QObject *parent = 0);
+        explicit TcpListener(int socketDescriptor, QObject *parent = 0);
 #endif
-
         explicit TcpListener(QHostAddress remoteAddress, quint16 remotePort, QObject *parent = 0);
         ~TcpListener();
+        QString getName();
+        bool isReflexive();
     public slots:
-        void sendBlock(const Block & block);
+        void sendBlock(Block *block);
         bool startListening();
         void stopListening();
     private slots:
         void onDataReceived();
         void onSocketError(QAbstractSocket::SocketError error);
     private:
+
         void processBlock(QByteArray data);
         QTcpSocket *socket;
         QByteArray tempData;
@@ -49,6 +52,7 @@ class TcpListener : public BlocksSource
 #else
         int socketDescriptor;
 #endif
+
 };
 
 #endif // TCPLISTENER_H

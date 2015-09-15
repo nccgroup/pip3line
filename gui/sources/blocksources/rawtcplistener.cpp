@@ -1,12 +1,15 @@
 #include "rawtcplistener.h"
 #include <QDebug>
-#include "networkclientwidget.h"
+#include "../networkclientwidget.h"
+
+const QString RawTcpListener::ID = QString("TCP Client");
 
 RawTcpListener::RawTcpListener(QObject *parent) :
     BlocksSource(parent),
     remotePort(0)
 {
     ssocket = NULL;
+    type = CLIENT;
 }
 
 RawTcpListener::RawTcpListener(QHostAddress remoteAddress, quint16 remotePort, QObject *parent) :
@@ -15,6 +18,7 @@ RawTcpListener::RawTcpListener(QHostAddress remoteAddress, quint16 remotePort, Q
     remotePort(remotePort)
 {
     ssocket = NULL;
+    type = CLIENT;
 }
 
 RawTcpListener::~RawTcpListener()
@@ -23,16 +27,17 @@ RawTcpListener::~RawTcpListener()
     qDebug() << "Destroyed" << this;
 }
 
-void RawTcpListener::sendBlock(const Block &block)
+void RawTcpListener::sendBlock(Block *block)
 {
     if (ssocket != NULL && ssocket->isWritable()) {
-        QByteArray data = block.data;
+        QByteArray data = block->getData();
         qint64 size = data.size();
         qint64 byteWritten = ssocket->write(data);
         while (size > byteWritten && ssocket->isWritable()) {
             byteWritten += ssocket->write(&(data.data()[byteWritten - 1]),size - byteWritten);
         }
     }
+    delete block;
 }
 
 bool RawTcpListener::startListening()
@@ -54,7 +59,7 @@ bool RawTcpListener::startListening()
      connect(ssocket, SIGNAL(readyRead()), SLOT(onDataReceived()));
 
      if (remotePort == 0) {
-         qCritical() << metaObject()->className() << tr("Socket Descriptor instanciation not implemented");
+         qCritical() << metaObject()->className() << tr("TCP port is null");
          delete ssocket;
          ssocket = NULL;
          return false;
@@ -130,13 +135,9 @@ void RawTcpListener::onSSLModeChange(QSslSocket::SslMode mode)
 
 void RawTcpListener::processBlock(QByteArray data)
 {
-    Block datab;
-    datab.data = data;
-    datab.source = this;
-    datab.sourceid = 0;
-    datab.direction = Block::SOURCE;
-
-    if (datab.data.size() > 0) {
+    if (data.size() > 0) {
+        Block * datab = new(std::nothrow) Block(data,sid);
+        if (datab == NULL) qFatal("Cannot allocate memory for Block X{");
         emit blockReceived(datab);
     }
 }
@@ -165,6 +166,16 @@ quint16 RawTcpListener::getRemotePort() const
 void RawTcpListener::setRemotePort(const quint16 &value)
 {
     remotePort = value;
+}
+
+QString RawTcpListener::getName()
+{
+    return ID;
+}
+
+bool RawTcpListener::isReflexive()
+{
+    return false;
 }
 
 QHostAddress RawTcpListener::getRemotePeerAddress() const

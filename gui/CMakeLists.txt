@@ -85,17 +85,21 @@ set ( pip3line_HDRS
 	sources/memorywidget.h
 	sources/filewidget.h
 	sources/largefile.h
-	sources/blockssource.h
-	sources/udplistener.h
-	sources/tcpserverlistener.h
-	sources/tcplistener.h
+	sources/blocksources/blockssource.h
+	sources/blocksources/udplistener.h
+	sources/blocksources/tcpserverlistener.h
+	sources/blocksources/tcplistener.h
 	sources/searchabstract.h
-	sources/intercepsource.h
-	sources/interceptwidget.h
+	sources/intercept/intercepsource.h
+	sources/intercept/interceptwidget.h
+	sources/intercept/payload.h
+	sources/intercept/payloadmodel.h
+	sources/intercept/interceptorchestratorabstract.h
+	sources/intercept/interceptorproxy.h
 	sources/networkconfwidget.h
 	sources/intermediatesource.h
 	sources/networkclientwidget.h
-	sources/rawtcplistener.h
+	sources/blocksources/rawtcplistener.h
 	views/hexview.h
 	views/textview.h
 	views/bytetableview.h
@@ -167,17 +171,21 @@ set ( pip3line_SRCS
 	sources/memorywidget.cpp
 	sources/filewidget.cpp
 	sources/largefile.cpp
-	sources/blockssource.cpp
-	sources/udplistener.cpp
-	sources/tcpserverlistener.cpp
-	sources/tcplistener.cpp
+	sources/blocksources/blockssource.cpp
+	sources/blocksources/udplistener.cpp
+	sources/blocksources/tcpserverlistener.cpp
+	sources/blocksources/tcplistener.cpp
 	sources/searchabstract.cpp
-	sources/intercepsource.cpp
-	sources/interceptwidget.cpp
+	sources/intercept/intercepsource.cpp
+	sources/intercept/interceptwidget.cpp
+	sources/intercept/payload.cpp
+	sources/intercept/payloadmodel.cpp
+	sources/intercept/interceptorchestratorabstract.cpp
+	sources/intercept/interceptorproxy.cpp
 	sources/networkconfwidget.cpp
 	sources/intermediatesource.cpp
 	sources/networkclientwidget.cpp
-	sources/rawtcplistener.cpp
+	sources/blocksources/rawtcplistener.cpp
 	views/hexview.cpp
 	views/bytetableview.cpp
 	views/byteitemmodel.cpp
@@ -238,7 +246,7 @@ set ( pip3line_UIS
 	textinputdialog.ui
 	views/hexview.ui
 	views/textview.ui
-	sources/interceptwidget.ui
+	sources/intercept/interceptwidget.ui
 	sources/networkconfwidget.ui
 	sources/networkclientwidget.ui
 	shared/searchresultswidget.ui

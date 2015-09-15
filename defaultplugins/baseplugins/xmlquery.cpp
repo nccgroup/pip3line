@@ -119,8 +119,13 @@ QString XmlQuery::help() const
     help.append("<p>There are two output modes, depending on what comes out the transformation:");
     help.append("<ul><li>Pure text, if the XMLQuery produce text only</li><li>XML document</li></ul></p>");
     help.append("<p>For example, if we process an nmap scan in XML format, this query: ");
-    help.append("<ul><li>/nmaprun/host/ports</li></ul> will return an XML document containing all the \"ports\" nodes, whereas:");
-    help.append("<ul><li>/nmaprun/host/ports/port/@portid/string()</li></ul>will return the list of port numbers, one by line.</p>");
+    help.append("<blockquote>/nmaprun/host/ports</blockquote> will return an XML document containing all the \"ports\" nodes, whereas:");
+    help.append("<blockquote>/nmaprun/host/ports/port/@portid/string()</blockquote>will return the list of port numbers, one by line.</p>");
+    help.append("<p>The following will return the list of addresses that did not return \"reset\"");
+    help.append("<blockquote>for $x in /nmaprun/host<br/>");
+    help.append("where $x/status[@reason != \"reset\"]<br/>");
+    help.append("return $x/address/@addr/string()");
+    help.append("</blockquote></p>");
     help.append("<p><b>Warning: </b>the current engine does not support external entities, in short no SOAP support</p>");
     return help;
 }

@@ -19,7 +19,7 @@ Released under AGPL see LICENSE for more information
 #include <QPushButton>
 #include <QPoint>
 #include <QNetworkAccessManager>
-#include "sources/blockssource.h"
+#include "sources/blocksources/blockssource.h"
 #include "shared/guiconst.h"
 #include "state/basestateabstract.h"
 
@@ -93,9 +93,9 @@ class MainWindow : public QMainWindow
         void updateTrayIcon();
         void onDebugDestroyed();
         void onNewAction(QAction * action);
-        void onNewDefault();
+        void onNewDefault(QByteArray initialData = QByteArray());
         void showWindow();
-        void onExternalBlockReceived(const Block &block);
+        void onExternalBlockReceived(Block *block);
         void onSaveState();
         void onLoadState();
         void onSaveLoadFinished();

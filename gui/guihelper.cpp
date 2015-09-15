@@ -86,6 +86,10 @@ GuiHelper::~GuiHelper()
     // clearDeletedTabs(); // not needed because the maintab will delete them anyway;
     delete settings;
     logger = NULL;
+    if (autoSaveTimer != NULL) {
+        delete autoSaveTimer;
+        autoSaveTimer = NULL;
+    }
 }
 
 LoggerWidget *GuiHelper::getLogger()

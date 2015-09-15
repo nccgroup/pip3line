@@ -44,7 +44,7 @@ class MainTabs : public QTabWidget
 
     public slots:
         TabAbstract *newTab(ByteSourceAbstract *bytesource, GuiConst::TAB_TYPES type, int *index = NULL);
-        TabAbstract *newPreTab(GuiConst::AVAILABLE_PRETABS preType);
+        TabAbstract *newPreTab(GuiConst::AVAILABLE_PRETABS preType, QByteArray initialData = QByteArray());
         TabAbstract *newTabTransform(const QByteArray &initialValue = QByteArray(), const QString &conf = QString());
         TabAbstract *newFileTab(QString fileName = QString());
         TabAbstract *newHexEditorTab(QByteArray data = QByteArray());

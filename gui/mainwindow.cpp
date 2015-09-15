@@ -53,9 +53,8 @@ Released under AGPL see LICENSE for more information
 #include "maintabs.h"
 #include "quickviewdialog.h"
 #include "comparisondialog.h"
-#include "sources/tcpserverlistener.h"
-#include "sources/tcplistener.h"
-#include "sources/intercepsource.h"
+#include "sources/blocksources/tcpserverlistener.h"
+#include "sources/intercept/intercepsource.h"
 #include "shared/guiconst.h"
 #include "state/stateorchestrator.h"
 #include "state/closingstate.h"
@@ -127,7 +126,6 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 
     qRegisterMetaType<Pip3lineConst::LOGLEVEL>("Pip3lineConst::LOGLEVEL");
     qRegisterMetaType<quintptr>("quintptr");
-    qRegisterMetaType<Block>("Block");
     qRegisterMetaType<QHostAddress>("QHostAddress");
     qRegisterMetaType<BytesRangeList>("BytesRangeList");
 #if QT_VERSION >= 0x050000
@@ -199,12 +197,13 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     // by default everything is base64 encoded, to avoid parsing issues
     blockListener->setDecodeinput(true);
 
-    connect(blockListener, SIGNAL(blockReceived(Block)), SLOT(onExternalBlockReceived(Block)),Qt::QueuedConnection);
+    connect(blockListener, SIGNAL(blockReceived(Block *)), SLOT(onExternalBlockReceived(Block *)),Qt::QueuedConnection);
     connect(blockListener,SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)), logger,SLOT(logMessage(QString,QString,Pip3lineConst::LOGLEVEL)));
     QTimer::singleShot(0,blockListener,SLOT(startListening()));
     connect(this, SIGNAL(exiting()), blockListener, SLOT(stopListening()), Qt::QueuedConnection);
 
     connect(guiHelper,SIGNAL(raiseWindowRequest()), SLOT(showWindow()));
+    connect(guiHelper, SIGNAL(newTabRequested(QByteArray)), this, SLOT(onNewDefault(QByteArray)));
     connect(ui->actionSave_State, SIGNAL(triggered()), SLOT(onSaveState()));
     connect(ui->actionLoad_State, SIGNAL(triggered()), SLOT(onLoadState()));
 
@@ -292,7 +291,7 @@ void MainWindow::buildToolBar()
 
 //    newInterceptTabAction = new(std::nothrow) QAction(INTERCEP_TAB_STRING, newMenu);
 //    if (newInterceptTabAction == NULL) {
-//    	qFatal("Cannot allocate memory for QAction NEW_INTERCEP X{");
+//        qFatal("Cannot allocate memory for QAction NEW_INTERCEP X{");
 //    }
 //    newMenu->addAction(newInterceptTabAction);
 
@@ -498,9 +497,10 @@ void MainWindow::showWindow()
     }
 }
 
-void MainWindow::onExternalBlockReceived(const Block &block)
+void MainWindow::onExternalBlockReceived(Block *block)
 {
-    guiHelper->routeExternalDataBlock(block.data);
+    guiHelper->routeExternalDataBlock(block->getData());
+    delete block;
 }
 
 void MainWindow::saveLoadState(QString filename, quint64 flags)
@@ -744,6 +744,9 @@ void MainWindow::hideEvent(QHideEvent *event)
 {
     savedPos = pos();
     guiHelper->goIntoHidding();
+    if (stateDialog != NULL) {
+        stateDialog->hide();
+    }
     QMainWindow::hideEvent(event);
 }
 
@@ -752,6 +755,9 @@ void MainWindow::showEvent(QShowEvent *event)
     if (!savedPos.isNull())
         move(savedPos);
     guiHelper->isRising();
+    if (stateDialog != NULL) {
+        stateDialog->show();
+    }
     QMainWindow::showEvent(event);
 }
 
@@ -832,9 +838,9 @@ void MainWindow::onNewAction(QAction *action)
     }
 }
 
-void MainWindow::onNewDefault()
+void MainWindow::onNewDefault(QByteArray initialData)
 {
-    mainTabs->newPreTab(guiHelper->getDefaultNewTab());
+    mainTabs->newPreTab(guiHelper->getDefaultNewTab(),initialData);
 }
 
 void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)

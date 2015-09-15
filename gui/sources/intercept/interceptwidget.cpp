@@ -1,14 +1,24 @@
+/**
+Released as open source by NCC Group Plc - http://www.nccgroup.com/
+
+Developed by Gabriel Caudrelier, gabriel dot caudrelier at nccgroup dot com
+
+https://github.com/nccgroup/pip3line
+
+Released under AGPL see LICENSE for more information
+**/
+
 #include "interceptwidget.h"
 #include "ui_interceptwidget.h"
 #include "intercepsource.h"
-#include "udplistener.h"
-#include "tcpserverlistener.h"
+#include "../blocksources/udplistener.h"
+#include "../blocksources/tcpserverlistener.h"
 #include <QTableView>
 #include <QStandardItem>
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QDebug>
-#include "rawtcplistener.h"
+#include "../blocksources/rawtcplistener.h"
 
 const QString InterceptWidget::CHOOSE_TEXT = QObject::tr("Choose source");
 const QString InterceptWidget::UDP_EXTERNAL_SOURCE_TEXT = QObject::tr("External process (UDP)");
@@ -113,7 +123,6 @@ void InterceptWidget::onSourceChanged(QString selected)
 
             connect(currentGui, SIGNAL(destroyed()), SLOT(onCurrentGuiDeleted()), Qt::DirectConnection);
         }
-
         source->setCurrentBlockSource(currentBlockSource);
     }
 }

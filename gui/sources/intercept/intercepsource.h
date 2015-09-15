@@ -11,54 +11,14 @@ Released under AGPL see LICENSE for more information
 #ifndef INTERCEPSOURCE_H
 #define INTERCEPSOURCE_H
 
-#include "bytesourceabstract.h"
+#include "../bytesourceabstract.h"
 #include <QList>
 #include <QDateTime>
 #include <QStringList>
-#include <QAbstractTableModel>
 #include <QQueue>
-#include <QFont>
-#include <QIcon>
-#include "blockssource.h"
-
-class QAbstractItemModel;
-
-class Payload
-{
-    public:
-        QByteArray originalPayload;
-        QByteArray payload;
-        QList<ByteSourceAbstract::HistItem> history;
-        BlocksSource * source;
-        int sourceid;
-        QDateTime timestamp;
-        Block::BLOCK_ORIGIN direction;
-};
-
-class PayloadModel : public QAbstractTableModel
-{
-        Q_OBJECT
-    public:
-        static const int TIMESPTAMP_COLUMN;
-        static const int DIRECTION_COLUMN;
-        static const int PAYLOAD_COLUMN;
-        explicit PayloadModel(QObject * parent = 0);
-        ~PayloadModel();
-        int rowCount ( const QModelIndex & parent = QModelIndex() ) const;
-        int columnCount(const QModelIndex &parent = QModelIndex()) const;
-        QVariant data ( const QModelIndex & index, int role = Qt::DisplayRole ) const;
-        QVariant headerData ( int section, Qt::Orientation orientation, int role = Qt::DisplayRole ) const;
-        void addPayload(Payload * payload);
-        Payload *getPayload(int i);
-        QStringList getColumnNames() const;
-        void setColumnNames(const QStringList &value);
-    public slots:
-        void clear();
-    private:
-        static const QFont RegularFont;
-        QList<Payload *> payloadList;
-        QStringList columnNames;
-};
+#include "../blocksources/blockssource.h"
+#include "payloadmodel.h"
+#include "payload.h"
 
 class IntercepSource : public ByteSourceAbstract
 {

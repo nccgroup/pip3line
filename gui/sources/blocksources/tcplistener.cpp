@@ -9,13 +9,15 @@ Released under AGPL see LICENSE for more information
 **/
 
 #include "tcplistener.h"
-#include "networkconfwidget.h"
+#include "../networkconfwidget.h"
 #include <QTcpSocket>
 #include <QThread>
 #include <QTimer>
 #include <QTime>
 #include <QCryptographicHash>
 #include <QDebug>
+
+const QString TcpListener::ID = QString("External program (TCP)");
 
 TcpListener::TcpListener(
 #if QT_VERSION >= 0x050000
@@ -41,12 +43,23 @@ TcpListener::TcpListener(QHostAddress remoteAddress, quint16 nport, QObject *par
     socketDescriptor = 0;
     remotePeerAddress = remoteAddress;
     remotePort = nport;
+    type = EXTERNAL_CLIENT;
 }
 
 TcpListener::~TcpListener()
 {
     delete socket;
     qDebug() << "Destroyed" << this;
+}
+
+QString TcpListener::getName()
+{
+    return ID;
+}
+
+bool TcpListener::isReflexive()
+{
+    return true;
 }
 
 bool TcpListener::startListening()
@@ -172,25 +185,25 @@ void TcpListener::processBlock(QByteArray data)
         }
     }
 
-    Block datab;
-    datab.data = data;
-    datab.source = this;
-    datab.sourceid = 0;
+    Block * datab = new(std::nothrow) Block(data,sid);
+    if (datab == NULL) qFatal("Cannot allocate Block for TCPListener X{");
+
     emit blockReceived(datab);
 }
 
-void TcpListener::sendBlock(const Block & block)
+void TcpListener::sendBlock(Block *block)
 {
     if (socket != NULL && socket->isWritable()) {
         QByteArray data;
         if (encodeOutput)
-            data = block.data.toBase64();
+            data = block->getData().toBase64();
         else
-            data = block.data;
+            data = block->getData();
         qint64 size = data.size();
         qint64 byteWritten = socket->write(data);
         while (size > byteWritten && socket->isWritable()) {
             byteWritten += socket->write(&(data.data()[byteWritten - 1]),size - byteWritten);
         }
     }
+    delete block; // end of life for any blocks
 }

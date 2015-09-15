@@ -3,7 +3,7 @@
 
 #include <QHostAddress>
 #include <QWidget>
-#include "rawtcplistener.h"
+#include "blocksources/rawtcplistener.h"
 
 namespace Ui {
     class NetworkClientWidget;

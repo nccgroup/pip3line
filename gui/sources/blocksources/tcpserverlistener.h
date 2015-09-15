@@ -42,27 +42,29 @@ class TcpServerListener : public BlocksSource
 {
         Q_OBJECT
     public:
+        static const QString ID;
         explicit TcpServerListener(QObject *parent = 0);
         ~TcpServerListener();
-        void sendBlock(const Block & block);
+        void sendBlock(Block * block);
         bool startListening();
         void stopListening();
-        void postBlockForSending(Block block);
+        void postBlockForSending(Block *block);
+        QString getName();
+        bool isReflexive();
     public slots:
         void setListeningAddress(const QHostAddress &value);
         void setPort(const quint16 &value);
     signals:
-        void blockToClient(Block block);
+        void blockToClient(Block *block);
         void shutdownAllClient();
     private slots:
         void clientFinished();
-        void onClientReceivedBlock(Block block);
+        void onClientReceivedBlock(Block *block);
 #if QT_VERSION >= 0x050000
         void handlingClient(qintptr socketDescriptor);
 #else
         void handlingClient(int socketDescriptor);
 #endif
-
     private:
         static const quint16 DEFAULT_PORT;
         static const QHostAddress DEFAULT_ADDRESS;
@@ -73,7 +75,8 @@ class TcpServerListener : public BlocksSource
         quint16 port;
         QThread *workerThread;
         QThread *serverThread;
-        QList<TcpListener *> clients;
+        QHash<int,TcpListener *> clientsID;
+        QHash<TcpListener *, int> clientsList;
         InTcpServer *server;
 };
 

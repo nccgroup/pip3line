@@ -12,6 +12,7 @@ Released under AGPL see LICENSE for more information
 #define UDPLISTENER_H
 
 #include <QHostAddress>
+#include <QHash>
 #include "blockssource.h"
 
 class QUdpSocket;
@@ -37,15 +38,18 @@ class UdpListener : public BlocksSource
 {
         Q_OBJECT
     public:
+        static const QString ID;
         explicit UdpListener(QObject *parent = 0);
         explicit UdpListener(QHostAddress listeningAddress, quint16 port , QObject *parent = 0);
         ~UdpListener();
     public slots:
-        void sendBlock(const Block & block);
+        void sendBlock(Block *block);
         void setPort(const quint16 &value);
         void setListeningAddress(const QHostAddress &value);
         bool startListening();
         void stopListening();
+        QString getName();
+        bool isReflexive();
     private slots:
         void readPendingDatagrams();
     private:
@@ -57,7 +61,7 @@ class UdpListener : public BlocksSource
         quint16 port;
         QUdpSocket *currentSocket;
         QThread *serverThread;
-        QList<UDPClient> clients;
+        QHash<int, UDPClient *> clients;
 };
 
 #endif // UDPLISTENER_H

@@ -40,30 +40,27 @@ void myMessageOutput(QtMsgType type, const char *localMsg)
     QByteArray ftime = QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8();
     const char * currentTime = ftime.constData();
 
-    switch (type) {
-    case QtDebugMsg:
+    if (type == QtDebugMsg) {
         fprintf(stderr, "%s Debug: %s\n",currentTime, localMsg);
         if (_logFile != NULL)
             fprintf(_logFile, "%s Debug: %s\n",currentTime, localMsg);
-        break;
+    }
 #if QT_VERSION >= 0x050500
-    case QtInfoMsg:
+    else if (type == QtInfoMsg) {
         fprintf(stderr, "%s Info: %s\n",currentTime, localMsg);
         if (_logFile != NULL)
             fprintf(_logFile, "%s Info: %s\n",currentTime, localMsg);
-        break;
+    }
 #endif
-    case QtWarningMsg:
+    else if (type == QtWarningMsg) {
         fprintf(stderr, "%s Warning: %s\n",currentTime, localMsg);
         if (_logFile != NULL)
             fprintf(_logFile, "%s Warning: %s\n",currentTime, localMsg);
-        break;
-    case QtCriticalMsg:
+    } else if (type == QtCriticalMsg) {
         fprintf(stderr, "%s Critical: %s\n",currentTime, localMsg);
         if (_logFile != NULL)
             fprintf(_logFile, "%s Critical: %s\n",currentTime, localMsg);
-        break;
-    case QtFatalMsg:
+    } else if (type == QtFatalMsg) {
         fprintf(stderr, "%s Fatal: %s\n",currentTime, localMsg);
         if (_logFile != NULL) {
             fprintf(_logFile, "%s Fatal: %s\n",currentTime, localMsg);

@@ -12,13 +12,41 @@ Released under AGPL see LICENSE for more information
 #include <QWidget>
 #include <QDebug>
 
-Block::Block()
+Block::Block(QByteArray data, int sourceid):
+    data(data),
+    sourceid(sourceid)
 {
-    direction = SOURCE;
-    source = NULL;
-    sourceid = -1;
 }
 
+Block::~Block()
+{
+    //qDebug() << "Destroying" << this;
+}
+
+QByteArray Block::getData() const
+{
+    return data;
+}
+
+void Block::setData(const QByteArray &value)
+{
+    data = value;
+}
+
+int Block::getSourceid() const
+{
+    return sourceid;
+}
+
+void Block::setSourceid(int value)
+{
+    sourceid = value;
+}
+
+
+int BlocksSource::currentid = 0;
+QMutex BlocksSource::idlock;
+QHash<int,BlocksSource *> BlocksSource::idSourceTable;
 const int BlocksSource::BLOCK_MAX_SIZE = 0x8000000;
 
 BlocksSource::BlocksSource(QObject *parent) :
@@ -28,7 +56,9 @@ BlocksSource::BlocksSource(QObject *parent) :
     encodeOutput = true;
     decodeInput = true;
     gui = NULL;
-    connect(this, SIGNAL(blockToBeSend(Block)), SLOT(sendBlock(Block)), Qt::QueuedConnection);
+    type = INVALID_TYPE;
+    sid = BlocksSource::newSourceID(this);
+    connect(this, SIGNAL(blockToBeSend(Block *)), SLOT(sendBlock(Block *)), Qt::QueuedConnection);
     //qDebug() << this << "created";
 }
 
@@ -36,6 +66,7 @@ BlocksSource::~BlocksSource()
 {
     //qDebug() << this << "Destroying" << isRunning();
     delete gui;
+    BlocksSource::releaseID(sid);
 }
 
 QWidget *BlocksSource::getGui(QWidget * parent)
@@ -53,6 +84,12 @@ QWidget *BlocksSource::requestGui(QWidget *)
 {
     return NULL;
 }
+
+BlocksSource::BSOURCETYPE BlocksSource::getType() const
+{
+    return type;
+}
+
 bool BlocksSource::getDecodeinput() const
 {
     return decodeInput;
@@ -61,11 +98,6 @@ bool BlocksSource::getDecodeinput() const
 void BlocksSource::setDecodeinput(bool value)
 {
     decodeInput = value;
-}
-
-void BlocksSource::sendBlock(const Block &)
-{
-    qCritical() << tr("BlocksSource::sendBlock not implemented");
 }
 
 bool BlocksSource::getEncodeOutput() const
@@ -88,7 +120,7 @@ void BlocksSource::setSeparator(char value)
     separator = value;
 }
 
-void BlocksSource::postBlockForSending(Block block)
+void BlocksSource::postBlockForSending(Block *block)
 {
     emit blockToBeSend(block);
 }
@@ -105,3 +137,34 @@ void BlocksSource::onGuiDestroyed()
     gui = NULL;
 }
 
+
+int BlocksSource::newSourceID(BlocksSource *source)
+{
+    QMutexLocker lock(&idlock);
+
+    if (currentid == INT_MAX) {
+        qWarning() << "BlocksSource IDs is wrapping";
+        if (idSourceTable.size() == INT_MAX) {
+            qFatal("BlocksSource IDs table is full ... really? X{");
+        }
+        currentid = 0;
+    }
+
+    while (idSourceTable.contains(currentid++));
+
+    idSourceTable.insert(currentid, source);
+    return currentid;
+}
+
+void BlocksSource::releaseID(int id)
+{
+    QMutexLocker lock(&idlock);
+    idSourceTable.remove(id);
+}
+
+BlocksSource *BlocksSource::getSourceObject(int id)
+{
+    QMutexLocker lock(&idlock);
+    qWarning() << QObject::tr("No Source object for id %1 T_T").arg(id);
+    return idSourceTable.value(id,NULL);
+}

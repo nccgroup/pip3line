@@ -65,7 +65,6 @@ SOURCES += main.cpp\
     sources/bytesourceabstract.cpp \
     sources/basicsource.cpp \
     sources/filewidget.cpp \
-    sources/sourcemanager.cpp \
     sources/currentmemorysource.cpp \
     sources/largerandomaccesssource.cpp \
     views/hexview.cpp \
@@ -84,14 +83,8 @@ SOURCES += main.cpp\
     ../tools/processingstats.cpp \
     shared/detachtabbutton.cpp \
     sources/largefile.cpp \
-    sources/blockssource.cpp \
-    sources/udplistener.cpp \
-    sources/tcpserverlistener.cpp \
     sources/searchabstract.cpp \
-    sources/tcplistener.cpp \
-    sources/intercepsource.cpp \
     sources/networkconfwidget.cpp \
-    sources/interceptwidget.cpp \
     shared/universalreceiverbutton.cpp \
     shared/messagepanelwidget.cpp \
     sources/intermediatesource.cpp \
@@ -100,8 +93,19 @@ SOURCES += main.cpp\
     state/basestateabstract.cpp \
     state/closingstate.cpp \
     state/statedialog.cpp \
-    sources/rawtcplistener.cpp \
     sources/networkclientwidget.cpp \
+    sources/intercept/payload.cpp \
+    sources/intercept/payloadmodel.cpp \
+    sources/intercept/intercepsource.cpp \
+    sources/intercept/interceptwidget.cpp \
+    sources/blocksources/udplistener.cpp \
+    sources/blocksources/tcpserverlistener.cpp \
+    sources/blocksources/tcplistener.cpp \
+    sources/blocksources/rawtcplistener.cpp \
+    sources/blocksources/blockssource.cpp \
+    sources/intercept/interceptorchestratorabstract.cpp \
+    sources/intercept/interceptorproxy.cpp \
+    sources/intercept/interceptsetupwidget.cpp \
     state/statestatuswidget.cpp
 
 HEADERS  += mainwindow.h \
@@ -140,7 +144,6 @@ HEADERS  += mainwindow.h \
     tabs/generictab.h \
     tabs/randomaccesstab.h \
     tabs/transformsgui.h \
-    sources/sourcemanager.h \
     sources/currentmemorysource.h \
     sources/largerandomaccesssource.h \
     sources/filewidget.h \
@@ -162,14 +165,8 @@ HEADERS  += mainwindow.h \
     ../tools/processingstats.h \
     shared/detachtabbutton.h \
     sources/largefile.h \
-    sources/blockssource.h \
-    sources/udplistener.h \
-    sources/tcpserverlistener.h \
     sources/searchabstract.h \
-    sources/tcplistener.h \
-    sources/intercepsource.h \
     sources/networkconfwidget.h \
-    sources/interceptwidget.h \
     shared/universalreceiverbutton.h \
     shared/messagepanelwidget.h \
     sources/intermediatesource.h \
@@ -179,8 +176,19 @@ HEADERS  += mainwindow.h \
     state/basestateabstract.h \
     state/closingstate.h \
     state/statedialog.h \
-    sources/rawtcplistener.h \
     sources/networkclientwidget.h \
+    sources/intercept/payload.h \
+    sources/intercept/payloadmodel.h \
+    sources/intercept/intercepsource.h \
+    sources/intercept/interceptwidget.h \
+    sources/blocksources/blockssource.h \
+    sources/blocksources/udplistener.h \
+    sources/blocksources/tcpserverlistener.h \
+    sources/blocksources/tcplistener.h \
+    sources/blocksources/rawtcplistener.h \
+    sources/intercept/interceptorchestratorabstract.h \
+    sources/intercept/interceptorproxy.h \
+    sources/intercept/interceptsetupwidget.h \
     state/statestatuswidget.h
 
 FORMS    += mainwindow.ui \
@@ -211,7 +219,7 @@ FORMS    += mainwindow.ui \
     sources/filewidget.ui \
     sources/memorywidget.ui \
     sources/networkconfwidget.ui \
-    sources/interceptwidget.ui \
+    sources/intercept/interceptwidget.ui \
     shared/messagepanelwidget.ui \
     shared/searchresultswidget.ui \
     state/statedialog.ui \
