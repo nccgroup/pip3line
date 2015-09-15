@@ -65,8 +65,8 @@ MainTabs::MainTabs(GuiHelper *nguiHelper, QWidget *parent) :
     connect(deletedTabContextMenu, SIGNAL(triggered(QAction*)), this, SLOT(onDeletedTabSelected(QAction*)));
     connect(guiHelper, SIGNAL(tabRevived(TabAbstract*)), this, SLOT(integrateTab(TabAbstract*)));
 
-    this->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this,SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onContextMenuRequested(QPoint)));
+    tabBarRef->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(tabBarRef,SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onContextMenuRequested(QPoint)));
 
 }
 

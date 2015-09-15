@@ -224,7 +224,8 @@ FORMS    += mainwindow.ui \
     shared/searchresultswidget.ui \
     state/statedialog.ui \
     sources/networkclientwidget.ui \
-    state/statestatuswidget.ui
+    state/statestatuswidget.ui \
+    sources/intercept/interceptsetupwidget.ui
 
 OTHER_FILES += icons/pip3line.png \
     win.rc \
