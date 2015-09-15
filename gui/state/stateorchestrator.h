@@ -23,6 +23,7 @@ class QXmlStreamWriter;
 class QXmlStreamReader;
 class StateDialog;
 class QWidget;
+class StateStatusWidget;
 
 class StateOrchestrator : public QObject
 {
@@ -33,6 +34,8 @@ class StateOrchestrator : public QObject
         QXmlStreamWriter *getWriter() const;
         bool initialize();
         bool isSaving();
+        StateDialog * getStatusDialog(QWidget *parent = NULL);
+        StateStatusWidget *getStatusGui(QWidget *parent = NULL);
 
     public slots:
         bool start();

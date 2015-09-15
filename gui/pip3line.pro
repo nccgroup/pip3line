@@ -101,7 +101,8 @@ SOURCES += main.cpp\
     state/closingstate.cpp \
     state/statedialog.cpp \
     sources/rawtcplistener.cpp \
-    sources/networkclientwidget.cpp
+    sources/networkclientwidget.cpp \
+    state/statestatuswidget.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -179,7 +180,8 @@ HEADERS  += mainwindow.h \
     state/closingstate.h \
     state/statedialog.h \
     sources/rawtcplistener.h \
-    sources/networkclientwidget.h
+    sources/networkclientwidget.h \
+    state/statestatuswidget.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \
@@ -213,7 +215,8 @@ FORMS    += mainwindow.ui \
     shared/messagepanelwidget.ui \
     shared/searchresultswidget.ui \
     state/statedialog.ui \
-    sources/networkclientwidget.ui
+    sources/networkclientwidget.ui \
+    state/statestatuswidget.ui
 
 OTHER_FILES += icons/pip3line.png \
     win.rc \

@@ -22,6 +22,7 @@ Released under AGPL see LICENSE for more information
 #include <QFileInfo>
 #include "../shared/guiconst.h"
 #include "statedialog.h"
+#include "statestatuswidget.h"
 
 StateOrchestrator::StateOrchestrator(QString fileName, quint64 flags) :
     QObject(NULL),
@@ -190,6 +191,31 @@ bool StateOrchestrator::initialize()
 bool StateOrchestrator::isSaving()
 {
     return (flags & GuiConst::STATE_SAVE_REQUEST);
+}
+
+StateDialog *StateOrchestrator::getStatusDialog(QWidget *parent)
+{
+    StateDialog * stateDialog = new(std::nothrow) StateDialog(parent);
+    if (stateDialog == NULL) {
+        qFatal("Cannot allocate memory for StateDialog X{");
+    }
+    stateDialog->setModal(true);
+    connect(this, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)),
+            stateDialog, SLOT(log(QString,QString,Pip3lineConst::LOGLEVEL)));
+
+    return stateDialog;
+}
+
+StateStatusWidget *StateOrchestrator::getStatusGui(QWidget * parent)
+{
+    StateStatusWidget *w = new(std::nothrow) StateStatusWidget(parent);
+    if (w == NULL) {
+        qFatal("Cannot allocate memory for StateStatusWidget X{");
+    }
+    connect(this, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)),
+            w, SLOT(log(QString,QString,Pip3lineConst::LOGLEVEL)));
+
+    return w;
 }
 
 

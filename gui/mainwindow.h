@@ -42,6 +42,7 @@ class BlocksSource;
 class TabAbstract;
 class StateOrchestrator;
 class StateDialog;
+class StateStatusWidget;
 
 #ifdef Q_OS_LINUX
 class QSocketNotifier;
@@ -135,6 +136,7 @@ class MainWindow : public QMainWindow
         BlocksSource * blockListener;
         StateOrchestrator * stateOrchestrator;
         StateDialog *stateDialog;
+        StateStatusWidget * stateStatusWidget;
 
         QSystemTrayIcon *trayIcon;
         QMenu *trayIconMenu;

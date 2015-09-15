@@ -31,6 +31,7 @@ Released under AGPL see LICENSE for more information
 #include <QDebug>
 #include <QColorDialog>
 #include <transformabstract.h>
+#include <QStatusBar>
 #include <commonstrings.h>
 #include <QFileDialog>
 #include <QPalette>
@@ -59,6 +60,7 @@ Released under AGPL see LICENSE for more information
 #include "state/stateorchestrator.h"
 #include "state/closingstate.h"
 #include "state/statedialog.h"
+#include "state/statestatuswidget.h"
 
 #ifdef Q_OS_LINUX
 #include <QSocketNotifier>
@@ -100,6 +102,7 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
 
     stateOrchestrator = NULL;
     stateDialog = NULL;
+    stateStatusWidget = NULL;
 
     settingsWasVisible = false;
     quickViewWasVisible = false;
@@ -519,11 +522,13 @@ void MainWindow::saveLoadState(QString filename, quint64 flags)
                 return;
             }
 
-            stateDialog = new(std::nothrow) StateDialog(this);
-            stateDialog->setModal(true);
-            stateDialog->show();
-            connect(stateOrchestrator, SIGNAL(log(QString,QString,Pip3lineConst::LOGLEVEL)),
-                    stateDialog, SLOT(log(QString,QString,Pip3lineConst::LOGLEVEL)));
+            if (flags & GuiConst::STATE_SAVE_REQUEST) { // if saving jsut show the progress in the status bar
+                stateStatusWidget = stateOrchestrator->getStatusGui(this);
+                statusBar()->addWidget(stateStatusWidget);
+            } else { // otherwise dialog
+                stateDialog = stateOrchestrator->getStatusDialog(this);
+                stateDialog->show();
+            }
 
             BaseStateAbstract *stateObj = new(std::nothrow) MainWinStateObj(this);
             if (stateObj == NULL) {
@@ -672,6 +677,11 @@ void MainWindow::onSaveLoadFinished()
         stateDialog->hide();
         delete stateDialog;
         stateDialog = NULL;
+    }
+
+    if (stateStatusWidget != NULL) {
+        delete stateStatusWidget;
+        stateStatusWidget = NULL;
     }
 
     if (appExiting)
