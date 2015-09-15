@@ -225,7 +225,7 @@
         <height>269</height>
        </rect>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <layout class="QVBoxLayout" name="mainLayout">
        <property name="spacing">
         <number>0</number>
        </property>

@@ -59,7 +59,8 @@ class TransformsGui : public TabAbstract
         void onNameChangeRequest(QString name);
         void resetAll();
         void onAutoCopychanged(bool val);
-
+        void onFoldRequest();
+        void onUnfoldRequest();
     private:
         Q_DISABLE_COPY(TransformsGui)
         void setCurrentTransformChain(TransformChain list);

@@ -146,6 +146,7 @@ namespace GuiConst
 
     static const QString UPDATE_URL = "https://raw.githubusercontent.com/nccgroup/pip3line/master/gui/release.txt";
     static const QString RELEASES_URL = "https://github.com/nccgroup/pip3line/releases";
+    static const QString NO_TRANSFORM = "No transform";
 
     static const int DEFAULT_PORT = 45632;
     static const char DEFAULT_BLOCK_SEPARATOR = '\n';

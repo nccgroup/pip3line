@@ -113,6 +113,8 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
     connect(this, SIGNAL(sendRequest(TransformRequest*)), guiHelper->getCentralTransProc(), SLOT(processRequest(TransformRequest*)), Qt::QueuedConnection);
     connect(ui->deleteButton, SIGNAL(clicked()), SLOT(deleteMe()));
 
+    connect(ui->foldPushButton, SIGNAL(clicked()), this, SIGNAL(foldRequest()));
+
  //   qDebug() << "Created" << this;
 }
 
@@ -406,6 +408,22 @@ BaseStateAbstract *TransformWidget::getStateMngtObj()
     }
 
     return stateObj;
+}
+
+QString TransformWidget::getDescription()
+{
+    QString ret(GuiConst::NO_TRANSFORM);
+    if (currentTransform != NULL) {
+        ret = (currentTransform->name());
+        if (currentTransform->isTwoWays()) {
+            ret.append(QString(" [%2]")
+                       .arg(currentTransform->way() == TransformAbstract::INBOUND ?
+                               currentTransform->inboundString() :
+                               currentTransform->outboundString() ));
+        }
+    }
+
+    return ret;
 }
 
 void TransformWidget::forceUpdating()

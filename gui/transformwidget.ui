@@ -212,6 +212,29 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="foldPushButton">
+              <property name="maximumSize">
+               <size>
+                <width>24</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Fold this view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="gui_res.qrc">
+                <normaloff>:/Images/icons/go-top-3.png</normaloff>:/Images/icons/go-top-3.png</iconset>
+              </property>
+              <property name="flat">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
             <item alignment="Qt::AlignRight">
              <widget class="QPushButton" name="forwardPushButton">
               <property name="maximumSize">

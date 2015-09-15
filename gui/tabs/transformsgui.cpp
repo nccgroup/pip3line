@@ -26,6 +26,7 @@ Released under AGPL see LICENSE for more information
 #include "../shared/detachtabbutton.h"
 #include "../shared/universalreceiverbutton.h"
 #include "../state/closingstate.h"
+#include "foldedwidget.h"
 
 TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
     TabAbstract(guiHelper,parent)
@@ -333,6 +334,7 @@ void TransformsGui::addWidget(TransformWidget *transformWidget)
     connect(transformWidget,SIGNAL(deletionRequest(TransformWidget*)), this, SLOT(processDeletionRequest(TransformWidget*)));
     connect(transformWidget, SIGNAL(transformChanged()), this, SLOT(onTransformChanged()),Qt::QueuedConnection);
     connect(transformWidget, SIGNAL(tryNewName(QString)), this, SLOT(onNameChangeRequest(QString)));
+    connect(transformWidget, SIGNAL(foldRequest()), this, SLOT(onFoldRequest()));
 
     emit entriesChanged();
 }
@@ -486,6 +488,49 @@ void TransformsGui::onAutoCopychanged(bool val)
         last->setAutoCopyTextToClipboard(val);
     } else {
         qCritical() << tr("No TransformWidget in the list T_T");
+    }
+}
+
+void TransformsGui::onFoldRequest()
+{
+    TransformWidget * requester = static_cast<TransformWidget *>(sender());
+    if (requester == NULL) {
+        qFatal("Cannot cast sender() to TransformWidget X{");
+    }
+
+    int index = ui->mainLayout->indexOf(requester);
+    if (index == -1) {
+        logger->logError(tr("Invalid index when folding T_T"), metaObject()->className());
+    } else {
+        ui->mainLayout->removeWidget(requester);
+        requester->hide();
+        FoldedWidget *fw = new(std::nothrow) FoldedWidget(requester,this);
+        if (fw == NULL) {
+            qFatal("Cannot allocate memory for FoldedWidget X{");
+        }
+
+        connect(fw, SIGNAL(unfoldRequested()), this, SLOT(onUnfoldRequest()));
+
+        ui->mainLayout->insertWidget(index,fw);
+    }
+}
+
+void TransformsGui::onUnfoldRequest()
+{
+    FoldedWidget *fw = static_cast<FoldedWidget *>(sender());
+    if (fw == NULL) {
+        qFatal("Cannot cast sender() to FoldedWidget X{");
+    }
+
+    int index = ui->mainLayout->indexOf(fw);
+    if (index == -1) {
+        logger->logError(tr("Invalid index when unfolding T_T"), metaObject()->className());
+    } else {
+        TransformWidget * tw = fw->getTransformWidget();
+        ui->mainLayout->removeWidget(fw);
+        delete fw;
+        ui->mainLayout->insertWidget(index,tw);
+        tw->show();
     }
 }
 

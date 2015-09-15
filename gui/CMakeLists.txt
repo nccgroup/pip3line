@@ -126,6 +126,7 @@ set ( pip3line_HDRS
 	state/closingstate.h
 	state/statedialog.h
 	state/statestatuswidget.h
+	tabs/foldedwidget.h
 	)
 
 
@@ -212,6 +213,7 @@ set ( pip3line_SRCS
 	state/closingstate.cpp
 	state/statedialog.cpp
 	state/statestatuswidget.cpp
+	tabs/foldedwidget.cpp
 	)
 
 set ( pip3line_UIS
@@ -232,6 +234,7 @@ set ( pip3line_UIS
 	tabs/generictab.ui
 	tabs/transformsgui.ui
 	tabs/randomaccesstab.ui
+	tabs/foldedwidget.ui
 	floatingdialog.ui
 	quickviewdialog.ui
 	quickviewitem.ui

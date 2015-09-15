@@ -60,6 +60,7 @@ class TransformWidget : public QWidget
         ByteTableView *getHexTableView();
         void copyTextToClipboard();
         BaseStateAbstract *getStateMngtObj();
+        QString getDescription();
     signals:
         void updated();
         void transfoRequest(TransformWidget *);
@@ -71,6 +72,7 @@ class TransformWidget : public QWidget
         void deletionRequest(TransformWidget *);
         void tryNewName(QString name);
         void sendRequest(TransformRequest *);
+        void foldRequest();
     public slots:
         void input(QByteArray inputdata);
         void updatingFrom();
