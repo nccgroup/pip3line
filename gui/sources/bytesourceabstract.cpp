@@ -163,6 +163,7 @@ void BytesRange::setSize(const quint64 &value)
 
 void BytesRange::addMarkToList(BytesRangeList *list, BytesRange *newRange)
 {
+    if (list == NULL) return; // nothing to do here
     if (!(newRange->backgroundColor.isValid() || newRange->foregroundColor.isValid()) && newRange->description.isEmpty()) {
         // apply clearing algo instead
         BytesRange::clearMarkingFromList(list, newRange->lowerVal,newRange->upperVal);
@@ -276,6 +277,7 @@ void BytesRange::addMarkToList(BytesRangeList *list, BytesRange *newRange)
 
 void BytesRange::addMarkToList(BytesRangeList *list, quint64 start, quint64 end, const QColor &bgcolor, const QColor &fgColor, QString toolTip)
 {
+    if (list == NULL) return; // nothing to do here
     // stupidity protection
     if (start > end) {
         quint64 temp = start;
@@ -297,6 +299,7 @@ void BytesRange::addMarkToList(BytesRangeList *list, quint64 start, quint64 end,
 
 void BytesRange::clearMarkingFromList(BytesRangeList *list, quint64 start, quint64 end)
 {
+    if (list == NULL) return; // nothing to do here
     // stupidity protection
     if (start > end) {
         quint64 temp = start;
@@ -349,6 +352,7 @@ void BytesRange::clearMarkingFromList(BytesRangeList *list, quint64 start, quint
 
 void BytesRange::moveMarkingAfterDelete(BytesRangeList *list, quint64 pos, quint64 deleteSize)
 {
+    if (list == NULL) return; // nothing to do here
     int msize = list->size();
     for (int i = 0; i < msize; i++) {
         BytesRange * currRange = list->at(i);
@@ -374,6 +378,7 @@ void BytesRange::moveMarkingAfterDelete(BytesRangeList *list, quint64 pos, quint
 
 void BytesRange::moveMarkingAfterInsert(BytesRangeList *list, quint64 pos, quint64 insertSize)
 {
+    if (list == NULL) return; // nothing to do here
     int msize = list->size();
     for (int i = 0; i < msize; i++) {
         BytesRange * currRange = list->at(i);
@@ -403,7 +408,7 @@ void BytesRange::moveMarkingAfterInsert(BytesRangeList *list, quint64 pos, quint
 
 void BytesRange::moveMarkingAfterReplace(BytesRangeList *list, quint64 pos, int diff)
 {
-    if (diff == 0) return; // nothing to do here
+    if (diff == 0 || list == NULL) return; // nothing to do here
     int msize = list->size();
     for (int i = 0; i < msize; i++) {
         BytesRange * currRange = list->at(i);
