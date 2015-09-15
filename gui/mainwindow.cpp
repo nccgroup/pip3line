@@ -499,7 +499,12 @@ void MainWindow::showWindow()
 
 void MainWindow::onExternalBlockReceived(Block *block)
 {
-    guiHelper->routeExternalDataBlock(block->getData());
+    if (stateOrchestrator == NULL) {
+       guiHelper->routeExternalDataBlock(block->getData());
+    } else {
+        logger->logError("Received external data packet during save/restore, so dropping the packet");
+    }
+
     delete block;
 }
 
