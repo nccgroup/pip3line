@@ -121,6 +121,7 @@ set ( pip3line_HDRS
 	state/stateorchestrator.h
 	state/closingstate.h
 	state/statedialog.h
+	state/statestatuswidget.h
 	)
 
 
@@ -202,6 +203,7 @@ set ( pip3line_SRCS
 	state/stateorchestrator.cpp
 	state/closingstate.cpp
 	state/statedialog.cpp
+	state/statestatuswidget.cpp
 	)
 
 set ( pip3line_UIS
@@ -241,6 +243,7 @@ set ( pip3line_UIS
 	sources/networkclientwidget.ui
 	shared/searchresultswidget.ui
 	state/statedialog.ui
+	state/statestatuswidget.ui
 	)
 
 set ( pip3line_RSCS
