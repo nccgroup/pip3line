@@ -418,7 +418,12 @@ void MainWindow::processingCheckForUpdate(QByteArray bdata)
             if (major > VERSION_MAJOR ||
                     (major == VERSION_MAJOR && minor > VERSION_MINOR) ||
                     (major == VERSION_MAJOR && minor == VERSION_MINOR && rev > VERSION_REV)) {
-                message = tr("Current: %1\nLatest: %2.%3.%4\n\nNew version of Pip3line available at\n \nhttps://code.google.com/p/pip3line/downloads/list").arg(QString(VERSION_STRING)).arg(major).arg(minor).arg(rev);
+                message = tr("Current: %1\nLatest: %2.%3.%4\n\nNew version of Pip3line available at\n \n%5")
+                          .arg(QString(VERSION_STRING))
+                          .arg(major)
+                          .arg(minor)
+                          .arg(rev)
+                          .arg(RELEASES_URL);
                 QMessageBox::warning(this,tr("New update"),message,QMessageBox::Ok);
             } else {
                 message = tr("Latest version of Pip3line in use (%1), everything is fine").arg(QString(VERSION_STRING));

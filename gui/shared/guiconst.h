@@ -145,6 +145,7 @@ namespace GuiConst
     static const QString TCP_SERVER = QObject::tr("Tcp server");
 
     static const QString UPDATE_URL = "https://raw.githubusercontent.com/nccgroup/pip3line/master/gui/release.txt";
+    static const QString RELEASES_URL = "https://github.com/nccgroup/pip3line/releases";
 
     static const int DEFAULT_PORT = 45632;
     static const char DEFAULT_BLOCK_SEPARATOR = '\n';
