@@ -40,16 +40,29 @@
       </header>
       <section>
 	<h2>Python 2.7 &amp; 3 plugins</h2>
+	<h3>The short version (for the busy)</h3>
+	<p>Create a usual python file using your favorite text editor/IDE, with this skeleton:</p>
+	<pre><code>#!/usr/bin/env python
+#-*- coding: UTF-8 -*-
 
+def pip3line_transform(inputData):
+	""" Take a bytearray as input and returns a bytearray"""
+	# if you need to convert to a Python 'string'
+	string = inputData.decode('utf-8')
+
+	# Some code ......
+
+	# just remember to convert it back to a bytearray
+	return bytearray(string, 'utf-8')</code></pre>
+
+	<p>The <strong>pip3line_transform</strong> function will be called automatically by Pip3line</p>
+	<p>Now you just need to load it using the Python 2.7/3 module transform (by default in the available list)</p>
+	<p>If there is no Python transform check the prequisites below.</p>
 	<h3>Prequisites</h3>
 	<p><strong>The two Python plugins need respectively the Python 2.7 and Python 3.x libraries to be installed, if the plugin cannot found them, it will fail to load.</strong></p>
 
 	<p>
-	The Python 3 plugin is now compiling against Python 3.3, although it should still works fine with 3.2.</p>
-	<p>
-	On Windows there is no real change, as the Python header is generic.<br/>
-	On Linux platform this just a question of changing the headers value from 3.3 to 3.2 in the Python plugin code.
-	</p>
+	The Python 3 plugin is now compiling against the latest Python 3.x, although it should still works fine with older version</p>
 	<h3>Files locations</h3>
 
 	<p>The plugins looks for python files in the following locations</p>
