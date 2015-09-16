@@ -37,6 +37,7 @@ MainTabs::MainTabs(GuiHelper *nguiHelper, QWidget *parent) :
     deletedTabContextMenu = NULL;
     tabBarRef = tabBar();
     tabBarRef->installEventFilter(this);
+    installEventFilter(this);
 
     tabCount = 1;
     maxTabCount = GuiConst::DEFAULT_MAX_TAB_COUNT;
@@ -65,9 +66,6 @@ MainTabs::MainTabs(GuiHelper *nguiHelper, QWidget *parent) :
     connect(deletedTabContextMenu, SIGNAL(triggered(QAction*)), this, SLOT(onDeletedTabSelected(QAction*)));
     connect(guiHelper, SIGNAL(tabRevived(TabAbstract*)), this, SLOT(integrateTab(TabAbstract*)));
 
-    tabBarRef->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(tabBarRef,SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onContextMenuRequested(QPoint)));
-
 }
 
 MainTabs::~MainTabs()
@@ -82,14 +80,15 @@ MainTabs::~MainTabs()
 bool MainTabs::eventFilter(QObject *receiver, QEvent *event)
 {
     bool result = QObject::eventFilter(receiver, event);
+
     if (receiver == tabBarRef) {
         if (event->type() == QEvent::MouseButtonDblClick) {
             QMouseEvent* me = dynamic_cast<QMouseEvent*>(event);
             if (me == NULL) {
-                qWarning() << "[MainTabs::eventFilter] NULL MouseEvent";
+                qCritical() << "[MainTabs::eventFilter] NULL MouseEvent";
+                return true; // not supposed to happen anyway ..
             } else {
                 // checking if we can locate the tab
-
                 int clickedTabId = tabBarRef->tabAt(me->pos());
                 if (clickedTabId == -1)
                     return result;
@@ -97,6 +96,33 @@ bool MainTabs::eventFilter(QObject *receiver, QEvent *event)
                 askForRenaming(clickedTabId);
                 return true;  //no further handling of this event is required
             }
+        }
+    } else if (receiver == this) {
+        if (event->type() == QEvent::MouseButtonDblClick) {
+            QRect clickable = tabBarRef->geometry();
+            clickable.setRight(geometry().right());
+            QMouseEvent* me = dynamic_cast<QMouseEvent*>(event);
+            if (me == NULL) {
+                qCritical() << "[MainTabs::eventFilter] NULL MouseEvent";
+                return true; // not supposed to happen anyway ..
+            } else if (clickable.contains(me->pos())){ // only in the tabbar area
+                newPreTab(guiHelper->getDefaultNewTab());
+                return true;
+            }
+        } else if (event->type() == QEvent::MouseButtonPress) {
+            QMouseEvent* me = dynamic_cast<QMouseEvent*>(event);
+            if (me == NULL) {
+                qCritical() << "[MainTabs::eventFilter] NULL MouseEvent";
+                return true; // not supposed to happen anyway ..
+            } else if (me->buttons() == Qt::RightButton){ // only in the tabbar area
+                QRect clickable = tabBarRef->geometry();
+                clickable.setRight(geometry().right());
+                if (clickable.contains(me->pos()) && guiHelper->getDeletedTabs().size() > 0) {
+                    deletedTabContextMenu->exec(this->mapToGlobal(me->pos()));
+                    return true;
+                }
+            }
+
         }
     }
     return result;
@@ -520,11 +546,6 @@ void MainTabs::onFloatingWindowsReject()
            qWarning("[MainTabs] Tab not found  in the active windows tab (reject) T_T");
         }
     }
-}
-
-void MainTabs::onContextMenuRequested(QPoint pos)
-{
-    deletedTabContextMenu->exec(this->mapToGlobal(pos));
 }
 
 void MainTabs::updateDeletedTabMenu()

@@ -62,7 +62,6 @@ class MainTabs : public QTabWidget
         void detachTab(TabAbstract * tab, QByteArray windowState = QByteArray());
         void receivedBringToFront();
         void onFloatingWindowsReject();
-        void onContextMenuRequested(QPoint pos);
         void updateDeletedTabMenu();
         void onDeletedTabSelected(QAction * action);
     private:
