@@ -66,6 +66,7 @@ void TabAbstract::onDetach()
 {
     emit askWindowTabSwitch();
 }
+
 GuiConst::AVAILABLE_PRETABS TabAbstract::getPreTabType() const
 {
     return preTabType;

@@ -502,7 +502,7 @@ void MainWindow::onExternalBlockReceived(Block *block)
     if (stateOrchestrator == NULL) {
        guiHelper->routeExternalDataBlock(block->getData());
     } else {
-        logger->logError("Received external data packet during save/restore, so dropping the packet");
+        logger->logError("Received external data packet during save/restore, dropping the packet");
     }
 
     delete block;
