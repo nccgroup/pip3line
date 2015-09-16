@@ -4,6 +4,8 @@
 #include <QWidget>
 #include "transformwidget.h"
 
+class QMouseEvent;
+
 namespace Ui {
     class FoldedWidget;
 }
@@ -20,6 +22,7 @@ class FoldedWidget : public QWidget
     signals:
         void unfoldRequested();
     private:
+        void mouseDoubleClickEvent ( QMouseEvent * event );
         Ui::FoldedWidget * ui;
         TransformWidget * transformWidget;
 };

@@ -1,5 +1,6 @@
 #include "foldedwidget.h"
 #include "ui_foldedwidget.h"
+#include <QMouseEvent>
 
 FoldedWidget::FoldedWidget(TransformWidget *transformWidget, QWidget *parent) :
     QWidget(parent),
@@ -19,5 +20,12 @@ FoldedWidget::~FoldedWidget()
 TransformWidget *FoldedWidget::getTransformWidget() const
 {
     return transformWidget;
+}
+
+void FoldedWidget::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        emit unfoldRequested();
+    }
 }
 
