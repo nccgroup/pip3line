@@ -17,6 +17,9 @@ Released under AGPL see LICENSE for more information
 #include <QXmlStreamWriter>
 #include <QXmlStreamReader>
 #include <QXmlStreamAttributes>
+#include <QRect>
+#include <QDesktopWidget>
+#include <QApplication>
 
 using namespace GuiConst;
 
@@ -25,6 +28,7 @@ AppStateObj::AppStateObj(AppDialog *diag) :
     dialog(diag)
 {
     setName(dialog->metaObject()->className());
+
 }
 
 AppStateObj::~AppStateObj()
@@ -86,6 +90,8 @@ AppDialog::AppDialog(GuiHelper * nguiHelper, QWidget *parent) :
     attachedAction = NULL;
     connect(guiHelper, SIGNAL(appGoesIntoHidding()), SLOT(onMainHiding()));
     connect(guiHelper, SIGNAL(appIsRising()), SLOT(onMainRising()));
+    const QRect screen = QApplication::desktop()->screenGeometry();
+    move(screen.center() - this->rect().center());
     //qDebug() << "created" << this;
 }
 
