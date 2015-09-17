@@ -41,6 +41,7 @@ class QuickViewItem : public QWidget
     private slots:
         void processingFinished(QByteArray output, Messages messages);
         void mouseDoubleClickEvent (QMouseEvent *event);
+        void onCopy();
     signals:
         void askForDeletion(QuickViewItem *);
         void sendRequest(TransformRequest *);

@@ -13,6 +13,7 @@ Released under AGPL see LICENSE for more information
 #include <QXmlStreamReader>
 #include <QTimer>
 #include <QMouseEvent>
+#include <QClipboard>
 #include "loggerwidget.h"
 #include <QDebug>
 #include "ui_quickviewitem.h"
@@ -48,6 +49,7 @@ QuickViewItem::QuickViewItem(GuiHelper *nguiHelper, QWidget *parent, const QStri
 
     ThreadedProcessor * proc = guiHelper->getCentralTransProc();
     connect(this, SIGNAL(sendRequest(TransformRequest *)), proc, SLOT(processRequest(TransformRequest*)), Qt::QueuedConnection);
+    connect(ui->copyPushButton, SIGNAL(clicked()), SLOT(onCopy()));
 }
 
 QuickViewItem::~QuickViewItem()
@@ -62,7 +64,7 @@ void QuickViewItem::processingFinished(QByteArray output, Messages messages)
     toolTipMess.clear();
     QString text;
     QWidget * outputWidget = NULL;
-    QString stylesheet = QString("%1 { border: 1px solid %2; border-radius: 0px}");
+  //  QString stylesheet = QString("%1 { border: 1px solid %2; border-radius: 0px}");
 
     if (format == TEXTFORMAT)
         text = QString::fromUtf8(output);
@@ -181,6 +183,20 @@ void QuickViewItem::mouseDoubleClickEvent(QMouseEvent * event)
         processData(currentData);
 
     event->accept();
+}
+
+void QuickViewItem::onCopy()
+{
+    QClipboard *clipboard = QApplication::clipboard();
+    if (outputType == ONELINE) {
+        if (outputLine != NULL) {
+            clipboard->setText(outputLine->text());
+        }
+    } else {
+        if (outputBlock != NULL) {
+            clipboard->setText(outputBlock->toPlainText());
+        }
+    }
 }
 
 QString QuickViewItem::getXmlConf()
