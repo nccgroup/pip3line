@@ -107,7 +107,7 @@ SOURCES += main.cpp\
     sources/intercept/interceptorproxy.cpp \
     sources/intercept/interceptsetupwidget.cpp \
     state/statestatuswidget.cpp \
-    tabs/foldedwidget.cpp
+    views/foldedview.cpp
 
 HEADERS  += mainwindow.h \
     transformwidget.h \
@@ -191,7 +191,7 @@ HEADERS  += mainwindow.h \
     sources/intercept/interceptorproxy.h \
     sources/intercept/interceptsetupwidget.h \
     state/statestatuswidget.h \
-    tabs/foldedwidget.h
+    views/foldedview.h
 
 FORMS    += mainwindow.ui \
     transformwidget.ui \
@@ -228,7 +228,7 @@ FORMS    += mainwindow.ui \
     sources/networkclientwidget.ui \
     state/statestatuswidget.ui \
     sources/intercept/interceptsetupwidget.ui \
-    tabs/foldedwidget.ui
+    views/foldedview.ui
 
 OTHER_FILES += icons/pip3line.png \
     win.rc \

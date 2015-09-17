@@ -26,7 +26,7 @@ Released under AGPL see LICENSE for more information
 #include "../shared/detachtabbutton.h"
 #include "../shared/universalreceiverbutton.h"
 #include "../state/closingstate.h"
-#include "foldedwidget.h"
+#include "../views/foldedview.h"
 
 TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
     TabAbstract(guiHelper,parent)
@@ -504,31 +504,31 @@ void TransformsGui::onFoldRequest()
     } else {
         ui->mainLayout->removeWidget(requester);
         requester->hide();
-        FoldedWidget *fw = new(std::nothrow) FoldedWidget(requester,this);
-        if (fw == NULL) {
+        FoldedView *fv = new(std::nothrow) FoldedView(requester,this);
+        if (fv == NULL) {
             qFatal("Cannot allocate memory for FoldedWidget X{");
         }
 
-        connect(fw, SIGNAL(unfoldRequested()), this, SLOT(onUnfoldRequest()));
+        connect(fv, SIGNAL(unfoldRequested()), this, SLOT(onUnfoldRequest()));
 
-        ui->mainLayout->insertWidget(index,fw);
+        ui->mainLayout->insertWidget(index,fv);
     }
 }
 
 void TransformsGui::onUnfoldRequest()
 {
-    FoldedWidget *fw = static_cast<FoldedWidget *>(sender());
-    if (fw == NULL) {
+    FoldedView *fv = static_cast<FoldedView *>(sender());
+    if (fv == NULL) {
         qFatal("Cannot cast sender() to FoldedWidget X{");
     }
 
-    int index = ui->mainLayout->indexOf(fw);
+    int index = ui->mainLayout->indexOf(fv);
     if (index == -1) {
         logger->logError(tr("Invalid index when unfolding T_T"), metaObject()->className());
     } else {
-        TransformWidget * tw = fw->getTransformWidget();
-        ui->mainLayout->removeWidget(fw);
-        delete fw;
+        TransformWidget * tw = fv->getTransformWidget();
+        ui->mainLayout->removeWidget(fv);
+        delete fv;
         ui->mainLayout->insertWidget(index,tw);
         tw->show();
     }

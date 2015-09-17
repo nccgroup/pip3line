@@ -105,6 +105,7 @@ set ( pip3line_HDRS
 	views/bytetableview.h
 	views/byteitemmodel.h
 	views/singleviewabstract.h
+	views/foldedview.h
 	tabs/tababstract.h
 	tabs/transformsgui.h
 	tabs/generictab.h
@@ -126,7 +127,6 @@ set ( pip3line_HDRS
 	state/closingstate.h
 	state/statedialog.h
 	state/statestatuswidget.h
-	tabs/foldedwidget.h
 	)
 
 
@@ -192,6 +192,7 @@ set ( pip3line_SRCS
 	views/byteitemmodel.cpp
 	views/textview.cpp
 	views/singleviewabstract.cpp
+	views/foldedview.cpp
 	tabs/generictab.cpp
 	tabs/tababstract.cpp
 	tabs/transformsgui.cpp
@@ -213,7 +214,6 @@ set ( pip3line_SRCS
 	state/closingstate.cpp
 	state/statedialog.cpp
 	state/statestatuswidget.cpp
-	tabs/foldedwidget.cpp
 	)
 
 set ( pip3line_UIS
@@ -234,7 +234,6 @@ set ( pip3line_UIS
 	tabs/generictab.ui
 	tabs/transformsgui.ui
 	tabs/randomaccesstab.ui
-	tabs/foldedwidget.ui
 	floatingdialog.ui
 	quickviewdialog.ui
 	quickviewitem.ui
@@ -249,6 +248,7 @@ set ( pip3line_UIS
 	textinputdialog.ui
 	views/hexview.ui
 	views/textview.ui
+	views/foldedview.ui
 	sources/intercept/interceptwidget.ui
 	sources/networkconfwidget.ui
 	sources/networkclientwidget.ui

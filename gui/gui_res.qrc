@@ -39,6 +39,10 @@
         <file>icons/edit-copy-3.png</file>
         <file>icons/edit-copy-4.png</file>
         <file>icons/object-rotate-right_out.png</file>
+        <file>icons/view-restore-2.png</file>
+        <file>icons/view-fullscreen-4.png</file>
+        <file>icons/arrow-right-double-3.png</file>
+        <file>icons/go-last-2.png</file>
     </qresource>
     <qresource prefix="/xmlconfs">
         <file>defaultsxml/base32decode.xml</file>
