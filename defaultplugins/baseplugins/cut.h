@@ -36,10 +36,17 @@ class Cut : public TransformAbstract
         bool setFromPos(int val);
         bool setLength(int val);
         void setCutEverything(bool val);
+        bool getClassicCut() const;
+        void setClassicCut(bool value);
+        bool getLineByLine() const;
+        void setLineByLine(bool value);
+
     private:
         int from;
         int length;
         bool everything;
+        bool classicCut;
+        bool lineByLine;
 };
 
 #endif // CUT_H

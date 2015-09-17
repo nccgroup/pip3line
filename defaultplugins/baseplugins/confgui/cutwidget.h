@@ -29,6 +29,8 @@ class CutWidget : public QWidget
         void onFromChange(int value);
         void onLengthChange(int value);
         void onEverythingChange(bool);
+        void onCutToggled(bool checked);
+        void onLineByLineToggled(bool checked);
     private:
         Ui::CutWidget *ui;
         Cut *transform;

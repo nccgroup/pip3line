@@ -18,6 +18,8 @@ Cut::Cut()
     from = 0;
     length = 1;
     everything = false;
+    classicCut = true;
+    lineByLine = false;
 }
 
 Cut::~Cut()
@@ -36,7 +38,25 @@ QString Cut::description() const
 
 void Cut::transform(const QByteArray &input, QByteArray &output)
 {
-    output = input.mid(from, (everything ? -1 : length));
+    QList<QByteArray> list;
+    QByteArray temp;
+    if (lineByLine) {
+        list = input.split('\n');
+    } else {
+        list.append(input);
+    }
+
+    for (int i = 0; i < list.size(); i++) {
+        if (classicCut)
+            output.append(list.at(i).mid(from, (everything ? -1 : length)));
+        else {
+            temp = list.at(i);
+            temp.chop(length);
+            output.append(temp);
+        }
+        output.append('\n');
+    }
+    output.chop(1);
 }
 
 bool Cut::isTwoWays()
@@ -50,6 +70,8 @@ QHash<QString, QString> Cut::getConfiguration()
     properties.insert(XMLFROM,QString::number(from));
     properties.insert(XMLLENGTH,QString::number(length));
     properties.insert(XMLEVERYTHING,QString::number(everything ? 1 : 0));
+    properties.insert(XMLTYPE, QString::number(classicCut));
+    properties.insert(XMLPROCESSLINEBYLINE, QString::number(lineByLine));
     return properties;
 }
 
@@ -58,7 +80,7 @@ bool Cut::setConfiguration(QHash<QString, QString> propertiesList)
     bool res = TransformAbstract::setConfiguration(propertiesList);
     bool ok;
 
-    int val = propertiesList.value(XMLFROM).toInt(&ok);
+    int val = propertiesList.value(XMLFROM,QString("0")).toInt(&ok);
     if (!ok) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLFROM),id);
@@ -66,7 +88,7 @@ bool Cut::setConfiguration(QHash<QString, QString> propertiesList)
         res = setFromPos(val) && res;
     }
 
-    val = propertiesList.value(XMLLENGTH).toInt(&ok);
+    val = propertiesList.value(XMLLENGTH,QString("1")).toInt(&ok);
     if (!ok) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLLENGTH),id);
@@ -74,13 +96,30 @@ bool Cut::setConfiguration(QHash<QString, QString> propertiesList)
         res = setLength(val) && res;
     }
 
-    val = propertiesList.value(XMLEVERYTHING).toInt(&ok);
+    val = propertiesList.value(XMLEVERYTHING,QString("0")).toInt(&ok);
     if (!ok || (val != 0 && val != 1)) {
         res = false;
         emit error(tr("Invalid value for %1").arg(XMLEVERYTHING),id);
     } else {
         setCutEverything(val == 1);
     }
+
+    val = propertiesList.value(XMLTYPE,QString("1")).toInt(&ok);
+    if (!ok || (val != 0 && val != 1)) {
+        res = false;
+        emit error(tr("Invalid value for %1").arg(XMLTYPE),id);
+    } else {
+        setClassicCut(val == 1);
+    }
+
+    val = propertiesList.value(XMLPROCESSLINEBYLINE,QString("0")).toInt(&ok);
+    if (!ok || (val != 0 && val != 1)) {
+        res = false;
+        emit error(tr("Invalid value for %1").arg(XMLPROCESSLINEBYLINE),id);
+    } else {
+        setLineByLine(val == 1);
+    }
+
     return res;
 }
 
@@ -121,8 +160,10 @@ bool Cut::setFromPos(int val)
         emit error(tr("Invalid starting position: %1").arg(val),id);
         return false;
     }
-    from = val;
-    emit confUpdated();
+    if (from != val) {
+        from = val;
+        emit confUpdated();
+    }
     return true;
 }
 
@@ -132,14 +173,44 @@ bool Cut::setLength(int val)
         emit error(tr("Invalid length: %1").arg(val),id);
         return false;
     }
-    length = val;
-    everything = false;
-    emit confUpdated();
+    if (length != val) {
+        length = val;
+        everything = false;
+        emit confUpdated();
+    }
     return true;
 }
 
 void Cut::setCutEverything(bool val)
 {
-    everything = val;
-    emit confUpdated();
+    if (everything != val) {
+        everything = val;
+        emit confUpdated();
+    }
 }
+bool Cut::getClassicCut() const
+{
+    return classicCut;
+}
+
+void Cut::setClassicCut(bool value)
+{
+    if (classicCut != value) {
+        classicCut = value;
+        emit confUpdated();
+    }
+}
+bool Cut::getLineByLine() const
+{
+    return lineByLine;
+}
+
+void Cut::setLineByLine(bool value)
+{
+    if (lineByLine != value) {
+        lineByLine = value;
+        emit confUpdated();
+    }
+}
+
+
