@@ -36,6 +36,7 @@ class UnittestsTest : public QObject
         void testCharEncoding();
         void testCisco7();
         void testCut();
+        void testCrc32();
         void testHexencode();
         void testHieroglyphy();
         void testBytesToInteger();
@@ -568,7 +569,7 @@ void UnittestsTest::testCut()
     QCOMPARE(transf->transform(QByteArray("062506324F41")), QByteArray("0"));
 
     configuration = transf->getConfiguration();
-    QCOMPARE(configuration.size() , 5);
+    QCOMPARE(configuration.size() , 7);
     QCOMPARE(configuration.value(PROP_NAME) , name);
     QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::INBOUND));
 
@@ -588,22 +589,6 @@ void UnittestsTest::testCut()
     QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::INBOUND));
 
     failconfiguration = configuration;
-    failconfiguration.remove(PROP_WAY);
-    QVERIFY(!transf->setConfiguration(failconfiguration));
-
-    failconfiguration = configuration;
-    failconfiguration.remove(XMLFROM);
-    QVERIFY(!transf->setConfiguration(failconfiguration));
-
-    failconfiguration = configuration;
-    failconfiguration.remove(XMLLENGTH);
-    QVERIFY(!transf->setConfiguration(failconfiguration));
-
-    failconfiguration = configuration;
-    failconfiguration.remove(XMLEVERYTHING);
-    QVERIFY(!transf->setConfiguration(failconfiguration));
-
-    failconfiguration = configuration;
     failconfiguration.insert(XMLFROM,QString::number(-1));
     QVERIFY(!transf->setConfiguration(failconfiguration));
 
@@ -618,6 +603,40 @@ void UnittestsTest::testCut()
     failconfiguration = configuration;
     failconfiguration.insert(XMLEVERYTHING,QString::number(2));
     QVERIFY(!transf->setConfiguration(failconfiguration));
+    delete transf;
+}
+
+void UnittestsTest::testCrc32()
+{
+    QString name = "CRC32";
+    QHash<QString, QString> configuration;
+
+    TransformAbstract *transf = transformFactory->getTransform(name);
+    if (transf == 0)
+        QSKIP("Cannot find the transformation, skipping test",SkipSingle);
+
+    connect(transf, SIGNAL(error(QString, QString)), this, SLOT(logError(QString)));
+    connect(transf, SIGNAL(warning(QString,QString)), this, SLOT(logError(QString)));
+
+    transf->setWay(TransformAbstract::INBOUND);
+    QCOMPARE(transf->transform(QByteArray("12345677890qwerrtiuop")), QByteArray("\xa6\x87\x5a\x54"));
+    configuration = transf->getConfiguration();
+    QCOMPARE(configuration.size() , 5);
+    QCOMPARE(configuration.value(PROP_NAME) , name);
+    QCOMPARE(configuration.value(PROP_WAY), QString::number((int)TransformAbstract::INBOUND));
+
+    configuration.insert(XMLLITTLEENDIAN,QString::number(0));
+    QVERIFY(transf->setConfiguration(configuration));
+    QCOMPARE(transf->transform(QByteArray("12345677890qwerrtiuop")), QByteArray("\x54\x5a\x87\xa6"));
+
+    configuration.insert(XMLOUTPUTTYPE,QString::number(1));
+    QVERIFY(transf->setConfiguration(configuration));
+    QCOMPARE(transf->transform(QByteArray("12345677890qwerrtiuop")), QByteArray("545a87a6"));
+
+    configuration.insert(XMLAPPENDTOINPUT,QString::number(1));
+    QVERIFY(transf->setConfiguration(configuration));
+    QCOMPARE(transf->transform(QByteArray("12345677890qwerrtiuop")), QByteArray("12345677890qwerrtiuop545a87a6"));
+
     delete transf;
 }
 

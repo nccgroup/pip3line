@@ -24,12 +24,12 @@ CutWidget::CutWidget(Cut *ntransform, QWidget *parent) :
     ui->fromSpinBox->setValue(transform->getFromPos());
     ui->lengthSpinBox->setValue(transform->getLength());
     ui->everythingCheckBox->setChecked(transform->doCutEverything());
+    ui->cutRadioButton->setChecked(transform->isClassicCut());
+    ui->lineByLineCheckBox->setChecked(transform->isLineByLine());
+
     connect(ui->fromSpinBox,SIGNAL(valueChanged(int)),this,SLOT(onFromChange(int)));
     connect(ui->lengthSpinBox,SIGNAL(valueChanged(int)),this,SLOT(onLengthChange(int)));
     connect(ui->everythingCheckBox,SIGNAL(toggled(bool)),this,SLOT(onEverythingChange(bool)));
-
-    ui->cutRadioButton->setChecked(true);
-
     connect(ui->cutRadioButton, SIGNAL(toggled(bool)), this, SLOT(onCutToggled(bool)));
     connect(ui->lineByLineCheckBox, SIGNAL(toggled(bool)), SLOT(onLineByLineToggled(bool)));
 }

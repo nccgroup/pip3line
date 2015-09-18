@@ -36,9 +36,9 @@ class Cut : public TransformAbstract
         bool setFromPos(int val);
         bool setLength(int val);
         void setCutEverything(bool val);
-        bool getClassicCut() const;
+        bool isClassicCut() const;
         void setClassicCut(bool value);
-        bool getLineByLine() const;
+        bool isLineByLine() const;
         void setLineByLine(bool value);
 
     private:

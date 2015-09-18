@@ -85,6 +85,7 @@ set ( baseplugins_HDRS
 	bytestofloat.h
 	byterot.h
 	hmactransform.h
+	crc32.cpp
 	confgui/xorwidget.h
 	confgui/urlencodewidget.h
 	confgui/splitwidget.h
@@ -114,6 +115,7 @@ set ( baseplugins_HDRS
 	confgui/bytestofloatwdiget.h
 	confgui/byterotwidget.h
 	confgui/hmactransformwidget.h
+	confgui/crc32widget.h
 	)
 
 set ( baseplugins_SRCS
@@ -160,6 +162,7 @@ set ( baseplugins_SRCS
 	bytestofloat.cpp
 	byterot.cpp
 	hmactransform.cpp
+	crc32.cpp
 	confgui/xorwidget.cpp
 	confgui/urlencodewidget.cpp
 	confgui/splitwidget.cpp
@@ -189,6 +192,7 @@ set ( baseplugins_SRCS
 	confgui/bytestofloatwdiget.cpp
 	confgui/byterotwidget.cpp
 	confgui/hmactransformwidget.cpp
+	confgui/crc32widget.cpp
 	)
 
 set ( baseplugins_UIS
@@ -221,6 +225,7 @@ set ( baseplugins_UIS
 	confgui/bytestofloatwdiget.ui
 	confgui/byterotwidget.ui
 	confgui/hmactransformwidget.ui
+	confgui/crc32widget.ui
 	)
 
 if(WITH_QT5)

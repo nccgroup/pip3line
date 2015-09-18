@@ -188,7 +188,7 @@ void Cut::setCutEverything(bool val)
         emit confUpdated();
     }
 }
-bool Cut::getClassicCut() const
+bool Cut::isClassicCut() const
 {
     return classicCut;
 }
@@ -200,7 +200,7 @@ void Cut::setClassicCut(bool value)
         emit confUpdated();
     }
 }
-bool Cut::getLineByLine() const
+bool Cut::isLineByLine() const
 {
     return lineByLine;
 }

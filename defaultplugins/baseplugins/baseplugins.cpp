@@ -57,6 +57,7 @@ Released under AGPL see LICENSE for more information
 #include "bytestofloat.h"
 #include "byterot.h"
 #include "hmactransform.h"
+#include "crc32.h"
 #include "../../version.h"
 
 #if QT_VERSION >= 0x050000
@@ -167,6 +168,11 @@ TransformAbstract *BasePlugins::getTransform(QString name)
         ta = new(std::nothrow) HMACTransform();
         if (ta == NULL) {
             qFatal("Cannot allocate memory for HMACTransform X{");
+        }
+    } else if (Crc32::id == name) {
+        ta = new(std::nothrow) Crc32();
+        if (ta == NULL) {
+            qFatal("Cannot allocate memory for Crc32 X{");
         }
     } else if (BytesToFloat::id == name) {
         ta = new(std::nothrow) BytesToFloat();
@@ -403,6 +409,7 @@ const QStringList BasePlugins::getTransformList(QString typeName)
         enclist.append(Sha3_384::id);
         enclist.append(Sha3_512::id);
 #endif
+        enclist.append(Crc32::id);
 
     } else if (typeName == DEFAULT_TYPE_CRYPTO) {
         enclist.append(Xor::id);

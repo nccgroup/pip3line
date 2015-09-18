@@ -75,6 +75,7 @@ namespace Pip3lineConst {
     static const QString XMLLEVEL = "Level";
     static const QString XMLFORMAT = "Format";
     static const QString XMLOUTPUTTYPE = "OutputType";
+    static const QString XMLAPPENDTOINPUT = "AppendToInput";
     static const QString XMLDECODE = "Decode";
     static const QString XMLOFFSET = "Offset";
     static const QString XMLCLEAN = "Clean";
