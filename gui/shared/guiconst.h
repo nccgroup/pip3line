@@ -78,6 +78,7 @@ namespace GuiConst
     static const QString STATE_MAINTABS = "MainTabs";
     static const QString STATE_MAINTABS_LOGGER = "MainTabsLogger";
     static const QString STATE_CURRENT_INDEX = "CurrentIndex";
+    static const QString STATE_IS_VISIBLE = "IsVisible";
     static const QString STATE_SCROLL_INDEX = "ScrollIndex";
     static const QString STATE_RANDOM_SOURCE_CURRENT_OFFSET = "CurrentStartingOffset";
     static const QString STATE_CHUNK_SIZE = "ChunkSize";

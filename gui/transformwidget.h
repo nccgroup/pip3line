@@ -83,6 +83,7 @@ class TransformWidget : public QWidget
         void fromLocalFile(QString fileName);
         void deleteMe();
         void setAutoCopyTextToClipboard(bool val);
+        void onFoldRequest();
     private slots:
         void refreshOutput();
         void onFileLoadRequest();
@@ -96,12 +97,10 @@ class TransformWidget : public QWidget
         void onHistoryForward();
         void on_encodeRadioButton_toggled(bool checked);
         void on_decodeRadioButton_toggled(bool checked);
-
         void on_infoPushButton_clicked();
         void on_clearDataPushButton_clicked();
         void onSearch(QByteArray item, QBitArray mask, bool couldBeText);
         void onGotoOffset(quint64 offset, bool absolute, bool negative, bool select);
-
     private:
         Q_DISABLE_COPY(TransformWidget)
         static const int MAX_DIRECTION_TEXT;
@@ -145,4 +144,16 @@ class TransformWidgetStateObj : public BaseStateAbstract
     private:
         TransformWidget *tw;
 };
+
+class TransformWidgetFoldingObj : public BaseStateAbstract
+{
+        Q_OBJECT
+    public:
+        explicit TransformWidgetFoldingObj(TransformWidget *tw);
+        ~TransformWidgetFoldingObj();
+        void run();
+    private:
+        TransformWidget *tw;
+};
+
 #endif // TRANSFORMWIDGET_H

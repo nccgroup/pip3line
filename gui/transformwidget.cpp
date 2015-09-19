@@ -113,7 +113,7 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
     connect(this, SIGNAL(sendRequest(TransformRequest*)), guiHelper->getCentralTransProc(), SLOT(processRequest(TransformRequest*)), Qt::QueuedConnection);
     connect(ui->deleteButton, SIGNAL(clicked()), SLOT(deleteMe()));
 
-    connect(ui->foldPushButton, SIGNAL(clicked()), this, SIGNAL(foldRequest()));
+    connect(ui->foldPushButton, SIGNAL(clicked()), this, SLOT(onFoldRequest()));
 
  //   qDebug() << "Created" << this;
 }
@@ -599,6 +599,11 @@ void TransformWidget::onGotoOffset(quint64 offset, bool absolute, bool negative,
     }
 }
 
+void TransformWidget::onFoldRequest()
+{
+    emit foldRequest();
+}
+
 
 TransformWidgetStateObj::TransformWidgetStateObj(TransformWidget *tw) :
     tw(tw)
@@ -617,6 +622,7 @@ void TransformWidgetStateObj::run()
         writer->writeStartElement(tw->metaObject()->className());
         writer->writeAttribute(GuiConst::STATE_CURRENT_INDEX, write(tw->ui->tabWidget->currentIndex()));
         writer->writeAttribute(GuiConst::STATE_SCROLL_INDEX, write(tw->hexView->getHexTableView()->verticalScrollBar()->value()));
+        writer->writeAttribute(GuiConst::STATE_IS_VISIBLE, write(tw->isVisible()));
         writer->writeEndElement();
     } else {
         bool gotIt = false;
@@ -645,7 +651,35 @@ void TransformWidgetStateObj::run()
                 }
             }
 
+            if (attrList.hasAttribute(GuiConst::STATE_IS_VISIBLE)) {
+                ok = readBool(attrList.value(GuiConst::STATE_IS_VISIBLE));
+                if (!ok) {
+                    TransformWidgetFoldingObj * state = new(std::nothrow) TransformWidgetFoldingObj(tw);
+                    if (state == NULL) {
+                        qFatal("Cannot allocate memory for TransformWidgetFoldingObj X{");
+                    }
+                    emit addNewState(state);
+                }
+            }
+
             readEndElement(tw->metaObject()->className());// reading closing tag classname
         }
     }
+}
+
+
+TransformWidgetFoldingObj::TransformWidgetFoldingObj(TransformWidget *tw) :
+    tw(tw)
+{
+    name = "Folding Transform View";
+}
+
+TransformWidgetFoldingObj::~TransformWidgetFoldingObj()
+{
+
+}
+
+void TransformWidgetFoldingObj::run()
+{
+    tw->onFoldRequest();
 }
