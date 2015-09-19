@@ -290,7 +290,8 @@ bool TransformMgmt::loadPlugins()
                  }
 
              } else {
-                 emit error(tr("Could not load %1: %2").arg(pluginsDir.absoluteFilePath(fileName)).arg(loader->errorString()),id);
+                 emit error(tr("Could not load %1: %2 [This usually happens when some dependencies are missing/could not be found, for instance in case of the Python plugins, this usually means the adequate Python binaries are not installed]")
+                            .arg(pluginsDir.absoluteFilePath(fileName)).arg(loader->errorString()),id);
                  delete loader;
                  noError = false;
              }
