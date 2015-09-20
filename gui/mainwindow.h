@@ -104,7 +104,7 @@ class MainWindow : public QMainWindow
         void onExit();
         void cleaningAndExit();
         void handleUnixSignal();
-
+        void onClearMemory();
     private:
         Q_DISABLE_COPY(MainWindow)
         void buildToolBar();

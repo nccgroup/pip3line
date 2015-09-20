@@ -95,6 +95,11 @@ AppDialog::AppDialog(GuiHelper * nguiHelper, QWidget *parent) :
     //qDebug() << "created" << this;
 }
 
+AppDialog::~AppDialog()
+{
+    attachedAction = NULL;
+}
+
 void AppDialog::attachAction(QAction *action)
 {
     if (action->isCheckable())

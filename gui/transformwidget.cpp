@@ -67,6 +67,7 @@ TransformWidget::TransformWidget(GuiHelper *nguiHelper ,QWidget *parent) :
     settingsTab = NULL;
     gotoWidget = NULL;
     searchWidget = NULL;
+    folded = false;
     guiHelper = nguiHelper;
     transformFactory = guiHelper->getTransformFactory();
     manager = guiHelper->getNetworkManager();

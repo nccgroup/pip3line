@@ -213,6 +213,8 @@ MainWindow::MainWindow(bool debug, QWidget *parent) :
     if (guiHelper->getAutoRestoreOnStartup())
         QTimer::singleShot(0,this, SLOT(autoRestore()));
 
+    connect(ui->actionClear_memory, SIGNAL(triggered()), SLOT(onClearMemory()));
+
 //  qApp->setStyleSheet("* {color : green; background: black}");
 }
 
@@ -359,6 +361,7 @@ void MainWindow::onHelpWithRegExp()
 
 void MainWindow::onSettingsDialogOpen(bool checked)
 {
+    qDebug() << "onSettingsDialogOpen";
     if (checked) {
         if (settingsDialog == NULL) {
             settingsDialog = new(std::nothrow) SettingsDialog(guiHelper, this);
@@ -589,6 +592,39 @@ void MainWindow::handleUnixSignal()
 #else
     qWarning() << "UNIX Signals not handle on this platform";
 #endif
+}
+
+void MainWindow::onClearMemory()
+{
+    int res = QMessageBox::warning(this,tr("Clear memory"),tr("This will clear misc non-visibles objects from memory"),QMessageBox::Cancel,QMessageBox::Ok);
+    if (res == QMessageBox::Ok) {
+        qDebug() << "Clearing memory";
+        guiHelper->clearDeletedTabs();
+        if (analyseDialog != NULL && analyseDialog->isHidden()) {
+            delete analyseDialog;
+            analyseDialog = NULL;
+        }
+        if (settingsDialog != NULL && settingsDialog->isHidden()) {
+            delete settingsDialog;
+            settingsDialog = NULL;
+        }
+        if (regexphelpDialog != NULL && regexphelpDialog->isHidden()) {
+            delete regexphelpDialog;
+            regexphelpDialog = NULL;
+        }
+        if (quickView != NULL && quickView->isHidden()) {
+            delete quickView;
+            quickView = NULL;
+        }
+        if (comparisonView != NULL && comparisonView->isHidden()) {
+            delete comparisonView;
+            comparisonView = NULL;
+        }
+        if (debugDialog != NULL && debugDialog->isHidden()) {
+            delete debugDialog;
+            debugDialog = NULL;
+        }
+    }
 }
 
 #ifdef Q_OS_LINUX

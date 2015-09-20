@@ -65,6 +65,7 @@
     <addaction name="actionAbout_Qt"/>
     <addaction name="actionAbout_Pip3line"/>
     <addaction name="actionDebug_dialog"/>
+    <addaction name="actionClear_memory"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>
@@ -226,6 +227,11 @@
    </property>
    <property name="toolTip">
     <string>Load previously saved state</string>
+   </property>
+  </action>
+  <action name="actionClear_memory">
+   <property name="text">
+    <string>Clear memory</string>
    </property>
   </action>
  </widget>

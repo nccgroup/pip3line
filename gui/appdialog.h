@@ -26,6 +26,7 @@ class AppDialog : public QDialog
         Q_OBJECT
     public:
         explicit AppDialog(GuiHelper * guiHelper, QWidget *parent = 0);
+        virtual ~AppDialog();
         void attachAction(QAction * action);
         virtual BaseStateAbstract *getStateMngtObj();
     signals:

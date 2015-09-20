@@ -22,7 +22,7 @@ Released under AGPL see LICENSE for more information
 #include <QFileInfo>
 #include <pip3linecallback.h>
 #include <modulesmanagement.h>
-
+#include <QObject>
 
 PythonPlugin::PythonPlugin()
 {
@@ -96,10 +96,7 @@ const QStringList PythonPlugin::getTransformList(QString typeName)
 
 QWidget *PythonPlugin::getConfGui(QWidget *parent)
 {
-    if (gui == NULL) {
-        gui = modules->getGui(parent);
-    }
-    return gui;
+    return modules->getGui(parent);
 }
 
 const QStringList PythonPlugin::getTypesList()
