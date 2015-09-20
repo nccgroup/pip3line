@@ -535,6 +535,16 @@ void TransformWidget::dropEvent(QDropEvent *event)
     guiHelper->processDropEvent(event, byteSource);
 }
 
+bool TransformWidget::isFolded() const
+{
+    return folded;
+}
+
+void TransformWidget::setFolded(bool value)
+{
+    folded = value;
+}
+
 void TransformWidget::fromLocalFile(QString fileName)
 {
     byteSource->fromLocalFile(fileName);
@@ -622,7 +632,7 @@ void TransformWidgetStateObj::run()
         writer->writeStartElement(tw->metaObject()->className());
         writer->writeAttribute(GuiConst::STATE_CURRENT_INDEX, write(tw->ui->tabWidget->currentIndex()));
         writer->writeAttribute(GuiConst::STATE_SCROLL_INDEX, write(tw->hexView->getHexTableView()->verticalScrollBar()->value()));
-        writer->writeAttribute(GuiConst::STATE_IS_VISIBLE, write(tw->isVisible()));
+        writer->writeAttribute(GuiConst::STATE_IS_FOLDED, write(tw->isFolded()));
         writer->writeEndElement();
     } else {
         bool gotIt = false;
@@ -651,9 +661,9 @@ void TransformWidgetStateObj::run()
                 }
             }
 
-            if (attrList.hasAttribute(GuiConst::STATE_IS_VISIBLE)) {
-                ok = readBool(attrList.value(GuiConst::STATE_IS_VISIBLE));
-                if (!ok) {
+            if (attrList.hasAttribute(GuiConst::STATE_IS_FOLDED)) {
+                ok = readBool(attrList.value(GuiConst::STATE_IS_FOLDED));
+                if (ok) {
                     TransformWidgetFoldingObj * state = new(std::nothrow) TransformWidgetFoldingObj(tw);
                     if (state == NULL) {
                         qFatal("Cannot allocate memory for TransformWidgetFoldingObj X{");

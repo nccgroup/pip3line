@@ -11,6 +11,7 @@ Released under AGPL see LICENSE for more information
 #ifndef TRANSFORMSGUI_H
 #define TRANSFORMSGUI_H
 
+#include <QSpacerItem>
 #include <QWidget>
 #include <transformmgmt.h>
 #include "transformchain.h"
@@ -71,6 +72,7 @@ class TransformsGui : public TabAbstract
         TransformWidget *firstTransformWidget;
         QList<TransformWidget *> transformWidgetList;
         DetachTabButton *detachButton;
+        QSpacerItem *spacer;
 };
 
 class TransformGuiStateObj : public TabStateObj

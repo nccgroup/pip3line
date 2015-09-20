@@ -61,6 +61,9 @@ class TransformWidget : public QWidget
         void copyTextToClipboard();
         BaseStateAbstract *getStateMngtObj();
         QString getDescription();
+        bool isFolded() const;
+        void setFolded(bool value);
+
     signals:
         void updated();
         void transfoRequest(TransformWidget *);
@@ -129,6 +132,7 @@ class TransformWidget : public QWidget
         SearchWidget *searchWidget;
         ClearAllMarkingsButton * clearAllMarkingsButton;
         MessagePanelWidget* messagePanel;
+        bool folded;
 
         friend class TransformWidgetStateObj;
 };

@@ -27,6 +27,7 @@ Released under AGPL see LICENSE for more information
 #include "../shared/universalreceiverbutton.h"
 #include "../state/closingstate.h"
 #include "../views/foldedview.h"
+#include <QVBoxLayout>
 
 TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
     TabAbstract(guiHelper,parent)
@@ -38,6 +39,11 @@ TransformsGui::TransformsGui(GuiHelper *guiHelper, QWidget *parent) :
 
     transformFactory = guiHelper->getTransformFactory();
     ui->setupUi(this);
+
+    spacer = new(std::nothrow) QSpacerItem( 20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+    if (spacer == NULL) {
+        qFatal("Cannot allocate memory for QSpacerItem X{");
+    }
 
     firstTransformWidget = NULL;
     massProcessingDialog = NULL;
@@ -90,6 +96,7 @@ TransformsGui::~TransformsGui()
     while (transformWidgetList.size() > 0) {
         delete transformWidgetList.takeLast();
     }
+    //delete spacer;
     delete detachButton;
     logger = NULL;
     guiHelper = NULL;
@@ -504,6 +511,7 @@ void TransformsGui::onFoldRequest()
     } else {
         ui->mainLayout->removeWidget(requester);
         requester->hide();
+        requester->setFolded(true);
         FoldedView *fv = new(std::nothrow) FoldedView(requester,this);
         if (fv == NULL) {
             qFatal("Cannot allocate memory for FoldedWidget X{");
@@ -511,7 +519,15 @@ void TransformsGui::onFoldRequest()
 
         connect(fv, SIGNAL(unfoldRequested()), this, SLOT(onUnfoldRequest()));
 
-        ui->mainLayout->insertWidget(index,fv);
+        ui->mainLayout->insertWidget(index,fv,0, Qt::AlignTop);
+        bool allFolded = true;
+        for (int i = 0; i < transformWidgetList.size(); i++) {
+            allFolded = allFolded && transformWidgetList.at(i)->isFolded();
+        }
+
+        if (allFolded) {
+            ui->mainLayout->addSpacerItem(spacer);
+        }
     }
 }
 
@@ -529,7 +545,9 @@ void TransformsGui::onUnfoldRequest()
         TransformWidget * tw = fv->getTransformWidget();
         ui->mainLayout->removeWidget(fv);
         delete fv;
+        ui->mainLayout->removeItem(spacer);
         ui->mainLayout->insertWidget(index,tw);
+        tw->setFolded(false);
         tw->show();
     }
 }
