@@ -603,26 +603,32 @@ void MainWindow::onClearMemory()
         if (analyseDialog != NULL && analyseDialog->isHidden()) {
             delete analyseDialog;
             analyseDialog = NULL;
+            qDebug() << "Clearing memory: analyseDialog";
         }
         if (settingsDialog != NULL && settingsDialog->isHidden()) {
             delete settingsDialog;
             settingsDialog = NULL;
+            qDebug() << "Clearing memory: settingsDialog";
         }
         if (regexphelpDialog != NULL && regexphelpDialog->isHidden()) {
             delete regexphelpDialog;
             regexphelpDialog = NULL;
+            qDebug() << "Clearing memory: regexphelpDialog";
         }
         if (quickView != NULL && quickView->isHidden()) {
             delete quickView;
             quickView = NULL;
+            qDebug() << "Clearing memory: quickView";
         }
         if (comparisonView != NULL && comparisonView->isHidden()) {
             delete comparisonView;
             comparisonView = NULL;
+            qDebug() << "Clearing memory: comparisonView";
         }
         if (debugDialog != NULL && debugDialog->isHidden()) {
             delete debugDialog;
             debugDialog = NULL;
+            qDebug() << "Clearing memory: debugDialog";
         }
     }
 }

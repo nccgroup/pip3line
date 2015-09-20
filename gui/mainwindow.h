@@ -63,7 +63,6 @@ class MainWindow : public QMainWindow
         QuickViewDialog *getQuickView() const;
         ComparisonDialog *getComparisonView() const;
         DebugDialog *getDebugDialog() const;
-
         MainTabs *getMainTabs() const;
 
 #ifdef Q_OS_LINUX
