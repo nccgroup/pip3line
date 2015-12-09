@@ -17,6 +17,7 @@ https://github.com/nccgroup/pip3line/releases
 
 [Windows Binaries Download]
 
+https://github.com/nccgroup/pip3line/releases
 http://sourceforge.net/projects/pip3line/files/
 
 ## Documentation
