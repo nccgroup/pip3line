@@ -70,6 +70,20 @@ There is also an uninstall _make_ command available
 
 > shell$ sudo make uninstall
 
+### Ubuntu
+
+Make sure to install the following package:
+
+python2.7-dev
+python3-dev
+libqt5svg5-dev
+qt5-default
+libqt5xmlpatterns5-dev
+cmake
+git
+libssl-dev
+libdistorm3-dev
+
 ## Windows specific
 First brace yourself, the build process on a Windows platform can be quite tricky.
 
@@ -146,7 +160,7 @@ https://www.python.org/downloads/
 Be aware that you cannot mix x86 and x64 executables and DLLs, therefore be sure to choose the right architecture.
 Unfortunately the official Python page is not clear on what version you are downloading (32bits). If you are not sure, you are probably downloading the x86 version, as the x64 version is clearly indicate in the name (amd64).
 
-**Beware**: see #bug [[https://github.com/nccgroup/pip3line/issues/4]]
+**Beware**: see bug https://github.com/nccgroup/pip3line/issues/4
 
 ## Distorm plugin
 
