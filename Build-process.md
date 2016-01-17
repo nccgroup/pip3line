@@ -35,7 +35,7 @@ Other modules can be activated individually.
 
 Configure and compile the binary for QT5.
 
-This is now the default configuration, if you want to compile against Qt4 set this option to OFF
+This will soon be the default configuration, if you want to compile against Qt4 set this option to OFF
 
 ## Linux build & Install
 
