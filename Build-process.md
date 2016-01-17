@@ -127,7 +127,7 @@ On windows you need to copy the relevant dll into the program/system folder, oth
 
 ## Apple OS specific
 
-Unfortunately I only have a sporadic access to Apple hardware, so I can't test it regularly, and they may be some compilation issues.
+Unfortunately I only have a sporadic access to Apple hardware, so I can't test it regularly, and there may be some compilation issues.
 Most of them should be around missing headers (Windows and Linux systems are kind of more flexible with headers definitions, if not lenient)
  
 ## OpenSSL plugin
