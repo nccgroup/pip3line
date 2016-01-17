@@ -27,13 +27,14 @@ Configure and compile only the bare necessary parts:
 * libtransform
 * The Pip3line GUI
 * The command line tool
-* The default transformation plugin
+* The default transformations plugin
 
 Other modules can be activated individually.
 
 > -DWITH_QT5=ON
 
-Configure and compile the binary for QT5. (default)
+Configure and compile the binary for QT5.
+
 This is now the default configuration, if you want to compile against Qt4 set this option to OFF
 
 ## Linux build & Install
