@@ -35,3 +35,5 @@ http://nccgroup.github.io/pip3line/pythonplugins.html
 
 http://nccgroup.github.io/pip3line/nativeextensions.html
 
+[Build process]
+https://github.com/nccgroup/pip3line/blob/master/Build-process.md
